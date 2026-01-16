@@ -51,7 +51,11 @@ export default function ReportEditor() {
     }, [id]);
 
     useEffect(() => {
-        if (id) fetchReportData();
+        if (id) {
+            (async () => {
+                await fetchReportData();
+            })();
+        }
     }, [id, fetchReportData]);
 
     const handleDataChange = useCallback((data: ReportData) => {

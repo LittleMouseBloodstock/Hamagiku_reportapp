@@ -31,7 +31,9 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        fetchHorses();
+        (async () => {
+            await fetchHorses();
+        })();
     }, [fetchHorses]);
 
     async function createHorse() {

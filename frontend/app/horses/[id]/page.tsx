@@ -29,7 +29,11 @@ export default function HorseDetail() {
     }, [id]);
 
     useEffect(() => {
-        if (id) fetchData();
+        if (id) {
+            (async () => {
+                await fetchData();
+            })();
+        }
     }, [id, fetchData]);
 
     async function createReport() {
