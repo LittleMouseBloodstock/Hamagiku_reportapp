@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1a3c34;
+  --color-accent: #c5a059;
+  --color-light-bg: #f4f7f6;
+  --font-cormorant: var(--font-cormorant-garamond);
+  --font-noto: var(--font-noto-sans-jp);
+  --font-shippori: var(--font-shippori-mincho);
+}
+
+/* Custom Variables from report.html */
+:root {
+  --primary-color: #1a3c34;
+  --accent-color: #c5a059;
+  --bg-color: #ffffff;
+  --text-main: #333333;
+  --text-light: #666666;
+  --light-bg: #f4f7f6;
+}
+
+body {
+  background-color: #e0e0e0;
+  font-family: var(--font-noto), sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+}
+
+/* A4 Page Layout */
+@page { size: A4; margin: 0; }
+
+.a4-page {
+    width: 210mm;
+    height: 296mm;
+    margin: 20px auto;
+    background: var(--bg-color);
+    position: relative;
+    box-sizing: border-box;
+    padding: 40px 50px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Utility Classes for Typography */
+.font-cormorant { font-family: var(--font-cormorant), serif; }
+.font-shippori { font-family: var(--font-shippori), serif; }
+.font-noto { font-family: var(--font-noto), sans-serif; }
+
+/* Print Styles */
+@media print {
+    body { background: none; }
+    .no-print { display: none !important; }
+    .a4-page { margin: 0; box-shadow: none; height: 100%; box-sizing: border-box; }
+}
+
+/* Component Styles */
+.stat-box {
+    background: var(--light-bg);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: 3px solid #ddd;
+}
+.stat-box.highlight { border-top-color: var(--accent-color); }
