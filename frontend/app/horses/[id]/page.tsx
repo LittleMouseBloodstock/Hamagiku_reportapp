@@ -1,5 +1,4 @@
-'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
