@@ -1,16 +1,51 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import WeightChart from './WeightChart';
 import { Camera } from 'lucide-react';
 
-export default function ReportTemplate() {
-    const [logo, setLogo] = useState<string | null>(null);
-    const [mainPhoto, setMainPhoto] = useState<string>("https://images.unsplash.com/photo-1551884831-bbf3ddd77535?q=80&w=2070&auto=format&fit=crop");
+export type ReportData = {
+    horseName: string;
+    horseNameEn: string;
+    sire: string;
+    dam: string;
+    comment: string;
+    weight: string;
+    training: string;
+    condition: string;
+    target: string;
+    mainPhoto: string;
+    logo: string | null;
+};
 
-    // Editable Content State (Placeholder logic)
-    const [horseName, setHorseName] = useState("テンコーウィナー");
-    const [horseNameEn, setHorseNameEn] = useState("TENKO WINNER");
-    const [comment, setComment] = useState("今月は重点的にトモの強化を図り、坂路でのトレーニング強度を上げています。以前に比べ、踏み込みに力強さが出てきました。カイ食いも落ちることなく、馬体重もグラフの通り右肩上がりで、成長分を含めて理想的な数字をキープしています。\n\n気性面でも落ち着きが出てきており、他馬と併せても集中力を切らさずに走れています。来週からは帰厩を視野に入れ、より実戦的なピッチに上げていく予定です。");
+interface ReportTemplateProps {
+    initialData?: Partial<ReportData>;
+    onDataChange?: (data: ReportData) => void;
+}
+
+export default function ReportTemplate({ initialData, onDataChange }: ReportTemplateProps) {
+    // State initialization with defaults or props
+    const [logo, setLogo] = useState<string | null>(initialData?.logo || null);
+    const [mainPhoto, setMainPhoto] = useState<string>(initialData?.mainPhoto || "https://images.unsplash.com/photo-1551884831-bbf3ddd77535?q=80&w=2070&auto=format&fit=crop");
+    const [horseName, setHorseName] = useState(initialData?.horseName || "テンコーウィナー");
+    const [horseNameEn, setHorseNameEn] = useState(initialData?.horseNameEn || "TENKO WINNER");
+    const [sire, setSire] = useState(initialData?.sire || "Epiphaneia");
+    const [dam, setDam] = useState(initialData?.dam || "Gemini Heroine");
+    const [comment, setComment] = useState(initialData?.comment || "今月は重点的にトモの強化を図り...");
+    const [weight, setWeight] = useState(initialData?.weight || "482 kg");
+    const [training, setTraining] = useState(initialData?.training || "坂路 15-15");
+    const [condition, setCondition] = useState(initialData?.condition || "Good");
+    const [target, setTarget] = useState(initialData?.target || "3月 中山");
+
+    // Sync back to parent when any state changes
+    useEffect(() => {
+        if (onDataChange) {
+            onDataChange({
+                horseName, horseNameEn, sire, dam, comment,
+                weight, training, condition, target,
+                mainPhoto, logo
+            });
+        }
+    }, [horseName, horseNameEn, sire, dam, comment, weight, training, condition, target, mainPhoto, logo]);
 
     // File Handlers
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,11 +126,12 @@ export default function ReportTemplate() {
             {/* Data Section */}
             <div className="flex gap-8 mb-6 h-[220px]">
                 {/* Stats Grid */}
+                {/* Stats Grid */}
                 <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-2.5">
-                    <StatBox label="Current Weight" value="482 kg" highlight />
-                    <StatBox label="Training" value="坂路 15-15" />
-                    <StatBox label="Condition" value="Good" />
-                    <StatBox label="Target" value="3月 中山" highlight />
+                    <StatBox label="Current Weight" value={weight} onChange={setWeight} highlight />
+                    <StatBox label="Training" value={training} onChange={setTraining} />
+                    <StatBox label="Condition" value={condition} onChange={setCondition} />
+                    <StatBox label="Target" value={target} onChange={setTarget} highlight />
                 </div>
 
                 {/* Chart */}
@@ -128,7 +164,7 @@ export default function ReportTemplate() {
     );
 }
 
-function StatBox({ label, value, highlight = false }: { label: string, value: string, highlight?: boolean }) {
+function StatBox({ label, value, onChange, highlight = false }: { label: string, value: string, onChange?: (val: string) => void, highlight?: boolean }) {
     return (
         <div className={`stat-box ${highlight ? 'border-t-[var(--color-accent)]' : 'border-t-gray-300'}`}>
             <span className="text-[11px] text-gray-500 uppercase mb-1 block">{label}</span>
@@ -136,6 +172,7 @@ function StatBox({ label, value, highlight = false }: { label: string, value: st
                 className="font-cormorant text-2xl font-bold text-[var(--color-primary)] outline-none focus:bg-yellow-50 block"
                 contentEditable
                 suppressContentEditableWarning
+                onBlur={(e) => onChange && onChange(e.currentTarget.innerText)}
             >
                 {value}
             </span>
