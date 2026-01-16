@@ -18,37 +18,35 @@ export default function Dashboard() {
     const [horses, setHorses] = useState<Horse[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-
-    const fetchHorses = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('horses')
-            .select('*')
-            .order('updated_at', { ascending: false });
-
-        if (error) console.error(error);
-        if (data) setHorses(data);
-        setLoading(false);
-    }, []);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
-        (async () => {
-            await fetchHorses();
-        })();
-    }, [fetchHorses]);
+        const fetchHorses = async () => {
+            const { data, error } = await supabase
+                .from('horses')
+                .select('*')
+                .order('updated_at', { ascending: false });
+
+            if (error) console.error(error);
+            if (data) setHorses(data);
+            setLoading(false);
+        };
+        fetchHorses();
+    }, [refreshKey]);
 
     async function createHorse() {
         const name = prompt("馬名を入力してください (例: テンコーウィナー)");
         if (!name) return;
 
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('horses')
-            .insert([{ name, name_en: 'New Horse' }])
-            .select()
-            .single();
+            .insert([{ name, updated_at: new Date().toISOString() }]);
 
-        if (data) {
-            setHorses([data, ...horses]);
-            // Ideally redirect to edit page, but for now just refresh list
+        if (error) {
+            console.error(error);
+            alert("エラーが発生しました");
+        } else {
+            setRefreshKey(prev => prev + 1);
         }
     }
 

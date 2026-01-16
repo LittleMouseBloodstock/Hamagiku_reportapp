@@ -12,29 +12,23 @@ export default function HorseDetail() {
     const [reports, setReports] = useState<Record<string, any>[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchData = useCallback(async () => {
-        // 1. Fetch Horse
-        const { data: horseData } = await supabase.from('horses').select('*').eq('id', id).single();
-        if (horseData) setHorse(horseData);
-
-        // 2. Fetch Reports
-        const { data: reportsData } = await supabase
-            .from('reports')
-            .select('*')
-            .eq('horse_id', id)
-            .order('created_at', { ascending: false });
-
-        if (reportsData) setReports(reportsData);
-        setLoading(false);
-    }, [id]);
-
     useEffect(() => {
-        if (id) {
-            (async () => {
-                await fetchData();
-            })();
-        }
-    }, [id, fetchData]);
+        if (!id) return;
+
+        const fetchData = async () => {
+            // 1. Fetch Horse
+            const { data: horseData } = await supabase.from('horses').select('*').eq('id', id).single();
+            if (horseData) setHorse(horseData);
+
+            // 2. Fetch Reports
+            const { data: reportsData } = await supabase.from('reports').select('*').eq('horse_id', id).order('created_at', { ascending: false });
+            if (reportsData) setReports(reportsData);
+
+            setLoading(false);
+        };
+
+        fetchData();
+    }, [id]);
 
     async function createReport() {
         if (!horse) return;

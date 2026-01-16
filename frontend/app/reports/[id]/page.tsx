@@ -20,43 +20,41 @@ export default function ReportEditor() {
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
 
-    const fetchReportData = useCallback(async () => {
-        const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
-        if (error || !report) {
-            console.error("Report not found");
-            return;
-        }
-
-        // Fetch Horse Data
-        const { data: horse } = await supabase.from('horses').select('*').eq('id', report.horse_id).single();
-
-        setHorseId(report.horse_id);
-
-        // Map DB to ReportData
-        setInitialData({
-            horseName: horse?.name || '',
-            horseNameEn: horse?.name_en || '',
-            sire: horse?.sire || '',
-            dam: horse?.dam || '',
-            comment: report.body || '',
-            weight: report.weight ? `${report.weight} kg` : '',
-            training: report.status_training || '',
-            condition: report.condition || '',
-            target: report.target || '',
-            mainPhoto: report.main_photo_url || horse?.photo_url || '',
-            logo: null
-        });
-
-        setLoading(false);
-    }, [id]);
-
     useEffect(() => {
-        if (id) {
-            (async () => {
-                await fetchReportData();
-            })();
-        }
-    }, [id, fetchReportData]);
+        if (!id) return;
+
+        const fetchReportData = async () => {
+            const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
+            if (error || !report) {
+                console.error("Report not found");
+                return;
+            }
+
+            // Fetch Horse Data
+            const { data: horse } = await supabase.from('horses').select('*').eq('id', report.horse_id).single();
+
+            setHorseId(report.horse_id);
+
+            // Map DB to ReportData
+            setInitialData({
+                horseName: horse?.name || '',
+                horseNameEn: horse?.name_en || '',
+                sire: horse?.sire || '',
+                dam: horse?.dam || '',
+                comment: report.body || '',
+                weight: report.weight ? `${report.weight} kg` : '',
+                training: report.status_training || '',
+                condition: report.condition || '',
+                target: report.target || '',
+                mainPhoto: report.main_photo_url || horse?.photo_url || '',
+                logo: null
+            });
+
+            setLoading(false);
+        };
+
+        fetchReportData();
+    }, [id]);
 
     const handleDataChange = useCallback((data: ReportData) => {
         reportDataRef.current = data;
