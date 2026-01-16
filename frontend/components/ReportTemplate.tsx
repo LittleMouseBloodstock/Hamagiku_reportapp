@@ -70,16 +70,21 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
         <div className="a4-page shadow-2xl mx-auto bg-white relative overflow-hidden">
             {/* Header */}
             <header className="flex justify-between border-b-2 border-[var(--color-accent)] pb-4 mb-6">
-                <div className="flex items-center group relative">
-                    {logo ? (
-                        <img src={logo} alt="Logo" className="max-h-[50px] max-w-[180px] object-contain mr-2.5" />
-                    ) : (
-                        <div className="logo-text font-bold text-[var(--color-primary)] tracking-widest text-lg" id="farmNameText">
-                            GEMINI STABLE
+                <div className="flex items-center group relative cursor-pointer">
+                    <label htmlFor="logo-upload" className="flex items-center cursor-pointer">
+                        {logo ? (
+                            <img src={logo} alt="Logo" className="max-h-[50px] max-w-[180px] object-contain mr-2.5" />
+                        ) : (
+                            <div className="logo-text font-bold text-[var(--color-primary)] tracking-widest text-lg" id="farmNameText">
+                                GEMINI STABLE
+                            </div>
+                        )}
+                        {/* Hover Hint for Logo */}
+                        <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-[var(--color-primary)] font-bold transition-opacity no-print">
+                            Change Logo
                         </div>
-                    )}
-                    {/* Hidden Input for Logo (Triggered by UI overlay in real app, simplified here) */}
-                    <input type="file" onChange={handleLogoUpload} className="hidden" id="logo-upload" />
+                    </label>
+                    <input type="file" onChange={handleLogoUpload} className="hidden" id="logo-upload" accept="image/*" />
                 </div>
                 <div className="font-cormorant text-3xl text-[var(--color-primary)]">MONTHLY REPORT</div>
             </header>
