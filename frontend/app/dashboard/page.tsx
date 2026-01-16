@@ -19,7 +19,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
-    async function fetchHorses() {
+    const fetchHorses = useCallback(async () => {
         const { data, error } = await supabase
             .from('horses')
             .select('*')
@@ -28,11 +28,11 @@ export default function Dashboard() {
         if (error) console.error(error);
         if (data) setHorses(data);
         setLoading(false);
-    }
+    }, []);
 
     useEffect(() => {
         fetchHorses();
-    }, []);
+    }, [fetchHorses]);
 
     async function createHorse() {
         const name = prompt("馬名を入力してください (例: テンコーウィナー)");

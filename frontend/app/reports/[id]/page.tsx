@@ -3,12 +3,12 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
-import { ArrowLeft, Save, Printer, RefreshCw, Check, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Check, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ReportEditor() {
     const { id } = useParams();
-    const router = useRouter();
+    // const router = useRouter(); // Unused
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -20,7 +20,7 @@ export default function ReportEditor() {
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
 
-    async function fetchReportData() {
+    const fetchReportData = useCallback(async () => {
         const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
         if (error || !report) {
             console.error("Report not found");
@@ -48,11 +48,11 @@ export default function ReportEditor() {
         });
 
         setLoading(false);
-    }
+    }, [id]);
 
     useEffect(() => {
         if (id) fetchReportData();
-    }, [id]);
+    }, [id, fetchReportData]);
 
     const handleDataChange = useCallback((data: ReportData) => {
         reportDataRef.current = data;
@@ -92,7 +92,7 @@ export default function ReportEditor() {
         const d = reportDataRef.current;
 
         let mainPhotoUrl = d.mainPhoto;
-        let logoUrl = d.logo; // If we supported logo saving to DB
+        const logoUrl = d.logo; // If we supported logo saving to DB
 
         // Check if mainPhoto is new (Base64)
         if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {

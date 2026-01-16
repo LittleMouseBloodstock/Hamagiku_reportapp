@@ -8,11 +8,11 @@ import Link from 'next/link';
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
-    const [horse, setHorse] = useState<any>(null);
-    const [reports, setReports] = useState<any[]>([]);
+    const [horse, setHorse] = useState<Record<string, any> | null>(null);
+    const [reports, setReports] = useState<Record<string, any>[]>([]);
     const [loading, setLoading] = useState(true);
 
-    async function fetchData() {
+    const fetchData = useCallback(async () => {
         // 1. Fetch Horse
         const { data: horseData } = await supabase.from('horses').select('*').eq('id', id).single();
         if (horseData) setHorse(horseData);
@@ -26,11 +26,11 @@ export default function HorseDetail() {
 
         if (reportsData) setReports(reportsData);
         setLoading(false);
-    }
+    }, [id]);
 
     useEffect(() => {
         if (id) fetchData();
-    }, [id]);
+    }, [id, fetchData]);
 
     async function createReport() {
         if (!horse) return;
