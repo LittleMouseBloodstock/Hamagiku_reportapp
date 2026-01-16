@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
-import { ArrowLeft, Save, Printer, RefreshCw, Check } from 'lucide-react';
+import { ArrowLeft, Save, Printer, RefreshCw, Check, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ReportEditor() {
@@ -48,7 +48,7 @@ export default function ReportEditor() {
             condition: report.condition || '',
             target: report.target || '',
             mainPhoto: report.main_photo_url || horse?.photo_url || '',
-            logo: null // Logo usually static or fetched separately? For now null.
+            logo: null
         });
 
         setLoading(false);
@@ -58,10 +58,49 @@ export default function ReportEditor() {
         reportDataRef.current = data;
     }, []);
 
+    async function uploadImage(base64Data: string, path: string): Promise<string | null> {
+        try {
+            // Convert Base64 to Blob
+            const res = await fetch(base64Data);
+            const blob = await res.blob();
+
+            // Upload to Supabase Storage
+            const { data, error } = await supabase.storage
+                .from('report-assets')
+                .upload(path, blob, { upsert: true });
+
+            if (error) {
+                console.error("Upload Error:", error);
+                return null;
+            }
+
+            // Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('report-assets')
+                .getPublicUrl(path);
+
+            return publicUrl;
+        } catch (e) {
+            console.error("Image Processing Error:", e);
+            return null;
+        }
+    }
+
     async function saveReport() {
         if (!reportDataRef.current || !id) return;
         setSaving(true);
         const d = reportDataRef.current;
+
+        let mainPhotoUrl = d.mainPhoto;
+        let logoUrl = d.logo; // If we supported logo saving to DB
+
+        // Check if mainPhoto is new (Base64)
+        if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {
+            const fileName = `main_${Date.now()}.jpg`;
+            const path = `${horseId}/${id}/${fileName}`;
+            const uploadedUrl = await uploadImage(d.mainPhoto, path);
+            if (uploadedUrl) mainPhotoUrl = uploadedUrl;
+        }
 
         // Update Report
         const { error: rError } = await supabase.from('reports').update({
@@ -70,26 +109,48 @@ export default function ReportEditor() {
             status_training: d.training,
             condition: d.condition,
             target: d.target,
-            main_photo_url: d.mainPhoto,
+            main_photo_url: mainPhotoUrl,
             updated_at: new Date().toISOString()
         }).eq('id', id);
 
+        if (rError) {
+            console.error("Save Error:", rError);
+            alert("Error saving report");
+            setSaving(false);
+            return;
+        }
+
         // Update Horse (Name/Sire/Dam/Photo if changed)
         if (horseId) {
+            // Check if we should update horse photo (only if it was empty or creating new?)
+            // For now, if Report Photo is uploaded, we MIGHT want to update Horse Photo if it's the latest?
+            // User requirement: "Latest photo as thumbnail".
+            // So yes, we should update horse photoURL if we uploaded a new one.
+            // Or only if horse photo is empty.
+            // Let's update it for now to keep it fresh.
+
             await supabase.from('horses').update({
                 name: d.horseName,
                 name_en: d.horseNameEn,
                 sire: d.sire,
                 dam: d.dam,
-                // Only update horse photo if report main photo changed? 
-                // Maybe optional. User might want report photo specific.
-                // We'll leave horse photo alone for now or update it if it was empty.
+                photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
                 updated_at: new Date().toISOString()
             }).eq('id', horseId);
         }
 
         setSaving(false);
         setLastSaved(new Date());
+
+        // Update local ref to avoid re-uploading if clicked again immediately?
+        // Ideally we should update Child state with new URL.
+        // But ReportTemplate is uncontrolled for photo usually.
+        // We won't force update child for now, assume user navigates away or keeps editing text.
+        // If they click Save again, it's still "data:"... that's wasteful.
+        // We should update the ref or reload?
+        if (d.mainPhoto.startsWith('data:')) {
+            if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+        }
     }
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading Report...</div>;
@@ -114,7 +175,8 @@ export default function ReportEditor() {
                         disabled={saving}
                         className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-bold flex items-center gap-2 transition-all"
                     >
-                        <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                        {saving ? <UploadCloud size={16} className="animate-bounce" /> : <Save size={16} />}
+                        {saving ? 'Saving...' : 'Save'}
                     </button>
                     <button
                         onClick={() => window.print()}
