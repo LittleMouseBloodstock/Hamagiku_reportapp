@@ -1,5 +1,4 @@
-'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
@@ -8,7 +7,9 @@ import Link from 'next/link';
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [horse, setHorse] = useState<Record<string, any> | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [reports, setReports] = useState<Record<string, any>[]>([]);
     const [loading, setLoading] = useState(true);
 

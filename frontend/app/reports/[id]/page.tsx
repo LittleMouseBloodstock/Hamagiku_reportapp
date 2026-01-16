@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
@@ -67,7 +67,7 @@ export default function ReportEditor() {
             const blob = await res.blob();
 
             // Upload to Supabase Storage
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from('report-assets')
                 .upload(path, blob, { upsert: true });
 
@@ -94,7 +94,7 @@ export default function ReportEditor() {
         const d = reportDataRef.current;
 
         let mainPhotoUrl = d.mainPhoto;
-        const logoUrl = d.logo; // If we supported logo saving to DB
+        // const logoUrl = d.logo; // Unused
 
         // Check if mainPhoto is new (Base64)
         if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {
