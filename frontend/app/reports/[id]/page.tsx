@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
+export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
