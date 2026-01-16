@@ -20,10 +20,6 @@ export default function ReportEditor() {
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
 
-    useEffect(() => {
-        if (id) fetchReportData();
-    }, [id]);
-
     async function fetchReportData() {
         const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
         if (error || !report) {
@@ -53,6 +49,10 @@ export default function ReportEditor() {
 
         setLoading(false);
     }
+
+    useEffect(() => {
+        if (id) fetchReportData();
+    }, [id]);
 
     const handleDataChange = useCallback((data: ReportData) => {
         reportDataRef.current = data;

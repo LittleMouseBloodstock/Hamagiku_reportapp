@@ -12,10 +12,6 @@ export default function HorseDetail() {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (id) fetchData();
-    }, [id]);
-
     async function fetchData() {
         // 1. Fetch Horse
         const { data: horseData } = await supabase.from('horses').select('*').eq('id', id).single();
@@ -31,6 +27,10 @@ export default function HorseDetail() {
         if (reportsData) setReports(reportsData);
         setLoading(false);
     }
+
+    useEffect(() => {
+        if (id) fetchData();
+    }, [id]);
 
     async function createReport() {
         if (!horse) return;
