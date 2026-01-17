@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Dashboard() {
     const { language, setLanguage, t } = useLanguage();
@@ -66,11 +67,16 @@ export default function Dashboard() {
     return (
         <div className="flex h-screen w-full bg-background-light text-stone-850 font-sans antialiased overflow-hidden">
             <aside className="w-20 lg:w-64 flex flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
-                <div className="h-24 flex items-center justify-center lg:justify-start lg:px-8">
-                    <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
-                        <span className="material-symbols-outlined text-xl">spa</span>
+                <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
+                    <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
+                        <Image
+                            src="/Hamagiku Logo.png"
+                            alt="Hamagiku Farm"
+                            fill
+                            className="object-contain object-left"
+                            priority
+                        />
                     </div>
-                    <span className="hidden lg:block ml-3 font-display font-bold text-xl tracking-tight text-primary-dark">Hamagiku Farm</span>
                 </div>
                 <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
                     <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">

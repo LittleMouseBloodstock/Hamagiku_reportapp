@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
@@ -10,7 +10,9 @@ import LanguageToggle from '@/components/LanguageToggle';
 
 export default function ReportEditor() {
     const { id } = useParams();
-    // const router = useRouter(); // Unused
+    const router = useRouter();
+    const isNew = id === 'new';
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -19,6 +21,10 @@ export default function ReportEditor() {
     const [initialData, setInitialData] = useState<Partial<ReportData>>({});
     const [horseId, setHorseId] = useState<string | null>(null);
 
+    // Horse Selection (for New Reports)
+    const [showHorseSelector, setShowHorseSelector] = useState(false);
+    const [horses, setHorses] = useState<{ id: string, name: string }[]>([]);
+
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
 
@@ -26,9 +32,39 @@ export default function ReportEditor() {
         if (!id) return;
 
         const fetchReportData = async () => {
+            if (isNew) {
+                // Determine horseId from URL params (if linked from Horse Detail)
+                const params = new URLSearchParams(window.location.search);
+                const paramHorseId = params.get('horseId');
+
+                if (paramHorseId) {
+                    setHorseId(paramHorseId);
+                    // Fetch horse details to prepopulate
+                    const { data: horse } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
+                    setInitialData({
+                        horseName: horse?.name || '',
+                        horseNameEn: horse?.name_en || '',
+                        sire: horse?.sire || '',
+                        dam: horse?.dam || '',
+                        mainPhoto: horse?.photo_url || '',
+                        weight: '', training: '', condition: '', target: '', comment: ''
+                    });
+                    setLoading(false);
+                } else {
+                    // No horse selected, fetch list and show selector
+                    const { data: allHorses } = await supabase.from('horses').select('id, name').order('name');
+                    if (allHorses) setHorses(allHorses);
+                    setShowHorseSelector(true);
+                    setLoading(false);
+                }
+                return;
+            }
+
+            // Existing Report Logic
             const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
             if (error || !report) {
                 console.error("Report not found");
+                // Handle 404 gracefully?
                 return;
             }
 
@@ -56,7 +92,24 @@ export default function ReportEditor() {
         };
 
         fetchReportData();
-    }, [id]);
+    }, [id, isNew]);
+
+    const handleSelectHorse = async (selectedHorseId: string) => {
+        setHorseId(selectedHorseId);
+        setShowHorseSelector(false);
+        setLoading(true);
+        // Fetch horse details
+        const { data: horse } = await supabase.from('horses').select('*').eq('id', selectedHorseId).single();
+        setInitialData({
+            horseName: horse?.name || '',
+            horseNameEn: horse?.name_en || '',
+            sire: horse?.sire || '',
+            dam: horse?.dam || '',
+            mainPhoto: horse?.photo_url || '',
+            weight: '', training: '', condition: '', target: '', comment: ''
+        });
+        setLoading(false);
+    };
 
     const handleDataChange = useCallback((data: ReportData) => {
         reportDataRef.current = data;
@@ -92,47 +145,65 @@ export default function ReportEditor() {
 
     async function saveReport() {
         if (!reportDataRef.current || !id) return;
+        if (!horseId) {
+            alert("No horse selected!");
+            return;
+        }
+
         setSaving(true);
         const d = reportDataRef.current;
 
         let mainPhotoUrl = d.mainPhoto;
         // const logoUrl = d.logo; // Unused
 
-        // Check if mainPhoto is new (Base64)
+        // Check if mainPhoto is new (Base64) - only upload if changed
         if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {
             const fileName = `main_${Date.now()}.jpg`;
-            const path = `${horseId}/${id}/${fileName}`;
+            // If new, temporary ID usage might be tricky for path, but we can use 'new' folder or just horseId
+            // Better to use a UUID if creating new... but let's stick to simple path for now.
+            // If ID is new, we don't have a report ID yet.
+            // We can generate one or just use a timestamp in path.
+            const reportPathId = isNew ? `temp_${Date.now()}` : id;
+            const path = `${horseId}/${reportPathId}/${fileName}`;
+
             const uploadedUrl = await uploadImage(d.mainPhoto, path);
             if (uploadedUrl) mainPhotoUrl = uploadedUrl;
         }
 
-        // Update Report
-        const { error: rError } = await supabase.from('reports').update({
+        const payload = {
+            horse_id: horseId, // Ensure horse_id is set
             body: d.comment,
-            weight: parseFloat(d.weight.replace(/[^0-9.]/g, '')),
+            weight: parseFloat(d.weight.replace(/[^0-9.]/g, '') || '0'),
             status_training: d.training,
             condition: d.condition,
             target: d.target,
             main_photo_url: mainPhotoUrl,
             updated_at: new Date().toISOString()
-        }).eq('id', id);
+        };
 
-        if (rError) {
-            console.error("Save Error:", rError);
-            alert("Error saving report");
+        let resultError = null;
+        let newReportId = null;
+
+        if (isNew) {
+            // INSERT
+            const { data, error } = await supabase.from('reports').insert(payload).select().single();
+            resultError = error;
+            if (data) newReportId = data.id;
+        } else {
+            // UPDATE
+            const { error } = await supabase.from('reports').update(payload).eq('id', id);
+            resultError = error;
+        }
+
+        if (resultError) {
+            console.error("Save Error:", resultError);
+            alert("Error saving report: " + resultError.message);
             setSaving(false);
             return;
         }
 
         // Update Horse (Name/Sire/Dam/Photo if changed)
         if (horseId) {
-            // Check if we should update horse photo (only if it was empty or creating new?)
-            // For now, if Report Photo is uploaded, we MIGHT want to update Horse Photo if it's the latest?
-            // User requirement: "Latest photo as thumbnail".
-            // So yes, we should update horse photoURL if we uploaded a new one.
-            // Or only if horse photo is empty.
-            // Let's update it for now to keep it fresh.
-
             await supabase.from('horses').update({
                 name: d.horseName,
                 name_en: d.horseNameEn,
@@ -146,29 +217,50 @@ export default function ReportEditor() {
         setSaving(false);
         setLastSaved(new Date());
 
-        // Update local ref to avoid re-uploading if clicked again immediately?
-        // Ideally we should update Child state with new URL.
-        // But ReportTemplate is uncontrolled for photo usually.
-        // We won't force update child for now, assume user navigates away or keeps editing text.
-        // If they click Save again, it's still "data:"... that's wasteful.
-        // We should update the ref or reload?
-        if (d.mainPhoto.startsWith('data:')) {
-            if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+        if (isNew && newReportId) {
+            // Redirect to the new ID so future saves are updates
+            router.replace(`/reports/${newReportId}`);
+        } else {
+            if (d.mainPhoto.startsWith('data:')) {
+                if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+            }
         }
     }
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading Report...</div>;
+
+    if (showHorseSelector) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
+                <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+                    <h2 className="text-xl font-bold mb-4 text-gray-800">Select a Horse</h2>
+                    <p className="text-gray-500 mb-6 text-sm">Please select a horse to create a report for.</p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {horses.map(h => (
+                            <button
+                                key={h.id}
+                                onClick={() => handleSelectHorse(h.id)}
+                                className="w-full text-left p-3 hover:bg-gray-50 border rounded transition-colors"
+                            >
+                                {h.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block bg-gray-100">
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-4 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
                 <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start gap-4">
-                    <Link href={`/horses/${horseId}`} className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                    <Link href={`/dashboard`} className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
                         <ArrowLeft size={20} /> <span className="sm:hidden text-xs">Back</span>
                     </Link>
                     <div className="flex flex-col">
-                        <span className="font-bold text-sm">Report Editor</span>
+                        <span className="font-bold text-sm">{isNew ? 'New Report' : 'Report Editor'}</span>
                         {lastSaved && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Check size={8} /> Saved {lastSaved.toLocaleTimeString()}</span>}
                     </div>
                     <div className="sm:hidden">
