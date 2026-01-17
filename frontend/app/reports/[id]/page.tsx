@@ -321,7 +321,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full flex justify-center no-scrollbar">
+            <div className="w-full flex justify-center overflow-x-auto pb-8">
                 <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
             </div>
         </div>

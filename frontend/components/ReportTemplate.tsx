@@ -365,140 +365,136 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
             </div>
 
             {/* --- Right Side: Preview Area (Only this is shown in Print) --- */}
-            <div className="flex-1 p-8 overflow-auto flex justify-center print:bg-white print:p-0 print:block bg-gray-200">
+            <div className="flex-1 bg-gray-200/50 p-4 md:p-8 overflow-y-auto flex justify-center items-start">
 
                 {/* A4 Container */}
-                <div className="print-area bg-white shadow-2xl mx-auto flex flex-col relative"
+                <div
+                    id="report-preview"
+                    className="report-preview bg-white shadow-2xl relative flex flex-col mx-auto"
                     style={{
                         width: '210mm',
-                        minHeight: '297mm',
-                        padding: '12mm 15mm'
-                    }}>
-
-                    {/* Header Area */}
-                    <header className="flex flex-col items-center mb-8">
-                        {/* Logo Image */}
-                        <div className="mb-4 relative w-[80px] h-[80px]">
+                        minHeight: '297mm', // A4 Height
+                        padding: '12mm 15mm',
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    {/* Watermark Logo (Centered Top, Semi-Transparent) */}
+                    <div className="absolute top-0 left-0 right-0 h-[250px] flex justify-center pointer-events-none z-0 mt-12">
+                        <div className="relative w-[140px] h-[140px] opacity-40">
                             <img
                                 src="/HamagikuLogoSVG.svg"
-                                alt="Hamagiku Farm Logo"
+                                alt="Logo"
                                 className="w-full h-full object-contain"
                             />
                         </div>
-
-                        <h1 className="text-3xl font-serif-en tracking-widest text-[#1B3226] font-bold uppercase mb-1">
-                            Hamagiku Farm
-                        </h1>
-                        <div className="flex items-center gap-4 text-xs font-serif-en text-gray-400 tracking-[0.2em] uppercase">
-                            <span>Monthly Report</span>
-                            <span className="w-1 h-1 rounded-full bg-[#8CC63F]"></span>
-                            <span>{data.reportDate}</span>
-                        </div>
-                    </header>
-
-                    {/* Horse Profile */}
-                    <div className="mb-6 text-center">
-                        <h2 className="text-4xl font-serif-en text-[#1B3226] font-bold mb-1">{data.horseNameEn}</h2>
-                        <p className="text-lg font-serif-jp text-gray-500 mb-4">{data.horseNameJp}</p>
-
-                        <div className="inline-flex items-center justify-center gap-8 border-y border-gray-100 py-2 px-8">
-                            <div className="text-center">
-                                <span className="block text-[10px] uppercase text-gray-400 font-sans tracking-wider">Sire</span>
-                                <span className="block font-serif-en text-lg text-[#1B3226]">{data.sire}</span>
-                            </div>
-                            <div className="h-8 w-px bg-gray-200 rotate-12"></div>
-                            <div className="text-center">
-                                <span className="block text-[10px] uppercase text-gray-400 font-sans tracking-wider">Dam</span>
-                                <span className="block font-serif-en text-lg text-[#1B3226]">{data.dam}</span>
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Main Photo */}
-                    <div className="w-full h-80 mb-8 rounded-sm overflow-hidden shadow-sm relative group bg-gray-100">
-                        <img
-                            src={data.mainPhoto}
-                            alt={data.horseNameEn}
-                            className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 border border-black/5 pointer-events-none"></div>
-                    </div>
+                    {/* Content Wrapper (z-10) */}
+                    <div className="relative z-10 flex flex-col h-full font-serif-jp text-[#1B3226]">
 
-                    {/* Status & Graph Area */}
-                    <div className="grid grid-cols-12 gap-8 mb-10">
-                        {/* Left: Status Cards (4 cols) */}
-                        <div className="col-span-5 grid grid-cols-2 gap-3">
-                            {/* Status Card */}
-                            <div className="bg-[#F9FAFB] p-3 rounded border border-gray-100 flex flex-col items-center justify-center aspect-square text-center">
-                                <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Status</span>
-                                <span className="font-serif-jp text-lg font-bold text-[#1B3226] leading-tight">{data.statusJp}</span>
-                                <span className="text-xs text-[#8CC63F] font-serif-en mt-1">{data.statusEn}</span>
+                        {/* Header: Date & Title (Minimal) */}
+                        <div className="text-right text-xs font-serif-en tracking-[0.2em] text-gray-400 mb-10 border-b border-gray-100 pb-2">
+                            {data.reportDate} | HAMAGIKU FARM REPORT
+                        </div>
+
+                        {/* Profile Section */}
+                        <div className="flex flex-col items-center mb-10 text-center">
+                            {/* Horse Names */}
+                            <h1 className="text-4xl md:text-5xl font-bold mb-2 tracking-wide text-[#1B3226] font-serif-jp">
+                                {data.horseNameJp || '（馬名を入力）'}
+                            </h1>
+                            <h2 className="text-xl font-serif-en text-gray-500 mb-6 italic font-light tracking-wide">
+                                {data.horseNameEn || '(Horse Name)'}
+                            </h2>
+
+                            {/* Pedigree */}
+                            <div className="flex items-center gap-6 text-sm tracking-wider text-gray-600 border-t border-b border-gray-100 py-3 px-12">
+                                <span className="font-serif-en">Sire: <span className="font-bold text-[#1B3226] ml-2">{data.sire}</span></span>
+                                <span className="text-gray-300">×</span>
+                                <span className="font-serif-en">Dam: <span className="font-bold text-[#1B3226] ml-2">{data.dam}</span></span>
                             </div>
+                        </div>
 
-                            {/* Weight Card */}
-                            <div className="bg-[#F9FAFB] p-3 rounded border border-gray-100 flex flex-col items-center justify-center aspect-square text-center">
-                                <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Weight</span>
-                                <span className="font-serif-en text-2xl font-bold text-[#1B3226]">{data.weight}</span>
-                            </div>
+                        {/* Main Photo */}
+                        <div className="w-full h-[380px] bg-gray-50 mb-10 relative overflow-hidden rounded-sm shadow-sm group">
+                            {data.mainPhoto ? (
+                                <img
+                                    src={data.mainPhoto}
+                                    alt="Main"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center w-full h-full text-gray-300 bg-gray-100 font-serif-en italic">
+                                    No Photo Selected
+                                </div>
+                            )}
+                        </div>
 
-                            {/* Training/Target Card */}
-                            <div className="bg-[#F9FAFB] p-3 rounded border border-gray-100 flex flex-col items-center justify-center aspect-square col-span-2 flex-row gap-4 text-center">
+                        {/* Stats & Graph Row */}
+                        <div className="flex flex-row gap-10 mb-10 h-[160px]">
+                            {/* Stats Grid - Minimalist */}
+                            <div className="flex-1 grid grid-cols-2 gap-y-6 content-start pt-2">
                                 <div>
-                                    <span className="text-[10px] text-gray-400 uppercase tracking-widest block">Next Target</span>
-                                    <span className="font-serif-jp text-lg font-bold text-[#1B3226] mt-1">{data.targetJp}</span>
+                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Weight</div>
+                                    <div className="text-3xl font-bold font-serif-en text-[#1B3226]">{data.weight || '-'}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Total Status</div>
+                                    <div className="text-lg font-bold text-[#1B3226]">{data.statusJp || '-'}</div>
+                                    <div className="text-xs text-gray-400 italic font-serif-en">{data.statusEn}</div>
+                                </div>
+                                <div className="col-span-2">
+                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Next Target</div>
+                                    <div className="text-md font-bold text-[#1B3226]">{data.targetJp || '-'}</div>
+                                    <div className="text-xs text-gray-400 italic font-serif-en">{data.targetEn}</div>
+                                </div>
+                            </div>
+
+                            {/* Chart Area */}
+                            <div className="flex-[1.4] w-full h-full border-l border-gray-100 pl-8">
+                                <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">Weight History</div>
+                                <div className="h-full relative">
+                                    <SimpleLineChart data={data.weightHistory} color="#1B3226" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right: Graph Area (7 cols) */}
-                        <div className="col-span-7 flex flex-col justify-between">
-                            <div className="flex justify-between items-end mb-2 border-b border-gray-100 pb-2">
-                                <h3 className="text-sm font-serif-en font-bold text-[#1B3226] uppercase tracking-widest">Weight Progression</h3>
-                                <span className="text-xs text-[#8CC63F] font-serif-en">Recent 4 Months</span>
-                            </div>
-                            <div className="flex-1 bg-white relative">
-                                <SimpleLineChart data={data.weightHistory} color={colors.limeGreen} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Comment Area */}
-                    <div className="flex-1">
-                        <div className="border-t-2 border-[#1B3226] mb-4"></div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* English Comment */}
-                            <div>
-                                <h4 className="text-xs font-bold text-[#8CC63F] uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    Manager&apos;s Comment
-                                </h4>
-                                <p className="font-body-en text-lg text-gray-700 leading-relaxed italic">
-                                    &quot;{data.commentEn}&quot;
-                                </p>
-                            </div>
-
+                        {/* Comments Section */}
+                        <div className="flex-1 flex flex-col gap-8">
                             {/* Japanese Comment */}
-                            <div>
-                                <h4 className="text-xs font-bold text-gray-300 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    牧場長コメント
-                                </h4>
-                                <p className="font-serif-jp text-sm text-gray-600 leading-8 text-justify">
+                            <div className="relative">
+                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#1B3226] mb-3 pl-3 border-l-2 border-[#1B3226]">
+                                    Condition & Training
+                                </h3>
+                                <p className="text-[14px] leading-8 text-justify text-gray-800 whitespace-pre-wrap font-serif-jp pl-1">
                                     {data.commentJp}
                                 </p>
                             </div>
+
+                            {/* English Comment */}
+                            {data.commentEn && (
+                                <div className="relative">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 pl-3 border-l-2 border-gray-200">
+                                        Trainer's Comment (EN)
+                                    </h3>
+                                    <p className="text-[14px] leading-7 text-justify text-gray-600 whitespace-pre-wrap font-serif-en italic pl-1">
+                                        &quot;{data.commentEn}&quot;
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Logo/Brand - Minimal */}
+                        <div className="mt-auto pt-10 border-t border-gray-100 flex justify-between items-end opacity-70">
+                            <div className="flex items-center gap-3">
+                                <img src="/HamagikuLogoSVG.svg" className="w-6 h-6 object-contain opacity-50" alt="Small Logo" />
+                                <span className="text-[9px] font-bold tracking-[0.2em] text-[#1B3226] uppercase">Hamagiku Farm</span>
+                            </div>
+                            <div className="text-[9px] text-gray-400 font-serif-en tracking-widest">
+                                {new Date().getFullYear()} OFFICIAL REPORT
+                            </div>
                         </div>
                     </div>
-
-                    {/* Footer */}
-                    <footer className="mt-auto pt-8 border-t border-gray-100 flex justify-between items-end">
-                        <div className="text-[10px] text-gray-400 font-sans tracking-wider">
-                            CONFIDENTIAL REPORT FOR OWNERS
-                        </div>
-                        <div className="text-right">
-                            <div className="text-lg font-serif-en font-bold text-[#1B3226]">HAMAGIKU FARM</div>
-                            <div className="text-[10px] text-gray-400 tracking-widest">www.hamagikufarm.com</div>
-                        </div>
-                    </footer>
                 </div>
             </div>
         </div>
