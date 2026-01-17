@@ -5,9 +5,10 @@
   --color-primary-dark: #1F3F29;
   --color-accent-beige: #E8E6DE;
   --color-background-light: #FDFCF8;
-  --color-background-dark: #162111;
+  --color-background-dark: #FDFCF8;
+  /* Force white background in dark mode */
   --color-stone-850: #1A2E22;
-  
+
   --font-display: 'Newsreader', serif;
   --font-sans: 'Noto Sans JP', 'Noto Sans', sans-serif;
 
