@@ -70,7 +70,7 @@ export default function Dashboard() {
                 <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
                     <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
                         <Image
-                            src="/Hamagiku Logo.png"
+                            src="/HamagikuLogoSVG.svg"
                             alt="Hamagiku Farm"
                             fill
                             className="object-contain object-left"

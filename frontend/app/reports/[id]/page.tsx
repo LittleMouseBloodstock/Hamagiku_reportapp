@@ -36,18 +36,23 @@ export default function ReportEditor() {
                 // Determine horseId from URL params (if linked from Horse Detail)
                 const params = new URLSearchParams(window.location.search);
                 const paramHorseId = params.get('horseId');
+                const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
 
                 if (paramHorseId) {
                     setHorseId(paramHorseId);
                     // Fetch horse details to prepopulate
                     const { data: horse } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
                     setInitialData({
-                        horseName: horse?.name || '',
+                        reportDate: defaultDate,
+                        horseNameJp: horse?.name || '',
                         horseNameEn: horse?.name_en || '',
                         sire: horse?.sire || '',
                         dam: horse?.dam || '',
                         mainPhoto: horse?.photo_url || '',
-                        weight: '', training: '', condition: '', target: '', comment: ''
+                        statusEn: 'Training', statusJp: '調整中',
+                        weight: '', targetEn: '', targetJp: '',
+                        commentEn: '', commentJp: '',
+                        weightHistory: []
                     });
                     setLoading(false);
                 } else {
@@ -64,7 +69,6 @@ export default function ReportEditor() {
             const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
             if (error || !report) {
                 console.error("Report not found");
-                // Handle 404 gracefully?
                 return;
             }
 
@@ -73,17 +77,30 @@ export default function ReportEditor() {
 
             setHorseId(report.horse_id);
 
+            // Parse metrics_json for extra fields
+            const metrics = report.metrics_json || {};
+
             // Map DB to ReportData
             setInitialData({
-                horseName: horse?.name || '',
+                reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
+                horseNameJp: horse?.name || '',
                 horseNameEn: horse?.name_en || '',
                 sire: horse?.sire || '',
                 dam: horse?.dam || '',
-                comment: report.body || '',
+
+                commentJp: report.body || '',
+                commentEn: metrics.commentEn || '',
+
                 weight: report.weight ? `${report.weight} kg` : '',
-                training: report.status_training || '',
-                condition: report.condition || '',
-                target: report.target || '',
+
+                statusJp: report.status_training || '',
+                statusEn: metrics.statusEn || '',
+
+                targetJp: report.target || '',
+                targetEn: metrics.targetEn || '',
+
+                weightHistory: metrics.weightHistory || [],
+
                 mainPhoto: report.main_photo_url || horse?.photo_url || '',
                 logo: null
             });
@@ -98,15 +115,21 @@ export default function ReportEditor() {
         setHorseId(selectedHorseId);
         setShowHorseSelector(false);
         setLoading(true);
+        const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
+
         // Fetch horse details
         const { data: horse } = await supabase.from('horses').select('*').eq('id', selectedHorseId).single();
         setInitialData({
-            horseName: horse?.name || '',
+            reportDate: defaultDate,
+            horseNameJp: horse?.name || '',
             horseNameEn: horse?.name_en || '',
             sire: horse?.sire || '',
             dam: horse?.dam || '',
             mainPhoto: horse?.photo_url || '',
-            weight: '', training: '', condition: '', target: '', comment: ''
+            statusEn: 'Training', statusJp: '調整中',
+            weight: '', targetEn: '', targetJp: '',
+            commentEn: '', commentJp: '',
+            weightHistory: []
         });
         setLoading(false);
     };
@@ -159,10 +182,6 @@ export default function ReportEditor() {
         // Check if mainPhoto is new (Base64) - only upload if changed
         if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {
             const fileName = `main_${Date.now()}.jpg`;
-            // If new, temporary ID usage might be tricky for path, but we can use 'new' folder or just horseId
-            // Better to use a UUID if creating new... but let's stick to simple path for now.
-            // If ID is new, we don't have a report ID yet.
-            // We can generate one or just use a timestamp in path.
             const reportPathId = isNew ? `temp_${Date.now()}` : id;
             const path = `${horseId}/${reportPathId}/${fileName}`;
 
@@ -170,13 +189,22 @@ export default function ReportEditor() {
             if (uploadedUrl) mainPhotoUrl = uploadedUrl;
         }
 
+        // Pack extra fields into metrics_json
+        const metricsJson = {
+            commentEn: d.commentEn,
+            statusEn: d.statusEn,
+            targetEn: d.targetEn,
+            weightHistory: d.weightHistory
+        };
+
         const payload = {
             horse_id: horseId, // Ensure horse_id is set
-            body: d.comment,
+            title: d.reportDate, // Store report date in title
+            body: d.commentJp,
             weight: parseFloat(d.weight.replace(/[^0-9.]/g, '') || '0'),
-            status_training: d.training,
-            condition: d.condition,
-            target: d.target,
+            status_training: d.statusJp, // Map statusJp to status_training
+            target: d.targetJp, // Map targetJp to target
+            metrics_json: metricsJson,
             main_photo_url: mainPhotoUrl,
             updated_at: new Date().toISOString()
         };
@@ -205,7 +233,7 @@ export default function ReportEditor() {
         // Update Horse (Name/Sire/Dam/Photo if changed)
         if (horseId) {
             await supabase.from('horses').update({
-                name: d.horseName,
+                name: d.horseNameJp,
                 name_en: d.horseNameEn,
                 sire: d.sire,
                 dam: d.dam,
@@ -218,7 +246,6 @@ export default function ReportEditor() {
         setLastSaved(new Date());
 
         if (isNew && newReportId) {
-            // Redirect to the new ID so future saves are updates
             router.replace(`/reports/${newReportId}`);
         } else {
             if (d.mainPhoto.startsWith('data:')) {
@@ -289,17 +316,14 @@ export default function ReportEditor() {
                 </div>
             </div>
 
-            {/* Main Report Wrapper for Mobile Scrolling */}
-            <div className="w-full overflow-x-auto pb-10 px-0 sm:px-4 flex justify-center no-scrollbar">
-                <div className="min-w-[210mm] origin-top scale-[0.45] sm:scale-75 md:scale-100 transition-transform duration-300">
-                    <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
-                </div>
-            </div>
+            {/* Main Report Wrapper - Adjusted for Split View Compatibility */}
+            {/* The ReportTemplate now has its own split view, so we need to enable full width here and remove centralized scaling for desktop, keep mobile scaling? */}
+            {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
+               So we should just let it be full width. */}
 
-            {/* Mobile Scale Hint */}
-            <p className="sm:hidden text-xs text-gray-400 mt-[-50%] text-center no-print">
-                Preview scaled for mobile. PDF output will be A4.
-            </p>
+            <div className="w-full flex justify-center no-scrollbar">
+                <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+            </div>
         </div>
     );
 }
