@@ -14,8 +14,37 @@ interface Translations {
 const translations: Translations = {
     // Dashboard
     dashboardTitle: { ja: "レポート管理ダッシュボード", en: "Report Management Dashboard" },
+    reportInventory: { ja: "レポート一覧", en: "Report Inventory" },
+    dashboard: { ja: "ダッシュボード", en: "Dashboard" },
+    clients: { ja: "クライアント", en: "Clients" },
+    settings: { ja: "設定", en: "Settings" },
+
+    // Dashboard Header
+    deliverables: { ja: "Deliverables", en: "Deliverables" }, // Kept as English in JP design
+    manageReportsDesc: { ja: "多言語レポートの作成と管理をここで行えます。", en: "Manage and track your multilingual client deliverables across all regions." },
+    createReportBtn: { ja: "レポート作成", en: "Create Report" },
+
+    // Filters
+    searchPlaceholder: { ja: "馬名またはIDで検索", en: "Search by horse name or ID..." },
+    statusAll: { ja: "ステータス: すべて", en: "Status: All" },
+    languageAll: { ja: "言語: すべて", en: "Language: All" },
+
+    // Table Headers
+    reportTitle: { ja: "レポート名", en: "Report Title" },
+    created: { ja: "作成日", en: "Created" },
+    status: { ja: "ステータス", en: "Status" },
+    language: { ja: "言語", en: "Language" },
+    action: { ja: "操作", en: "Action" },
+
+    // Table Statuses
+    published: { ja: "公開済み", en: "Published" },
+    draft: { ja: "下書き", en: "Draft" },
+    review: { ja: "レビュー中", en: "Review" },
+
+    // Pagination
+    showingReports: { ja: "全24件中 1-5件を表示", en: "Showing 1-5 of 24 reports" },
+
     newReport: { ja: "新規レポート作成", en: "Create New Report" },
-    searchPlaceholder: { ja: "馬名で検索...", en: "Search by horse name..." },
     loading: { ja: "読み込み中...", en: "Loading..." },
 
     // Columns
@@ -43,7 +72,6 @@ const translations: Translations = {
     dam: { ja: "母", en: "Dam" },
     age: { ja: "年齢", en: "Age" },
     weight: { ja: "体重", en: "Weight" },
-    status: { ja: "現況", en: "Status" },
     comment: { ja: "コメント", en: "Comment" },
 };
 

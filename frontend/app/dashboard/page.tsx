@@ -1,224 +1,228 @@
 'use client';
-import { useEffect, useState } from 'react';
-export const runtime = 'edge';
-import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
-import { Search, Plus, FileText, Calendar, Activity, ChevronRight, Menu, Grid, Users, FileStack, Settings, LogOut } from 'lucide-react';
-import LanguageToggle from '@/components/LanguageToggle';
 
-type Horse = {
-    id: string;
-    name: string;
-    name_en: string;
-    photo_url: string | null;
-    sire: string;
-    dam: string;
-    updated_at: string;
-};
+import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Dashboard() {
-    const [horses, setHorses] = useState<Horse[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [refreshKey, setRefreshKey] = useState(0);
+    const { language, setLanguage, t } = useLanguage();
 
-    useEffect(() => {
-        const fetchHorses = async () => {
-            const { data, error } = await supabase
-                .from('horses')
-                .select('*')
-                .order('updated_at', { ascending: false });
-
-            if (error) console.error(error);
-            if (data) setHorses(data);
-            setLoading(false);
-        };
-        fetchHorses();
-    }, [refreshKey]);
-
-    async function createHorse() {
-        const name = prompt("馬名を入力してください (例: テンコーウィナー)");
-        if (!name) return;
-
-        const { error } = await supabase
-            .from('horses')
-            .insert([{ name, updated_at: new Date().toISOString() }]);
-
-        if (error) {
-            console.error(error);
-            alert("エラーが発生しました");
-        } else {
-            setRefreshKey(prev => prev + 1);
+    // Mock data based on the HTML provided
+    const reports = [
+        {
+            id: 1,
+            title: language === 'ja' ? "ハマギク" : "Hamagiku",
+            created: "Oct 24, 2023",
+            createdUnix: 1698111600,
+            author: "Sarah Jenkins",
+            status: "published",
+            languages: ["EN", "JP"]
+        },
+        {
+            id: 2,
+            title: language === 'ja' ? "ハマギクスター" : "Hamagiku Star",
+            created: "Oct 22, 2023",
+            createdUnix: 1697938800,
+            author: "Kenji Sato",
+            status: "draft",
+            languages: ["JP"]
+        },
+        {
+            id: 3,
+            title: language === 'ja' ? "グリーンフォレスト" : "Green Forest",
+            created: "Oct 15, 2023",
+            createdUnix: 1697334000,
+            author: "Eleanor Pena",
+            status: "review",
+            languages: ["EN"]
+        },
+        {
+            id: 4,
+            title: language === 'ja' ? "ハマギクプライド" : "Hamagiku Pride",
+            created: "Oct 10, 2023",
+            createdUnix: 1696902000,
+            author: "Sarah Jenkins",
+            status: "published",
+            languages: ["EN"]
+        },
+        {
+            id: 5,
+            title: language === 'ja' ? "オータムリーフ" : "Autumn Leaf",
+            created: "Oct 05, 2023",
+            createdUnix: 1696470000,
+            author: "Pierre Dubois",
+            status: "draft",
+            languages: ["FR", "EN"]
         }
-    }
+    ];
 
-    const filteredHorses = horses.filter(h =>
-        h.name.includes(search) || h.name_en?.toLowerCase().includes(search.toLowerCase())
-    );
+    const toggleLanguage = () => {
+        setLanguage(language === 'ja' ? 'en' : 'ja');
+    };
 
     return (
-        <div className="flex min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display text-[#141514] dark:text-gray-100 transition-colors duration-200">
-            {/* Sidebar */}
-            <aside className="hidden lg:flex w-72 flex-col justify-between border-r border-gray-200 dark:border-gray-800 bg-surface-light dark:bg-surface-dark transition-all duration-300">
-                <div className="flex flex-col h-full">
-                    {/* Header */}
-                    <div className="p-6 pb-2">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="bg-primary/10 p-2 rounded-xl">
-                                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
-                            </div>
-                            <div className="flex flex-col">
-                                <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Hamagiku Report</h1>
-                                <p className="text-slate-custom text-xs font-medium uppercase tracking-wider">Pro Edition</p>
-                            </div>
-                        </div>
-                        {/* Navigation */}
-                        <nav className="flex flex-col gap-1.5">
-                            <a className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary dark:text-primary-light transition-all duration-200 group relative overflow-hidden" href="#">
-                                <Grid size={20} className="icon-filled" />
-                                <span className="font-semibold text-sm">Dashboard</span>
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"></div>
-                            </a>
-                            <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200" href="#">
-                                <Calendar size={20} />
-                                <span className="font-medium text-sm">Schedule</span>
-                            </a>
-                            <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200" href="#">
-                                <Users size={20} />
-                                <span className="font-medium text-sm">Clients</span>
-                            </a>
-                            <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200" href="#">
-                                <Activity size={20} />
-                                <span className="font-medium text-sm">Horses</span>
-                            </a>
-                            <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200" href="#">
-                                <FileStack size={20} />
-                                <span className="font-medium text-sm">Reports</span>
-                            </a>
-                        </nav>
+        <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-stone-850 dark:text-gray-100 font-sans antialiased overflow-hidden">
+            <aside className="w-20 lg:w-64 flex flex-col justify-between border-r border-stone-200 dark:border-stone-800 bg-[#F5F4F0] dark:bg-stone-900/50 backdrop-blur-sm transition-all duration-300">
+                <div className="h-24 flex items-center justify-center lg:justify-start lg:px-8">
+                    <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
+                        <span className="material-symbols-outlined text-xl">spa</span>
                     </div>
-                    {/* Bottom Section */}
-                    <div className="p-6 mt-auto">
-                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all duration-200 cursor-pointer mb-4">
-                            <Settings size={20} />
-                            <span className="font-medium text-sm">Settings</span>
+                    <span className="hidden lg:block ml-3 font-display font-bold text-xl tracking-tight text-primary-dark dark:text-white">Hamagiku Farm</span>
+                </div>
+                <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
+                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white dark:hover:bg-primary/10 transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
+                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">dashboard</span>
+                        <span className="hidden lg:block text-sm font-medium">{t('dashboard')}</span>
+                    </a>
+                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20" href="#">
+                        <span className="material-symbols-outlined fill-1">article</span>
+                        <span className="hidden lg:block text-sm font-medium">{t('reportInventory')}</span>
+                    </a>
+                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white dark:hover:bg-primary/10 transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
+                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">group</span>
+                        <span className="hidden lg:block text-sm font-medium">{t('clients')}</span>
+                    </a>
+                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white dark:hover:bg-primary/10 transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
+                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">settings</span>
+                        <span className="hidden lg:block text-sm font-medium">{t('settings')}</span>
+                    </a>
+                </nav>
+                <div className="p-4 mt-auto">
+                    <div
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-stone-800 transition-colors cursor-pointer border border-transparent hover:border-stone-200"
+                        onClick={toggleLanguage}
+                        title="Toggle Language"
+                    >
+                        <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 shrink-0 shadow-sm bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                            {language.toUpperCase()}
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <div className="bg-center bg-no-repeat bg-cover rounded-xl size-10 shadow-inner bg-gray-200" />
-                            <div className="flex flex-col overflow-hidden">
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">User</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Admin</p>
-                            </div>
+                        <div className="hidden lg:flex flex-col overflow-hidden">
+                            <h1 className="text-stone-900 dark:text-white text-sm font-semibold truncate">Eleanor Pena</h1>
+                            <p className="text-stone-500 dark:text-stone-400 text-xs truncate">Senior Editor</p>
                         </div>
                     </div>
                 </div>
             </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto relative scroll-smooth">
-                {/* Top Mobile Header */}
-                <div className="lg:hidden flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark sticky top-0 z-20 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
-                        <span className="font-bold text-gray-900 dark:text-white">Hamagiku</span>
-                    </div>
-                    <button className="p-2 text-gray-600 dark:text-gray-300">
-                        <Menu size={24} />
-                    </button>
-                </div>
-
-                <div className="flex-1 w-full max-w-[1200px] mx-auto p-4 md:p-8 lg:p-12 flex flex-col gap-8">
-                    {/* Greeting & Stats Summary */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        <div className="flex flex-col gap-2">
-                            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Good morning, Team</h1>
-                            <p className="text-slate-500 dark:text-slate-400 text-lg">Here is your daily overview.</p>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm font-medium">
-                            <LanguageToggle />
-                        </div>
-                    </div>
-
-                    {/* Search Bar */}
-                    <div className="relative w-full z-10">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Search className="text-primary/70" size={20} />
-                        </div>
-                        <input
-                            className="w-full h-16 pl-12 pr-4 rounded-2xl border-0 bg-white dark:bg-surface-dark text-gray-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/20 shadow-tactile transition-all text-lg"
-                            placeholder="Search horses..."
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <div className="absolute inset-y-0 right-2 flex items-center">
-                            <button
-                                onClick={createHorse}
-                                className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
-                            >
-                                <Plus size={16} /> Add Horse
+            <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-background-light dark:from-background-dark to-transparent pointer-events-none z-10"></div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="max-w-[1200px] mx-auto w-full p-6 lg:p-12 pb-24">
+                        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 relative z-20">
+                            <div className="flex flex-col gap-2 max-w-2xl">
+                                <span className="text-primary font-medium text-sm uppercase tracking-wider mb-1">{t('deliverables')}</span>
+                                <h1 className="text-stone-900 dark:text-white text-4xl lg:text-5xl font-display font-medium leading-tight">
+                                    {t('reportInventory')}
+                                </h1>
+                                <p className="text-stone-500 dark:text-stone-400 text-lg font-light mt-2 max-w-lg">
+                                    {t('manageReportsDesc')}
+                                </p>
+                            </div>
+                            <button className="flex items-center justify-center gap-2 bg-primary dark:bg-white text-white dark:text-stone-900 hover:bg-primary-dark dark:hover:bg-gray-200 transition-all duration-300 px-6 py-3 rounded-full shadow-lg hover:shadow-primary/30 group">
+                                <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform">add</span>
+                                <span className="text-sm font-bold tracking-wide">{t('createReportBtn')}</span>
                             </button>
-                        </div>
-                    </div>
-
-                    {/* Stats Overview Row (Static for MVP) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-between h-32">
-                            <div className="flex items-start justify-between">
-                                <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Horses</span>
-                                <Activity className="text-primary/40" size={20} />
+                        </header>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 sticky top-0 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md py-4 z-30 transition-all border-b border-stone-200/50 dark:border-stone-800/50">
+                            <div className="relative w-full md:max-w-md group">
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-stone-400 group-focus-within:text-primary transition-colors">
+                                    <span className="material-symbols-outlined">search</span>
+                                </div>
+                                <input className="block w-full p-3 pl-10 text-sm text-stone-900 dark:text-white bg-transparent border-b border-stone-300 dark:border-stone-700 focus:border-primary dark:focus:border-primary focus:ring-0 placeholder-stone-400 transition-colors rounded-none" placeholder={t('searchPlaceholder')} type="text" />
                             </div>
-                            <div>
-                                <span className="text-3xl font-bold text-gray-900 dark:text-white">{horses.length}</span>
-                                <span className="text-primary text-xs font-bold ml-2 bg-primary/10 px-1.5 py-0.5 rounded">+Active</span>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="relative group">
+                                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-full hover:border-primary hover:text-primary transition-all shadow-sm">
+                                        <span>{t('statusAll')}</span>
+                                        <span className="material-symbols-outlined text-lg">keyboard_arrow_down</span>
+                                    </button>
+                                </div>
+                                <div className="relative group">
+                                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-full hover:border-primary hover:text-primary transition-all shadow-sm">
+                                        <span>{t('languageAll')}</span>
+                                        <span className="material-symbols-outlined text-lg">keyboard_arrow_down</span>
+                                    </button>
+                                </div>
+                                <button className="p-2 text-stone-400 hover:text-primary transition-colors ml-2" title="Filter Settings">
+                                    <span className="material-symbols-outlined">tune</span>
+                                </button>
                             </div>
                         </div>
-                        {/* Other stats can be placeholders or calculated */}
-                    </div>
-
-                    {/* Horses List (Grid) - Replacing "Today's Schedule" */}
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-1">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Active Horses</h2>
-                        </div>
-
-                        {loading ? (
-                            <div className="text-center py-20 text-gray-400">Loading horses...</div>
-                        ) : filteredHorses.length === 0 ? (
-                            <div className="text-center py-20 text-gray-400">No horses found.</div>
-                        ) : (
-                            <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                {filteredHorses.map(horse => (
-                                    <Link href={`/horses/${horse.id}`} key={horse.id}>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group cursor-pointer">
-                                            <div className="flex items-center gap-4 min-w-[140px]">
-                                                <div className="size-12 rounded-xl bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                                    {horse.photo_url ? (
-                                                        <img src={horse.photo_url} alt={horse.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-400"><Activity size={20} /></div>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">{horse.name}</span>
-                                                    <span className="text-xs text-slate-500">{horse.name_en || '-'}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                                        <span className="text-xs uppercase font-bold text-slate-400">Sire</span> {horse.sire || '-'}
-                                                        <span className="size-1 rounded-full bg-slate-300"></span>
-                                                        <span className="text-xs uppercase font-bold text-slate-400">Dam</span> {horse.dam || '-'}
+                        <div className="w-full">
+                            <div className="overflow-hidden rounded-xl bg-white dark:bg-stone-900 shadow-sm border border-stone-100 dark:border-stone-800">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-stone-100 dark:border-stone-800 text-xs uppercase tracking-wider text-stone-400 font-medium bg-[#FBFBF9] dark:bg-stone-900">
+                                            <th className="px-6 py-5 font-medium w-[40%]">{t('reportTitle')}</th>
+                                            <th className="px-6 py-5 font-medium hidden sm:table-cell">{t('created')}</th>
+                                            <th className="px-6 py-5 font-medium">{t('status')}</th>
+                                            <th className="px-6 py-5 font-medium hidden md:table-cell">{t('language')}</th>
+                                            <th className="px-6 py-5 font-medium text-right">{t('action')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+                                        {reports.map((report) => (
+                                            <tr key={report.id} className="group hover:bg-primary/5 transition-colors duration-200 cursor-pointer">
+                                                <td className="px-6 py-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xl font-display font-medium text-stone-900 dark:text-white group-hover:text-primary transition-colors">{report.title}</span>
+                                                        <span className="text-xs text-stone-400 mt-1 sm:hidden">
+                                                            {report.created} • {report.languages.join('/')}
+                                                        </span>
                                                     </div>
-                                                </div>
-                                                <ChevronRight className="text-slate-300" size={20} />
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))}
+                                                </td>
+                                                <td className="px-6 py-6 text-sm text-stone-500 hidden sm:table-cell">
+                                                    {report.created}
+                                                    <div className="text-xs text-stone-400 mt-0.5">by {report.author}</div>
+                                                </td>
+                                                <td className="px-6 py-6">
+                                                    {report.status === 'published' && (
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-xs font-semibold border border-primary/20 dark:border-primary/30">
+                                                            <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                            {t('published')}
+                                                        </div>
+                                                    )}
+                                                    {report.status === 'draft' && (
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 text-xs font-semibold border border-stone-200 dark:border-stone-700">
+                                                            {t('draft')}
+                                                        </div>
+                                                    )}
+                                                    {report.status === 'review' && (
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs font-semibold border border-orange-100 dark:border-orange-800">
+                                                            <span className="size-1.5 rounded-full bg-orange-400"></span>
+                                                            {t('review')}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-6 hidden md:table-cell">
+                                                    <div className="flex items-center gap-2">
+                                                        {report.languages.map(lang => (
+                                                            <span key={lang} className="px-2 py-1 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs rounded border border-stone-200 dark:border-stone-700 font-medium">
+                                                                {lang}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-6 text-right">
+                                                    <button className="text-stone-400 hover:text-primary p-2 rounded-full hover:bg-white dark:hover:bg-stone-800 transition-all opacity-0 group-hover:opacity-100">
+                                                        <span className="material-symbols-outlined">edit</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900">
+                                    <div className="text-xs text-stone-400">{t('showingReports')}</div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1 rounded-md hover:bg-white dark:hover:bg-stone-800 hover:text-primary text-stone-400 transition-colors disabled:opacity-50">
+                                            <span className="material-symbols-outlined text-lg">chevron_left</span>
+                                        </button>
+                                        <button className="p-1 rounded-md hover:bg-white dark:hover:bg-stone-800 hover:text-primary text-stone-400 transition-colors">
+                                            <span className="material-symbols-outlined text-lg">chevron_right</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </main>
