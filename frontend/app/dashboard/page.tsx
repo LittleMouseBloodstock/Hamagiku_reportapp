@@ -1,64 +1,66 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
     const { language, setLanguage, t } = useLanguage();
-
-    // Mock data based on the HTML provided
-    const reports = [
-        {
-            id: 1,
-            title: language === 'ja' ? "ハマギク" : "Hamagiku",
-            created: "Oct 24, 2023",
-            createdUnix: 1698111600,
-            author: "Sarah Jenkins",
-            status: "published",
-            languages: ["EN", "JP"]
-        },
-        {
-            id: 2,
-            title: language === 'ja' ? "ハマギクスター" : "Hamagiku Star",
-            created: "Oct 22, 2023",
-            createdUnix: 1697938800,
-            author: "Kenji Sato",
-            status: "draft",
-            languages: ["JP"]
-        },
-        {
-            id: 3,
-            title: language === 'ja' ? "グリーンフォレスト" : "Green Forest",
-            created: "Oct 15, 2023",
-            createdUnix: 1697334000,
-            author: "Eleanor Pena",
-            status: "review",
-            languages: ["EN"]
-        },
-        {
-            id: 4,
-            title: language === 'ja' ? "ハマギクプライド" : "Hamagiku Pride",
-            created: "Oct 10, 2023",
-            createdUnix: 1696902000,
-            author: "Sarah Jenkins",
-            status: "published",
-            languages: ["EN"]
-        },
-        {
-            id: 5,
-            title: language === 'ja' ? "オータムリーフ" : "Autumn Leaf",
-            created: "Oct 05, 2023",
-            createdUnix: 1696470000,
-            author: "Pierre Dubois",
-            status: "draft",
-            languages: ["FR", "EN"]
-        }
-    ];
-
     const router = useRouter();
+
+    interface DashboardReport {
+        id: string;
+        title: string;
+        created: string;
+        author: string;
+        status: string;
+        languages: string[];
+    }
+
+    const [reports, setReports] = useState<DashboardReport[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReports = async () => {
+            // Fetch reports with horse name
+            const { data, error } = await supabase
+                .from('reports')
+                .select(`
+                    *,
+                    horses (name, name_en)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching reports:', error);
+            } else {
+                const formatted = data?.map(r => {
+                    // Determine title: Use report title or Horse Name + Date
+                    const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
+                    // Determine languages: Check fields
+                    const langs = [];
+                    if (r.body) langs.push('JP');
+                    if (r.metrics_json?.commentEn) langs.push('EN');
+                    if (langs.length === 0) langs.push('JP'); // default
+
+                    return {
+                        id: r.id, // UUID
+                        title: title,
+                        created: new Date(r.created_at).toLocaleDateString(),
+                        author: 'You', // Placeholder as auth not fully linked to names yet
+                        status: r.status_training ? 'published' : 'draft', // Simple logic
+                        languages: langs
+                    };
+                }) || [];
+                setReports(formatted);
+            }
+            setLoading(false);
+        };
+        fetchReports();
+    }, [language]);
 
     const toggleLanguage = () => {
         setLanguage(language === 'ja' ? 'en' : 'ja');
@@ -169,59 +171,53 @@ export default function Dashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-stone-100">
-                                        {reports.map((report) => (
-                                            <tr
-                                                key={report.id}
-                                                onClick={() => router.push(`/reports/${report.id}`)}
-                                                className="group hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
-                                            >
-                                                <td className="px-6 py-6">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xl font-display font-medium text-stone-900 group-hover:text-primary transition-colors">{report.title}</span>
-                                                        <span className="text-xs text-stone-400 mt-1 sm:hidden">
-                                                            {report.created} • {report.languages.join('/')}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6 text-sm text-stone-500 hidden sm:table-cell">
-                                                    {report.created}
-                                                    <div className="text-xs text-stone-400 mt-0.5">by {report.author}</div>
-                                                </td>
-                                                <td className="px-6 py-6">
-                                                    {report.status === 'published' && (
+                                        {loading ? (
+                                            <tr><td colSpan={5} className="p-6 text-center text-gray-400">Loading reports...</td></tr>
+                                        ) : reports.length === 0 ? (
+                                            <tr><td colSpan={5} className="p-6 text-center text-gray-400">No reports found. Create one!</td></tr>
+                                        ) : (
+                                            reports.map((report) => (
+                                                <tr
+                                                    key={report.id}
+                                                    onClick={() => router.push(`/reports/${report.id}`)}
+                                                    className="group hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
+                                                >
+                                                    <td className="px-6 py-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xl font-display font-medium text-stone-900 group-hover:text-primary transition-colors">{report.title}</span>
+                                                            <span className="text-xs text-stone-400 mt-1 sm:hidden">
+                                                                {report.created} • {report.languages.join('/')}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-6 text-sm text-stone-500 hidden sm:table-cell">
+                                                        {report.created}
+                                                        <div className="text-xs text-stone-400 mt-0.5">by {report.author}</div>
+                                                    </td>
+                                                    <td className="px-6 py-6">
+                                                        {/* Simple Status Badge Logic for now */}
                                                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
                                                             <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
-                                                            {t('published')}
+                                                            {report.status}
                                                         </div>
-                                                    )}
-                                                    {report.status === 'draft' && (
-                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-semibold border border-stone-200">
-                                                            {t('draft')}
+                                                    </td>
+                                                    <td className="px-6 py-6 hidden md:table-cell">
+                                                        <div className="flex items-center gap-2">
+                                                            {report.languages.map((lang: string) => (
+                                                                <span key={lang} className="px-2 py-1 bg-stone-100 text-stone-600 text-xs rounded border border-stone-200 font-medium">
+                                                                    {lang}
+                                                                </span>
+                                                            ))}
                                                         </div>
-                                                    )}
-                                                    {report.status === 'review' && (
-                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-semibold border border-orange-100">
-                                                            <span className="size-1.5 rounded-full bg-orange-400"></span>
-                                                            {t('review')}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-6 hidden md:table-cell">
-                                                    <div className="flex items-center gap-2">
-                                                        {report.languages.map(lang => (
-                                                            <span key={lang} className="px-2 py-1 bg-stone-100 text-stone-600 text-xs rounded border border-stone-200 font-medium">
-                                                                {lang}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-6 text-right">
-                                                    <button className="text-stone-400 hover:text-primary p-2 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100">
-                                                        <span className="material-symbols-outlined">edit</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="px-6 py-6 text-right">
+                                                        <button className="text-stone-400 hover:text-primary p-2 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100">
+                                                            <span className="material-symbols-outlined">edit</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                                 <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 bg-stone-50/50">
