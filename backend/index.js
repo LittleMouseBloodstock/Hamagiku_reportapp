@@ -55,7 +55,14 @@ app.post('/generate', async (req, res) => {
     const { prompt, apiKey: clientApiKey } = req.body;
 
     const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "API Key not configured" });
+    console.log("Debug: /generate called");
+    console.log("Debug: Env GEMINI_API_KEY present?", !!process.env.GEMINI_API_KEY);
+    console.log("Debug: Client API Key provided?", !!clientApiKey);
+
+    if (!apiKey) {
+        console.error("Error: API Key is missing in both Env and Request body");
+        return res.status(500).json({ error: "API Key not configured in Environment Variables" });
+    }
 
     const dynamicGenAI = new GoogleGenerativeAI(apiKey);
 
