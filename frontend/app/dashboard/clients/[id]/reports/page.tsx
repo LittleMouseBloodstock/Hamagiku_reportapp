@@ -177,44 +177,46 @@ export default function ClientBatchReports() {
                 )}
             </div>
 
-            @media print {
-                @page {
-                size: A4;
-            margin: 0;
+            <style jsx global>{`
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
                     }
-            .no-print {display: none !important; }
-            body {background: white; margin: 0; padding: 0; }
-
-            /* Wrapper for each report page */
-            .page-break-after-always {
-                page -break-after: always !important;
-            break-after: page !important;
-            position: relative;
-            display: block;
-            width: 210mm;
-            height: 297mm; /* Full A4 Page container */
-            overflow: hidden; /* Cut off anything that spills */
-            margin: 0 auto;
-            padding: 0;
+                    .no-print { display: none !important; }
+                    body { background: white; margin: 0; padding: 0; }
+                    
+                    /* Wrapper for each report page */
+                    .page-break-after-always { 
+                        page-break-after: always !important; 
+                        break-after: page !important; 
+                        position: relative;
+                        display: block;
+                        width: 210mm;
+                        height: 297mm; /* Full A4 Page container */
+                        overflow: hidden; /* Cut off anything that spills */
+                        margin: 0 auto;
+                        padding: 0;
                     }
 
-            /* 
-               Override internal report styles.
-               Use 100% dimensions to fill the A4 container defined above.
-            */
-            #report-preview {
-                position: relative !important;
-            top: 0 !important;
-            left: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            box-shadow: none !important;
-            page-break-inside: avoid !important;
-            transform: scale(0.95); /* Slight shrink to ensure margins don't trigger bleed */
-            transform-origin: top center;
+                    /* 
+                       Override internal report styles.
+                       Use 100% dimensions to fill the A4 container defined above.
+                    */
+                    #report-preview {
+                        position: relative !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        margin: 0 !important;
+                        width: 100% !important; 
+                        height: 100% !important; 
+                        box-shadow: none !important;
+                        page-break-inside: avoid !important;
+                        transform: scale(0.95); /* Slight shrink to ensure margins don't trigger bleed */
+                        transform-origin: top center;
                     }
                 }
+            `}</style>
         </div>
     );
 }
