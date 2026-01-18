@@ -225,7 +225,13 @@ export default function ReportEditor() {
             const path = `${horseId}/${reportPathId}/${fileName}`;
 
             const uploadedUrl = await uploadImage(d.mainPhoto, path);
-            if (uploadedUrl) mainPhotoUrl = uploadedUrl;
+            if (uploadedUrl) {
+                mainPhotoUrl = uploadedUrl;
+            } else {
+                alert("Failed to upload image. Please make sure you have executed the 'fix_storage_policies.sql' script in Supabase SQL Editor.");
+                setSaving(false);
+                return;
+            }
         }
 
         // Pack extra fields into metrics_json

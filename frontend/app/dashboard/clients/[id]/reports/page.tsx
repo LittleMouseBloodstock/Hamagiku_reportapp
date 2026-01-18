@@ -170,7 +170,7 @@ export default function ClientBatchReports() {
                         <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
                             <div className="print:h-screen print:flex print:flex-col print:justify-start">
-                                <ReportTemplate initialData={item.data} />
+                                <ReportTemplate initialData={item.data} readOnly={true} />
                             </div>
                         </div>
                     ))
