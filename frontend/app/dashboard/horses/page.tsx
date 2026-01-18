@@ -78,9 +78,7 @@ export default function HorsesPage() {
                                 <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="h-10 w-10 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 font-bold text-lg mr-3">
-                                                {(language === 'ja' ? horse.name : horse.name_en)?.charAt(0) || 'H'}
-                                            </div>
+                                            <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
                                             <div>
                                                 <div className="text-sm font-medium text-stone-900">
                                                     {language === 'ja' ? horse.name : horse.name_en}

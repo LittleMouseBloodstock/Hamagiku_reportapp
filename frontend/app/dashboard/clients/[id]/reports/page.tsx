@@ -180,18 +180,33 @@ export default function ClientBatchReports() {
             <style jsx global>{`
                 @media print {
                     .no-print { display: none !important; }
-                    body { background: white; }
-                    .page-break-after-always { page-break-after: always; break-after: page; }
+                    body { background: white; margin: 0; padding: 0; }
                     
-                    /* Reset any absolute positioning from ReportTemplate that might conflict */
+                    /* Force Page Breaks */
+                    .page-break-after-always { 
+                        page-break-after: always !important; 
+                        break-after: page !important; 
+                        position: relative;
+                        display: block;
+                        height: 100vh; /* Ensure full page height per report */
+                        width: 100vw;
+                    }
+
+                    /* 
+                       CRITICAL OVERRIDE: 
+                       ReportTemplate.tsx default print styles use position: absolute !important.
+                       We MUST override this to allow multiple reports to flow in a document.
+                    */
                     #report-preview {
                         position: relative !important;
-                        top: auto !important;
-                        left: auto !important;
-                        width: 100% !important;
-                        height: auto !important;
-                        margin: 0 !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        margin: 0 auto !important;
+                        width: 210mm !important; /* A4 Width */
+                        height: 297mm !important; /* A4 Height */
+                        overflow: hidden !important;
                         box-shadow: none !important;
+                        page-break-inside: avoid !important;
                     }
                 }
             `}</style>
