@@ -301,7 +301,7 @@ export default function ReportEditor() {
         if (isNew && newReportId) {
             router.replace(`/reports/${newReportId}`);
         } else {
-            if (d.mainPhoto.startsWith('data:')) {
+            if (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:')) {
                 if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
             }
         }
