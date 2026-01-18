@@ -291,18 +291,25 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
         if (!aiPrompt) return;
         setIsGenerating(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/generate`, {
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
+            const res = await fetch(`${baseUrl}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: aiPrompt })
             });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Server Error (${res.status}): ${errorText}`);
+            }
+
             const json = await res.json();
             if (json.en && json.ja) {
                 setData(prev => ({ ...prev, commentEn: json.en, commentJp: json.ja }));
             }
         } catch (e) {
             console.error(e);
-            alert("AI Generation failed. Check backend connection.");
+            alert("AI Generation failed:\n" + (e instanceof Error ? e.message : String(e)));
         } finally {
             setIsGenerating(false);
         }
