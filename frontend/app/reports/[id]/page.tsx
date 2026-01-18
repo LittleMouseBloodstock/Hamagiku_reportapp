@@ -228,7 +228,7 @@ export default function ReportEditor() {
             if (uploadedUrl) {
                 mainPhotoUrl = uploadedUrl;
             } else {
-                const errorMsg = (uploadError as any)?.message || JSON.stringify(uploadError) || "Unknown Error";
+                const errorMsg = (uploadError as { message?: string })?.message || JSON.stringify(uploadError) || "Unknown Error";
                 alert(`Failed to upload image.\nError: ${errorMsg}\n\nPlease check Supabase Storage policies.`);
                 setSaving(false);
                 return;
