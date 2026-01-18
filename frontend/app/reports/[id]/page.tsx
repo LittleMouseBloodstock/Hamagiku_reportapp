@@ -177,7 +177,7 @@ export default function ReportEditor() {
         reportDataRef.current = data;
     }, []);
 
-    async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: any }> {
+    async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
             // Convert Base64 to Blob
             const res = await fetch(base64Data);
@@ -228,7 +228,7 @@ export default function ReportEditor() {
             if (uploadedUrl) {
                 mainPhotoUrl = uploadedUrl;
             } else {
-                const errorMsg = uploadError?.message || JSON.stringify(uploadError) || "Unknown Error";
+                const errorMsg = (uploadError as any)?.message || JSON.stringify(uploadError) || "Unknown Error";
                 alert(`Failed to upload image.\nError: ${errorMsg}\n\nPlease check Supabase Storage policies.`);
                 setSaving(false);
                 return;
