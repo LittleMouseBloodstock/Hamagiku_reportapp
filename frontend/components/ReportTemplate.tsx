@@ -413,8 +413,49 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     return (
         <div className="flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
             <Fonts />
-            {/* Cropper Modal ... */}
-            {/* ... */}
+            {/* Cropper Modal */}
+            {isCropping && tempImgSrc && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl overflow-hidden shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-gray-700 flex items-center gap-2"><Crop size={18} /> Edit Photo</h3>
+                            <button onClick={() => setIsCropping(false)} className="text-gray-500 hover:text-red-500 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="relative flex-1 bg-black min-h-[400px]">
+                            <Cropper
+                                image={tempImgSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={4 / 3} // iPhone Landscape (4:3)
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                            />
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t flex items-center gap-4">
+                            <span className="text-xs font-bold text-gray-500">Zoom</span>
+                            <input
+                                type="range"
+                                value={zoom}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                aria-labelledby="Zoom"
+                                onChange={(e) => setZoom(Number(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <button
+                                onClick={handleCropSave}
+                                className="bg-[#1B3226] hover:bg-[#2a4c3a] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors"
+                            >
+                                <Check size={18} /> Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- Left Side: Input Panel (Hidden on Print OR readOnly) --- */}
             {!readOnly && (
