@@ -3,12 +3,11 @@ import { useEffect, useState } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
+import { Plus, ArrowLeft, FileText, Calendar, Activity, Image as ImageIcon } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 import Link from 'next/link';
-
-
 import Image from 'next/image';
 
 type Horse = {
@@ -17,7 +16,9 @@ type Horse = {
     name_en: string;
     photo_url: string | null;
     sire: string;
+    sire_en?: string;
     dam: string;
+    dam_en?: string;
     updated_at: string;
 };
 
@@ -33,10 +34,11 @@ type Report = {
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
+    const { language, t } = useLanguage();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
-    const [formData, setFormData] = useState({ name: '', name_en: '', sire: '', dam: '' });
+    const [formData, setFormData] = useState({ name: '', name_en: '', sire: '', sire_en: '', dam: '', dam_en: '' });
 
 
     useEffect(() => {
@@ -50,7 +52,9 @@ export default function HorseDetail() {
                     name: h.name || '',
                     name_en: h.name_en || '',
                     sire: h.sire || '',
-                    dam: h.dam || ''
+                    sire_en: h.sire_en || '',
+                    dam: h.dam || '',
+                    dam_en: h.dam_en || ''
                 });
             }
 
@@ -72,7 +76,9 @@ export default function HorseDetail() {
                 name: formData.name,
                 name_en: formData.name_en,
                 sire: formData.sire,
+                sire_en: formData.sire_en,
                 dam: formData.dam,
+                dam_en: formData.dam_en,
                 updated_at: new Date().toISOString()
             })
             .eq('id', id);
@@ -81,7 +87,7 @@ export default function HorseDetail() {
             setHorse({ ...horse, ...formData });
             setEditMode(false);
         } else {
-            alert('Failed to update');
+            alert('Failed to update: ' + error?.message);
         }
     };
 
@@ -99,50 +105,86 @@ export default function HorseDetail() {
 
     if (!horse) return <div className="p-10 text-center">Loading...</div>;
 
+    const displayName = language === 'ja' ? horse.name : horse.name_en;
+    const displaySubName = language === 'ja' ? horse.name_en : horse.name;
+
+    // Fallback for sire/dam if only one exists
+    const displaySire = language === 'ja' ? horse.sire : (horse.sire_en || horse.sire);
+    const displayDam = language === 'ja' ? horse.dam : (horse.dam_en || horse.dam);
+
     return (
         <div className="min-h-screen bg-gray-50 pb-20 font-sans">
             {/* Nav */}
             <div className="bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between">
                 <Link href="/dashboard/horses" className="text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm font-bold">
-                    <ArrowLeft size={16} /> Back to Horses
+                    <ArrowLeft size={16} /> {language === 'ja' ? '馬一覧に戻る' : 'Back to Horses'}
                 </Link>
-                <LanguageToggle />
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 font-mono hidden sm:block">ID: {horse.id.slice(0, 8)}</span>
+                    <LanguageToggle />
+                </div>
             </div>
 
             <main className="max-w-4xl mx-auto px-4 py-8">
                 {/* Horse Header */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8 flex flex-col md:flex-row gap-6 items-start border border-gray-100">
-                    <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {horse.photo_url && <Image src={horse.photo_url} alt={horse.name} fill className="object-cover" unoptimized />}
+                    <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-200">
+                        {horse.photo_url ? (
+                            <Image
+                                src={horse.photo_url}
+                                alt={horse.name}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                                onError={(e) => {
+                                    // Fallback UI handled by CSS or generic icon if needed, 
+                                    // but next/image onError is tricky. 
+                                    // We'll trust the URL or show Placeholder if null.
+                                    // Actually better to just use a placeholder if URL is obviously bad?
+                                }}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                <ImageIcon size={32} />
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex-1 w-full">
                         {editMode ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Horse Name</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (JP)</label>
                                     <input className="w-full border border-gray-300 rounded p-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">English Name</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (EN)</label>
                                     <input className="w-full border border-gray-300 rounded p-2" value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Sire</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Sire (JP)</label>
                                     <input className="w-full border border-gray-300 rounded p-2" value={formData.sire} onChange={e => setFormData({ ...formData, sire: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Dam</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Sire (EN)</label>
+                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.sire_en} onChange={e => setFormData({ ...formData, sire_en: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Dam (JP)</label>
                                     <input className="w-full border border-gray-300 rounded p-2" value={formData.dam} onChange={e => setFormData({ ...formData, dam: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase">Dam (EN)</label>
+                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
                                 </div>
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-3xl font-bold text-[var(--color-primary)] mb-1">{horse.name}</h1>
-                                <p className="text-lg text-gray-400 font-serif mb-4">{horse.name_en}</p>
+                                <h1 className="text-3xl font-bold text-[var(--color-primary)] mb-1">{displayName}</h1>
+                                <p className="text-lg text-gray-400 font-serif mb-4">{displaySubName}</p>
                                 <div className="flex gap-6 text-sm text-gray-500">
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Sire</span> {horse.sire || '-'}</div>
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Dam</span> {horse.dam || '-'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Sire</span> {displaySire || '-'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Dam</span> {displayDam || '-'}</div>
                                 </div>
                             </>
                         )}
@@ -153,27 +195,27 @@ export default function HorseDetail() {
                             onClick={createReport}
                             className="bg-[var(--color-primary)] hover:brightness-110 text-white px-5 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all whitespace-nowrap"
                         >
-                            <Plus size={18} /> New Report
+                            <Plus size={18} /> {language === 'ja' ? '新規レポート' : 'New Report'}
                         </button>
                         {editMode ? (
                             <div className="flex gap-2">
-                                <button onClick={handleUpdateHorse} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex-1">Save</button>
-                                <button onClick={() => setEditMode(false)} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold flex-1">Cancel</button>
+                                <button onClick={handleUpdateHorse} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex-1">{language === 'ja' ? '保存' : 'Save'}</button>
+                                <button onClick={() => setEditMode(false)} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold flex-1">{language === 'ja' ? 'キャンセル' : 'Cancel'}</button>
                             </div>
                         ) : (
                             <button onClick={() => setEditMode(true)} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-5 py-2 rounded-full text-sm font-bold transition-all">
-                                Edit Profile
+                                {language === 'ja' ? '編集' : 'Edit Profile'}
                             </button>
                         )}
                     </div>
                 </div>
 
                 {/* Reports List */}
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Report History</h2>
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">{language === 'ja' ? 'レポート履歴' : 'Report History'}</h2>
 
                 {reports.length === 0 ? (
                     <div className="text-center py-10 bg-white rounded-lg border border-dashed border-gray-300 text-gray-400">
-                        No reports yet. Create one!
+                        {language === 'ja' ? 'レポートはまだありません。作成してください！' : 'No reports yet. Create one!'}
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -185,7 +227,7 @@ export default function HorseDetail() {
                                             <FileText size={20} />
                                         </div>
                                         <div>
-                                            <div className="font-bold text-gray-700">{report.title || 'Untitled Report'}</div>
+                                            <div className="font-bold text-gray-700">{report.title || (language === 'ja' ? '無題のレポート' : 'Untitled Report')}</div>
                                             <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
                                                 <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
                                                 {report.status_training && <span className="flex items-center gap-1"><Activity size={10} /> {report.status_training}</span>}
