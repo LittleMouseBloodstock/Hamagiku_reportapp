@@ -9,6 +9,8 @@ import LanguageToggle from '@/components/LanguageToggle';
 import Link from 'next/link';
 
 
+import Image from 'next/image';
+
 type Horse = {
     id: string;
     name: string;
@@ -111,7 +113,7 @@ export default function HorseDetail() {
                 {/* Horse Header */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8 flex flex-col md:flex-row gap-6 items-start border border-gray-100">
                     <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {horse.photo_url && <img src={horse.photo_url} alt={horse.name} className="w-full h-full object-cover" />}
+                        {horse.photo_url && <Image src={horse.photo_url} alt={horse.name} fill className="object-cover" unoptimized />}
                     </div>
 
                     <div className="flex-1 w-full">

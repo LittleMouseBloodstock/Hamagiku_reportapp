@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #2E5C35;
-  --color-primary-dark: #1F3F29;
+  --color-primary: #1A3C34;
+  --color-primary-dark: #122B25;
   --color-accent-beige: #E8E6DE;
   --color-background-light: #FDFCF8;
   --color-background-dark: #FDFCF8;
@@ -35,6 +36,7 @@ body {
   margin: 0;
   padding: 0;
   -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* A4 Page Layout */

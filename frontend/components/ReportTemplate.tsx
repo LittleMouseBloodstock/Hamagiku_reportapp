@@ -1,6 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Printer, RefreshCw, ChevronRight, FileText, Image as ImageIcon, Activity, Globe } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
+import { RefreshCw, FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check } from 'lucide-react';
+import Cropper from 'react-easy-crop';
+import { Point, Area } from 'react-easy-crop';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Google Fonts Component
 const Fonts = () => (
@@ -14,18 +18,37 @@ const Fonts = () => (
     /* Print Settings */
     @media print {
       @page { size: A4; margin: 0; }
-      body { -webkit-print-color-adjust: exact; }
-      .no-print { display: none !important; }
-      .print-area { 
-        width: 210mm; 
-        height: 297mm; 
-        position: absolute; 
-        top: 0; 
-        left: 0; 
-        margin: 0; 
-        padding: 0;
-        box-shadow: none;
-        overflow: hidden;
+      
+      /* NUCLEAR OPTION: Hide everything by default using visibility */
+      body * {
+        visibility: hidden;
+      }
+      
+      /* Show ONLY the report preview and its children */
+      #report-preview, #report-preview * {
+        visibility: visible;
+      }
+
+      /* Position the preview specifically for print */
+      #report-preview {
+        position: absolute !important; /* Fixed causes repetition on every page, Absolute prints once */
+        top: 0 !important;
+        left: 0 !important;
+        width: 210mm !important;
+        height: 280mm !important; /* Reduced further to 280mm */
+        margin: 0 !important;
+        padding: 30px 50px 10px 50px !important;
+        background-color: white !important;
+        z-index: 2147483647 !important; /* Max Z-Index */
+        overflow: hidden !important;
+        box-shadow: none !important;
+        transform: none !important;
+        border: none !important;
+      }
+
+      /* Logo Fix: Clip ALL edges to remove mystery line */
+      .logo-container {
+         clip-path: inset(1px); /* Cut 1px from all sides */
       }
     }
   `}</style>
@@ -72,8 +95,8 @@ const SimpleLineChart = ({ data, color }: { data: { label: string, value: number
                 return (
                     <g key={i}>
                         <circle cx={x} cy={y} r="3" fill="white" stroke={color} strokeWidth="2" />
-                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="8" fill="#6B7280" className="font-body-en">{d.label}</text>
-                        <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="8" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
+                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{d.label}</text>
+                        <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="12" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
                     </g>
                 );
             })}
@@ -81,23 +104,93 @@ const SimpleLineChart = ({ data, color }: { data: { label: string, value: number
     );
 };
 
+type OptionPair = { en: string; ja: string; };
+
+const DEFAULT_TRAINING_OPTIONS: OptionPair[] = [
+    { en: 'Training', ja: 'トレーニング' },
+    { en: 'Rest', ja: '休養' },
+    { en: 'Injured', ja: '怪我' },
+    { en: 'Breaking', ja: '馴致' },
+    { en: 'Growing', ja: '放牧中' },
+];
+
+const DEFAULT_CONDITION_OPTIONS: OptionPair[] = [
+    { en: 'Good', ja: '良好' },
+    { en: 'Light', ja: 'やや痩せ気味' },
+    { en: 'Leggy', ja: '肢長' },
+    { en: 'Fatty', ja: '肥満' },
+];
+
 export type ReportData = {
     reportDate: string;
     horseNameEn: string;
     horseNameJp: string;
     sire: string;
+    sireEn?: string;
+    sireJp?: string;
     dam: string;
+    damEn?: string;
+    damJp?: string;
     mainPhoto: string;
-    statusEn: string;
-    statusJp: string;
+    // statusEn/Jp deprecated but kept for compatibility if needed, prefer trainingStatus
+    statusEn?: string;
+    statusJp?: string;
+    trainingStatusEn: string;
+    trainingStatusJp: string;
+    conditionEn: string;
+    conditionJp: string;
     weight: string;
     targetEn: string;
     targetJp: string;
     commentEn: string;
     commentJp: string;
     weightHistory: { label: string, value: number }[];
-    logo: string | null; // Kept for interface compatibility, mostly unused in new design/fixed logo
+    logo: string | null;
+    originalPhoto?: string | null; // Keep original for re-cropping
 };
+
+// --- Utility: Create Cropped Image ---
+const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+        const image = new window.Image();
+        image.addEventListener('load', () => resolve(image));
+        image.addEventListener('error', (error) => reject(error));
+        image.setAttribute('crossOrigin', 'anonymous');
+        image.src = url;
+    });
+
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return '';
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+        image,
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        0,
+        0,
+        pixelCrop.width,
+        pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error('Canvas is empty'));
+                return;
+            }
+            resolve(window.URL.createObjectURL(blob));
+        }, 'image/jpeg');
+    });
+}
 
 interface ReportTemplateProps {
     initialData?: Partial<ReportData>;
@@ -105,16 +198,21 @@ interface ReportTemplateProps {
 }
 
 export default function ReportTemplate({ initialData, onDataChange }: ReportTemplateProps) {
+    const { t, language } = useLanguage();
+    const lang = language;
     // Default Data
     const defaultData: ReportData = {
-        reportDate: new Date().toISOString().slice(0, 7).replace('-', '.'), // yyyy.MM
+        reportDate: '', // Set in useEffect to avoid hydration mismatch
         horseNameEn: 'Hamagiku Vega',
         horseNameJp: 'ハマギクベガ',
         sire: 'Lucky Vega',
         dam: 'Xmas',
         mainPhoto: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
-        statusEn: 'Training',
-        statusJp: '坂路入り',
+        originalPhoto: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80',
+        trainingStatusEn: 'Training',
+        trainingStatusJp: 'トレーニング',
+        conditionEn: 'Good',
+        conditionJp: '良好',
         weight: '423kg',
         targetEn: 'Debut',
         targetJp: 'デビュー戦',
@@ -130,6 +228,119 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
     };
 
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
+
+    // --- Cropper State ---
+    const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+
+    // --- Options State (LocalStorage) ---
+    const [trainingOptions, setTrainingOptions] = useState<OptionPair[]>(DEFAULT_TRAINING_OPTIONS);
+    const [conditionOptions, setConditionOptions] = useState<OptionPair[]>(DEFAULT_CONDITION_OPTIONS);
+
+    useEffect(() => {
+        const savedTraining = localStorage.getItem('trainingOptions');
+        const savedCondition = localStorage.getItem('conditionOptions');
+        if (savedTraining) setTrainingOptions(JSON.parse(savedTraining));
+        if (savedCondition) setConditionOptions(JSON.parse(savedCondition));
+
+        // Set Date if empty (Hydration Fix)
+        if (!data.reportDate) {
+            setData(prev => ({ ...prev, reportDate: new Date().toISOString().slice(0, 7).replace('-', '.') }));
+        }
+    }, []);
+
+    const saveOption = (type: 'training' | 'condition', pair: OptionPair) => {
+        if (type === 'training') {
+            const newOpts = [...trainingOptions, pair];
+            setTrainingOptions(newOpts);
+            localStorage.setItem('trainingOptions', JSON.stringify(newOpts));
+        } else {
+            const newOpts = [...conditionOptions, pair];
+            setConditionOptions(newOpts);
+            localStorage.setItem('conditionOptions', JSON.stringify(newOpts));
+        }
+    };
+
+    // --- AI & Translation Logic ---
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+
+    const handleGenerateComment = async () => {
+        if (!aiPrompt) return;
+        setIsGenerating(true);
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: aiPrompt })
+            });
+            const json = await res.json();
+            if (json.en && json.ja) {
+                setData(prev => ({ ...prev, commentEn: json.en, commentJp: json.ja }));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("AI Generation failed. Check backend connection.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleTranslateName = async (name: string, field: 'sire' | 'dam', targetLang: 'ja' | 'en') => {
+        if (!name) return;
+        try {
+            const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/translate-name`;
+            console.log('Translating:', name, 'to', targetLang, 'at', apiUrl);
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, targetLang })
+            });
+            const json = await res.json();
+            if (json.translatedName) {
+                const targetKey = field === 'sire'
+                    ? (targetLang === 'ja' ? 'sireJp' : 'sireEn')
+                    : (targetLang === 'ja' ? 'damJp' : 'damEn');
+
+                // @ts-ignore
+                setData(prev => ({ ...prev, [targetKey]: json.translatedName }));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Name Translation Failed: " + e);
+        }
+    };
+
+    const handleTranslateDemo = () => {
+        // Placeholder
+    };
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+    const [isCropping, setIsCropping] = useState(false);
+    const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
+
+    const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
+
+    const showCropper = (imgSrc: string) => {
+        setTempImgSrc(imgSrc);
+        setIsCropping(true);
+        setZoom(1);
+        setCrop({ x: 0, y: 0 });
+    };
+
+    const handleCropSave = async () => {
+        if (tempImgSrc && croppedAreaPixels) {
+            try {
+                const croppedImage = await getCroppedImg(tempImgSrc, croppedAreaPixels);
+                setData(prev => ({ ...prev, mainPhoto: croppedImage }));
+                setIsCropping(false);
+                setTempImgSrc(null);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
 
     // Sync back to parent
     useEffect(() => {
@@ -147,43 +358,88 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
                 return { ...prev, ...initialData };
             });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [initialData]);
 
 
-    // Demo Translation (Mock)
-    const handleTranslateDemo = () => {
-        setData(prev => ({
-            ...prev,
-            commentJp: "（AI翻訳）此れはデモです。" + prev.commentEn
-        }));
-    };
+
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => setData(prev => ({ ...prev, mainPhoto: e.target?.result as string }));
+            reader.onload = (e) => {
+                const result = e.target?.result as string;
+                if (result) {
+                    // Update both main and original
+                    setData(prev => ({
+                        ...prev,
+                        mainPhoto: result,
+                        originalPhoto: result
+                    }));
+                    // Start cropper flow with uploaded image
+                    showCropper(result);
+                }
+            };
             reader.readAsDataURL(file);
         }
     };
 
-    // Color Palette
-    const colors = {
-        darkGreen: '#1B3226',
-        limeGreen: '#8CC63F',
-        lightGray: '#F9FAFB',
-        textDark: '#111827',
-        textGray: '#4B5563',
-    };
+
+
+
+
 
     return (
-        <div className="flex flex-col md:flex-row font-sans text-gray-800 bg-gray-100 min-h-screen">
+        <div className="flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
             <Fonts />
+            {/* Cropper Modal */}
+            {isCropping && tempImgSrc && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl overflow-hidden shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-gray-700 flex items-center gap-2"><Crop size={18} /> Edit Photo</h3>
+                            <button onClick={() => setIsCropping(false)} className="text-gray-500 hover:text-red-500 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="relative flex-1 bg-black min-h-[400px]">
+                            <Cropper
+                                image={tempImgSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={4 / 3} // iPhone Landscape (4:3)
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                            />
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t flex items-center gap-4">
+                            <span className="text-xs font-bold text-gray-500">Zoom</span>
+                            <input
+                                type="range"
+                                value={zoom}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                aria-labelledby="Zoom"
+                                onChange={(e) => setZoom(Number(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <button
+                                onClick={handleCropSave}
+                                className="bg-[#1B3226] hover:bg-[#2a4c3a] text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-colors"
+                            >
+                                <Check size={18} /> Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* --- Left Side: Input Panel (Hidden on Print) --- */}
-            <div className="w-full md:w-1/3 lg:w-96 bg-white border-r border-gray-200 shadow-lg overflow-y-auto max-h-screen sticky top-0 no-print z-10">
-                <div className="p-6 bg-[#1B3226] text-white">
+            <div className="w-full md:w-1/3 lg:w-96 bg-white border-r border-gray-200 shadow-lg overflow-y-auto h-full flex-shrink-0 no-print z-20">
+                <div className="p-6 bg-[#1B3226] text-white sticky top-0 z-10">
                     <h1 className="text-xl font-serif-en font-bold flex items-center gap-2">
                         <Activity size={20} className="text-[#8CC63F]" />
                         Report Builder
@@ -191,59 +447,93 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
                     <p className="text-xs text-gray-300 mt-1">Hamagiku Farm Official Tool</p>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-8 pb-48">
                     {/* Basic Info */}
                     <section>
-                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <FileText size={16} /> Basic Info
+                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                            <FileText size={16} /> {t('basicInfo')}
                         </h2>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-gray-700">Report Date</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">{t('reportDate')}</label>
                                 <input
                                     type="text"
                                     value={data.reportDate}
                                     onChange={e => setData({ ...data, reportDate: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm"
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700">Horse Name (EN)</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('horseName')} (EN)</label>
                                     <input
                                         type="text"
                                         value={data.horseNameEn}
                                         onChange={e => setData({ ...data, horseNameEn: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm"
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700">Horse Name (JP)</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('horseName')} (JP)</label>
                                     <input
                                         type="text"
                                         value={data.horseNameJp}
                                         onChange={e => setData({ ...data, horseNameJp: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm"
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+
+                            {/* Sire (Multilingual) */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700">Sire (父)</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('sire')} (EN)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={data.sireEn || data.sire} // Fallback
+                                            onChange={e => setData({ ...data, sireEn: e.target.value })}
+                                            onBlur={(e) => handleTranslateName(e.target.value, 'sire', 'ja')}
+                                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900 pr-6"
+                                            placeholder="Auto-translates to JP"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('sire')} (JP)</label>
                                     <input
                                         type="text"
-                                        value={data.sire}
-                                        onChange={e => setData({ ...data, sire: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm"
+                                        value={data.sireJp || ''}
+                                        onChange={e => setData({ ...data, sireJp: e.target.value })}
+                                        onBlur={(e) => handleTranslateName(e.target.value, 'sire', 'en')}
+                                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        placeholder="Auto-translates to EN"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Dam (Multilingual) */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('dam')} (EN)</label>
+                                    <input
+                                        type="text"
+                                        value={data.damEn || data.dam} // Fallback
+                                        onChange={e => setData({ ...data, damEn: e.target.value })}
+                                        onBlur={(e) => handleTranslateName(e.target.value, 'dam', 'ja')}
+                                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        placeholder="Auto-translates to JP"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-700">Dam (母)</label>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('dam')} (JP)</label>
                                     <input
                                         type="text"
-                                        value={data.dam}
-                                        onChange={e => setData({ ...data, dam: e.target.value })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm"
+                                        value={data.damJp || ''}
+                                        onChange={e => setData({ ...data, damJp: e.target.value })}
+                                        onBlur={(e) => handleTranslateName(e.target.value, 'dam', 'en')}
+                                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        placeholder="Auto-translates to EN"
                                     />
                                 </div>
                             </div>
@@ -252,111 +542,242 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
 
                     {/* Photo */}
                     <section>
-                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <ImageIcon size={16} /> Photo
+                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                            <ImageIcon size={16} /> {t('photo')}
                         </h2>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">Image URL / Upload</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={data.mainPhoto.startsWith('data:') ? '(Base64 Data)' : data.mainPhoto}
-                                    readOnly
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 px-3 py-2 text-sm truncate text-gray-500"
-                                />
-                                <label className="mt-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm flex items-center">
-                                    <ImageIcon size={16} />
-                                    <input type="file" onChange={handlePhotoUpload} className="hidden" accept="image/*" />
+                        <div className="space-y-3">
+                            <label className="block text-xs font-medium text-gray-700">{t('selectImage')}</label>
+
+                            {/* Current Image Preview & Edit Button */}
+                            {data.mainPhoto && (
+                                <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 group mb-2">
+                                    <Image
+                                        src={data.mainPhoto}
+                                        alt="Current"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                        <button
+                                            // Always try to use original photo for re-cropping to allow full reset
+                                            onClick={() => showCropper(data.originalPhoto || data.mainPhoto)}
+                                            className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-all transform scale-95 group-hover:scale-100 flex items-center gap-1"
+                                        >
+                                            <Crop size={12} /> Edit / Crop
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-center w-full">
+                                <label className="flex flex-col items-center justify-center w-full h-12 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4 text-gray-400" />
+                                        <span className="text-xs text-gray-500 font-semibold">{t('uploadNewPhoto')}</span>
+                                    </div>
+                                    <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                                 </label>
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">※横長の高解像度写真を推奨</p>
                         </div>
                     </section>
 
                     {/* Status & Stats */}
                     <section>
-                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <Activity size={16} /> Status & Stats
+                        <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                            <Activity size={16} /> {t('statusStats')}
                         </h2>
                         <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700">Status (EN)</label>
-                                <input type="text" value={data.statusEn} onChange={e => setData({ ...data, statusEn: e.target.value })} className="mt-1 w-full border rounded px-2 py-1 text-sm" />
+                            {/* Training Status Dropdown & Inputs */}
+                            <div className="col-span-2 bg-gray-50 p-2 rounded border border-gray-200">
+                                <label className="block text-xs font-bold text-gray-700 mb-1">{t('training')}</label>
+                                <div className="flex gap-2 mb-2">
+                                    <select
+                                        className="w-full text-xs border-gray-300 rounded text-gray-900 font-medium"
+                                        onChange={(e) => {
+                                            const idx = parseInt(e.target.value);
+                                            if (!isNaN(idx) && trainingOptions[idx]) {
+                                                setData({ ...data, trainingStatusEn: trainingOptions[idx].en, trainingStatusJp: trainingOptions[idx].ja });
+                                            }
+                                        }}
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>Select Status...</option>
+                                        {trainingOptions.map((opt, i) => (
+                                            <option key={i} value={i}>{opt.en} / {opt.ja}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => saveOption('training', { en: data.trainingStatusEn, ja: data.trainingStatusJp })}
+                                        className="whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 rounded shadow-sm"
+                                        title="Save current inputs to list"
+                                    >
+                                        + Save
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="EN"
+                                        value={data.trainingStatusEn}
+                                        onChange={e => setData({ ...data, trainingStatusEn: e.target.value })}
+                                        className="w-full border-gray-300 rounded-md text-xs px-2 py-1 text-gray-900"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="JP"
+                                        value={data.trainingStatusJp}
+                                        onChange={e => setData({ ...data, trainingStatusJp: e.target.value })}
+                                        className="w-full border-gray-300 rounded-md text-xs px-2 py-1 text-gray-900"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700">Status (JP)</label>
-                                <input type="text" value={data.statusJp} onChange={e => setData({ ...data, statusJp: e.target.value })} className="mt-1 w-full border rounded px-2 py-1 text-sm" />
+
+                            {/* Condition Dropdown & Inputs */}
+                            <div className="col-span-2 bg-gray-50 p-2 rounded border border-gray-200">
+                                <label className="block text-xs font-bold text-gray-700 mb-1">{t('condition')}</label>
+                                <div className="flex gap-2 mb-2">
+                                    <select
+                                        className="w-full text-xs border-gray-300 rounded text-gray-900 font-medium"
+                                        onChange={(e) => {
+                                            const idx = parseInt(e.target.value);
+                                            if (!isNaN(idx) && conditionOptions[idx]) {
+                                                setData({ ...data, conditionEn: conditionOptions[idx].en, conditionJp: conditionOptions[idx].ja });
+                                            }
+                                        }}
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled className="text-gray-500">Select Condition...</option>
+                                        {conditionOptions.map((opt, i) => (
+                                            <option key={i} value={i}>{opt.en} / {opt.ja}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => saveOption('condition', { en: data.conditionEn, ja: data.conditionJp })}
+                                        className="whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 rounded shadow-sm"
+                                        title="Save current inputs to list"
+                                    >
+                                        + Save
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="EN"
+                                        value={data.conditionEn}
+                                        onChange={e => setData({ ...data, conditionEn: e.target.value })}
+                                        className="w-full border-gray-300 rounded-md text-xs px-2 py-1 text-gray-900"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="JP"
+                                        value={data.conditionJp}
+                                        onChange={e => setData({ ...data, conditionJp: e.target.value })}
+                                        className="w-full border-gray-300 rounded-md text-xs px-2 py-1 text-gray-900"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700">Current Weight</label>
-                                <input type="text" value={data.weight} onChange={e => setData({ ...data, weight: e.target.value })} className="mt-1 w-full border rounded px-2 py-1 text-sm" />
+
+                            <div className="col-span-2">
+                                <label className="block text-xs font-medium text-gray-700 mb-1">{t('weight')}</label>
+                                <input type="text" value={data.weight} onChange={e => setData({ ...data, weight: e.target.value })} className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm" />
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700">Target (JP/Mix)</label>
-                                <input type="text" value={data.targetJp} onChange={e => setData({ ...data, targetJp: e.target.value })} className="mt-1 w-full border rounded px-2 py-1 text-sm" />
-                            </div>
+                            {/* Target removed as requested */}
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-2">Weight History (Graph Data)</label>
-                            {data.weightHistory.map((item, index) => (
-                                <div key={index} className="flex gap-2 mb-2">
-                                    <input
-                                        type="text"
-                                        value={item.label}
-                                        onChange={e => {
-                                            const newHist = [...data.weightHistory];
-                                            newHist[index].label = e.target.value;
-                                            setData({ ...data, weightHistory: newHist });
-                                        }}
-                                        className="w-16 border rounded px-2 py-1 text-sm text-center"
-                                    />
-                                    <input
-                                        type="number"
-                                        value={item.value}
-                                        onChange={e => {
-                                            const newHist = [...data.weightHistory];
-                                            newHist[index].value = parseInt(e.target.value) || 0;
-                                            setData({ ...data, weightHistory: newHist });
-                                        }}
-                                        className="w-20 border rounded px-2 py-1 text-sm"
-                                    />
-                                    <span className="text-xs self-center">kg</span>
-                                </div>
-                            ))}
+                            <label className="block text-xs font-medium text-gray-700 mb-2">{t('weightHistory')}</label>
+                            <div className="space-y-2 bg-gray-50 p-3 rounded-md border border-gray-200">
+                                {data.weightHistory.map((item, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            value={item.label}
+                                            onChange={e => {
+                                                const newHist = [...data.weightHistory];
+                                                newHist[index].label = e.target.value;
+                                                setData({ ...data, weightHistory: newHist });
+                                            }}
+                                            className="w-16 border-gray-300 rounded px-2 py-1 text-xs text-center text-gray-900 shadow-sm"
+                                            placeholder="Month"
+                                        />
+                                        <div className="flex-1 h-px bg-gray-300"></div>
+                                        <input
+                                            type="number"
+                                            value={item.value}
+                                            onChange={e => {
+                                                const newHist = [...data.weightHistory];
+                                                newHist[index].value = parseInt(e.target.value) || 0;
+                                                setData({ ...data, weightHistory: newHist });
+                                            }}
+                                            className="w-20 border-gray-300 rounded px-2 py-1 text-xs text-right text-gray-900 shadow-sm"
+                                            placeholder="kg"
+                                        />
+                                        <span className="text-xs text-gray-500">kg</span>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={() => setData({ ...data, weightHistory: [...data.weightHistory, { label: '', value: 0 }] })}
+                                    className="w-full py-1 text-xs text-center text-gray-500 hover:bg-gray-200 rounded border border-dashed border-gray-300 transition-colors"
+                                >
+                                    + Add History Row
+                                </button>
+                            </div>
                         </div>
                     </section>
 
-                    {/* Comments */}
+                    {/* Comments & AI Tools */}
                     <section>
-                        <div className="flex justify-between items-center mb-3">
-                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                                <Globe size={16} /> Comments
+                        <div className="flex flex-col gap-2 mb-4">
+                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 border-b pb-2">
+                                <Globe size={16} /> {t('aiComments')}
                             </h2>
-                            <button
-                                onClick={handleTranslateDemo}
-                                className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 flex items-center gap-1 transition-colors"
-                            >
-                                <RefreshCw size={12} /> Auto Translate
-                            </button>
+
+                            {/* Gemini AI Style Assist UI */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-lg">✨</span>
+                                    <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        value={aiPrompt}
+                                        onChange={(e) => setAiPrompt(e.target.value)}
+                                        placeholder={lang === 'ja' ? "例：動き良し、カイ食い良好" : "e.g. Good movement, good appetite"}
+                                        className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleGenerateComment}
+                                            disabled={isGenerating}
+                                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1">
+                                            <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="space-y-3">
+
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-gray-700">English Comment</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">{t('englishComment')}</label>
                                 <textarea
                                     rows={4}
                                     value={data.commentEn}
                                     onChange={e => setData({ ...data, commentEn: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm leading-relaxed"
+                                    className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900 leading-relaxed focus:bg-white transition-colors"
+                                    placeholder="Enter comment in English..."
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700">Japanese Translation</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">{t('japaneseTranslation')}</label>
                                 <textarea
                                     rows={4}
                                     value={data.commentJp}
                                     onChange={e => setData({ ...data, commentJp: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm leading-relaxed"
+                                    className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900 leading-relaxed focus:bg-white transition-colors"
+                                    placeholder="日本語のコメント..."
                                 />
                             </div>
                         </div>
@@ -364,139 +785,157 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
                 </div>
             </div>
 
-            {/* --- Right Side: Preview Area (Only this is shown in Print) --- */}
-            <div className="flex-1 bg-gray-200/50 p-4 md:p-8 overflow-y-auto flex justify-center items-start">
-
-                {/* A4 Container */}
+            {/* --- Right Side: Preview Area --- */}
+            <div className="flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper">
+                {/* A4 Container - Uniqlo Style Reverted */}
                 <div
                     id="report-preview"
-                    className="report-preview bg-white shadow-2xl relative flex flex-col mx-auto"
+                    className="bg-white shadow-2xl relative flex flex-col mx-auto transition-transform origin-top scale-[0.9] md:scale-100"
                     style={{
                         width: '210mm',
-                        minHeight: '297mm', // A4 Height
-                        padding: '12mm 15mm',
+                        minHeight: '297mm',
+                        padding: '30px 50px 10px 50px',
                         boxSizing: 'border-box'
                     }}
                 >
-                    {/* Watermark Logo (Centered Top, Semi-Transparent) */}
-                    <div className="absolute top-0 left-0 right-0 h-[250px] flex justify-center pointer-events-none z-0 mt-12">
-                        <div className="relative w-[140px] h-[140px] opacity-40">
-                            <img
+                    {/* Header */}
+                    <header className="flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[140px] pt-4">
+                        <div className="flex flex-col justify-center items-start z-10">
+                            <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
+                            <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
+                        </div>
+
+                        {/* Centered Watermark Logo - 150px (Reduced size as requested) */}
+                        {/* Centered Watermark Logo - 150px (Reduced size as requested, Moved Up) */}
+                        <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-50 pointer-events-none logo-container">
+                            <Image
                                 src="/HamagikuLogoSVG.svg"
                                 alt="Logo"
-                                className="w-full h-full object-contain"
+                                fill
+                                className="object-contain"
                             />
                         </div>
-                    </div>
 
-                    {/* Content Wrapper (z-10) */}
-                    <div className="relative z-10 flex flex-col h-full font-serif-jp text-[#1B3226]">
-
-                        {/* Header: Date & Title (Minimal) */}
-                        <div className="text-right text-xs font-serif-en tracking-[0.2em] text-gray-400 mb-10 border-b border-gray-100 pb-2">
-                            {data.reportDate} | HAMAGIKU FARM REPORT
+                        <div className="flex flex-col justify-center items-end z-10">
+                            <div className="font-serif-en font-bold text-2xl text-[#1a3c34] tracking-widest text-right whitespace-pre-line leading-tight">
+                                {t('monthlyReport').replace(' ', '\n')}
+                            </div>
                         </div>
+                    </header>
 
-                        {/* Profile Section */}
-                        <div className="flex flex-col items-center mb-10 text-center">
-                            {/* Horse Names */}
-                            <h1 className="text-4xl md:text-5xl font-bold mb-2 tracking-wide text-[#1B3226] font-serif-jp">
-                                {data.horseNameJp || '（馬名を入力）'}
-                            </h1>
-                            <h2 className="text-xl font-serif-en text-gray-500 mb-6 italic font-light tracking-wide">
-                                {data.horseNameEn || '(Horse Name)'}
-                            </h2>
+                    {/* Old Watermark Position (Removed) */}
 
-                            {/* Pedigree */}
-                            <div className="flex items-center gap-6 text-sm tracking-wider text-gray-600 border-t border-b border-gray-100 py-3 px-12">
-                                <span className="font-serif-en">Sire: <span className="font-bold text-[#1B3226] ml-2">{data.sire}</span></span>
-                                <span className="text-gray-300">×</span>
-                                <span className="font-serif-en">Dam: <span className="font-bold text-[#1B3226] ml-2">{data.dam}</span></span>
+                    {/* Content Wrapper */}
+                    <div className="relative z-10 flex flex-col h-full">
+
+                        {/* Horse Profile */}
+                        <div className="flex justify-between items-end mb-5">
+                            <div>
+                                {lang === 'ja' ? (
+                                    <>
+                                        <h1 className="text-4xl font-bold font-serif-jp text-gray-800 leading-tight">
+                                            {data.horseNameJp || '（馬名を入力）'}
+                                        </h1>
+                                        <p className="font-serif-en text-[#c5a059] text-xl mt-1">
+                                            {data.horseNameEn || '(Horse Name)'}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h1 className="text-4xl font-bold font-serif-en text-gray-800 leading-tight">
+                                            {data.horseNameEn || '(Horse Name)'}
+                                        </h1>
+                                        <p className="font-serif-jp text-[#c5a059] text-xl mt-1 font-bold">
+                                            {data.horseNameJp || '（馬名を入力）'}
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                            <div className="text-[15px] text-[#666] bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34]">
+                                {/* Multilingual Sire/Dam Display */}
+                                <span className="font-bold mr-1">{t('sire')}:</span>
+                                {lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)}
+                                <span className="mx-2 text-gray-400">×</span>
+                                <span className="font-bold mr-1">{t('dam')}:</span>
+                                {lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}
                             </div>
                         </div>
 
-                        {/* Main Photo */}
-                        <div className="w-full h-[380px] bg-gray-50 mb-10 relative overflow-hidden rounded-sm shadow-sm group">
+                        {/* Main Photo - Reduced width to save vertical space */}
+                        <div className="w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
                             {data.mainPhoto ? (
-                                <img
+                                <Image
                                     src={data.mainPhoto}
                                     alt="Main"
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
                                 />
                             ) : (
-                                <div className="flex items-center justify-center w-full h-full text-gray-300 bg-gray-100 font-serif-en italic">
+                                <div className="flex items-center justify-center w-full h-full text-gray-400 font-serif-en italic">
                                     No Photo Selected
                                 </div>
                             )}
                         </div>
 
-                        {/* Stats & Graph Row */}
-                        <div className="flex flex-row gap-10 mb-10 h-[160px]">
-                            {/* Stats Grid - Minimalist */}
-                            <div className="flex-1 grid grid-cols-2 gap-y-6 content-start pt-2">
-                                <div>
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Weight</div>
-                                    <div className="text-3xl font-bold font-serif-en text-[#1B3226]">{data.weight || '-'}</div>
+                        {/* Data Section - Compact Height (Reduced from 220px to 120px) */}
+                        <div className="flex gap-6 mb-4 h-[120px]">
+                            {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
+                            <div className="flex-1 grid grid-cols-3 gap-[10px]">
+                                <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
+                                    <span className="text-[10px] text-[#666] uppercase mb-1">{t('training')}</span>
+                                    <span className="text-base text-[#333] font-serif-jp leading-tight">
+                                        {lang === 'ja' ? (data.trainingStatusJp || '-') : (data.trainingStatusEn || '-')}
+                                    </span>
                                 </div>
-                                <div>
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Total Status</div>
-                                    <div className="text-lg font-bold text-[#1B3226]">{data.statusJp || '-'}</div>
-                                    <div className="text-xs text-gray-400 italic font-serif-en">{data.statusEn}</div>
+                                <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
+                                    <span className="text-[10px] text-[#666] uppercase mb-1">{t('condition')}</span>
+                                    <span className="text-base text-[#333] leading-tight">
+                                        {lang === 'ja' ? (data.conditionJp || '-') : (data.conditionEn || '-')}
+                                    </span>
                                 </div>
-                                <div className="col-span-2">
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Next Target</div>
-                                    <div className="text-md font-bold text-[#1B3226]">{data.targetJp || '-'}</div>
-                                    <div className="text-xs text-gray-400 italic font-serif-en">{data.targetEn}</div>
+                                <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#c5a059]">
+                                    <span className="text-[10px] text-[#666] uppercase mb-1">{t('currentWeight')}</span>
+                                    <span className="font-serif-en text-xl font-bold text-[#1a3c34]">{data.weight || '-'}</span>
                                 </div>
+                                {/* Target Removed */}
                             </div>
 
-                            {/* Chart Area */}
-                            <div className="flex-[1.4] w-full h-full border-l border-gray-100 pl-8">
-                                <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-2">Weight History</div>
-                                <div className="h-full relative">
-                                    <SimpleLineChart data={data.weightHistory} color="#1B3226" />
+                            {/* Chart - Responsive height */}
+                            <div className="flex-[1.2] relative pt-1">
+                                <span className="text-xs font-bold text-[#1a3c34] block mb-1 border-b border-[#ddd] pb-1 cursor-default">
+                                    {t('weightHistory')}
+                                </span>
+                                <div className="h-[90px] w-full">
+                                    <SimpleLineChart data={data.weightHistory} color="#1a3c34" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Comments Section */}
-                        <div className="flex-1 flex flex-col gap-8">
-                            {/* Japanese Comment */}
-                            <div className="relative">
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#1B3226] mb-3 pl-3 border-l-2 border-[#1B3226]">
-                                    Condition & Training
-                                </h3>
-                                <p className="text-[14px] leading-8 text-justify text-gray-800 whitespace-pre-wrap font-serif-jp pl-1">
+                        {/* Comment Section */}
+                        <div className="border border-[#ddd] p-5 relative bg-white min-h-[140px] mt-4">
+                            <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm">
+                                {t('trainersComment')}
+                            </span>
+                            {lang === 'ja' ? (
+                                <div className="text-[13px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#333]">
                                     {data.commentJp}
-                                </p>
-                            </div>
-
-                            {/* English Comment */}
-                            {data.commentEn && (
-                                <div className="relative">
-                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3 pl-3 border-l-2 border-gray-200">
-                                        Trainer's Comment (EN)
-                                    </h3>
-                                    <p className="text-[14px] leading-7 text-justify text-gray-600 whitespace-pre-wrap font-serif-en italic pl-1">
-                                        &quot;{data.commentEn}&quot;
-                                    </p>
+                                </div>
+                            ) : (
+                                <div className="text-[13px] leading-[1.8] text-justify font-serif-en text-[#333] whitespace-pre-wrap break-words">
+                                    {data.commentEn ? `"${data.commentEn}"` : ''}
                                 </div>
                             )}
                         </div>
 
-                        {/* Footer Logo/Brand - Minimal */}
-                        <div className="mt-auto pt-10 border-t border-gray-100 flex justify-between items-end opacity-70">
-                            <div className="flex items-center gap-3">
-                                <img src="/HamagikuLogoSVG.svg" className="w-6 h-6 object-contain opacity-50" alt="Small Logo" />
-                                <span className="text-[9px] font-bold tracking-[0.2em] text-[#1B3226] uppercase">Hamagiku Farm</span>
-                            </div>
-                            <div className="text-[9px] text-gray-400 font-serif-en tracking-widest">
-                                {new Date().getFullYear()} OFFICIAL REPORT
-                            </div>
-                        </div>
+                        {/* Footer */}
+                        <footer className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
+                            HAMAGIKU FARM - HOKKAIDO, JAPAN | {data.reportDate.replace(/\./g, '/')}
+                        </footer>
+
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

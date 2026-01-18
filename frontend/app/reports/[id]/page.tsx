@@ -42,6 +42,22 @@ export default function ReportEditor() {
                     setHorseId(paramHorseId);
                     // Fetch horse details to prepopulate
                     const { data: horse } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
+
+                    // Fetch past weight history
+                    const { data: reports } = await supabase
+                        .from('reports')
+                        .select('created_at, weight')
+                        .eq('horse_id', paramHorseId)
+                        .order('created_at', { ascending: true });
+
+                    const weightHistory = reports?.map(r => {
+                        const d = new Date(r.created_at);
+                        return {
+                            label: `${d.getMonth() + 1}月`,
+                            value: r.weight || 0
+                        };
+                    }).filter(item => item.value > 0) || [];
+
                     setInitialData({
                         reportDate: defaultDate,
                         horseNameJp: horse?.name || '',
@@ -52,7 +68,7 @@ export default function ReportEditor() {
                         statusEn: 'Training', statusJp: '調整中',
                         weight: '', targetEn: '', targetJp: '',
                         commentEn: '', commentJp: '',
-                        weightHistory: []
+                        weightHistory: weightHistory
                     });
                     setLoading(false);
                 } else {
@@ -86,7 +102,11 @@ export default function ReportEditor() {
                 horseNameJp: horse?.name || '',
                 horseNameEn: horse?.name_en || '',
                 sire: horse?.sire || '',
+                sireEn: metrics.sireEn || '',
+                sireJp: metrics.sireJp || '',
                 dam: horse?.dam || '',
+                damEn: metrics.damEn || '',
+                damJp: metrics.damJp || '',
 
                 commentJp: report.body || '',
                 commentEn: metrics.commentEn || '',
@@ -119,6 +139,22 @@ export default function ReportEditor() {
 
         // Fetch horse details
         const { data: horse } = await supabase.from('horses').select('*').eq('id', selectedHorseId).single();
+
+        // Fetch past weight history
+        const { data: reports } = await supabase
+            .from('reports')
+            .select('created_at, weight')
+            .eq('horse_id', selectedHorseId)
+            .order('created_at', { ascending: true });
+
+        const weightHistory = reports?.map(r => {
+            const d = new Date(r.created_at);
+            return {
+                label: `${d.getMonth() + 1}月`,
+                value: r.weight || 0
+            };
+        }).filter(item => item.value > 0) || [];
+
         setInitialData({
             reportDate: defaultDate,
             horseNameJp: horse?.name || '',
@@ -129,7 +165,7 @@ export default function ReportEditor() {
             statusEn: 'Training', statusJp: '調整中',
             weight: '', targetEn: '', targetJp: '',
             commentEn: '', commentJp: '',
-            weightHistory: []
+            weightHistory: weightHistory
         });
         setLoading(false);
     };
@@ -194,7 +230,11 @@ export default function ReportEditor() {
             commentEn: d.commentEn,
             statusEn: d.statusEn,
             targetEn: d.targetEn,
-            weightHistory: d.weightHistory
+            weightHistory: d.weightHistory,
+            sireEn: d.sireEn,
+            sireJp: d.sireJp,
+            damEn: d.damEn,
+            damJp: d.damJp
         };
 
         const payload = {
@@ -258,16 +298,16 @@ export default function ReportEditor() {
 
     if (showHorseSelector) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
-                <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
-                    <h2 className="text-xl font-bold mb-4 text-gray-800">Select a Horse</h2>
-                    <p className="text-gray-500 mb-6 text-sm">Please select a horse to create a report for.</p>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="min-h-screen flex items-start justify-center pt-10 sm:pt-20 bg-gray-100 font-sans px-4">
+                <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-2xl border border-stone-200">
+                    <h2 className="text-2xl font-bold mb-3 text-[#1a3c34]">Select a Horse</h2>
+                    <p className="text-stone-500 mb-6 text-sm">Please select a horse to create a report for.</p>
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
                         {horses.map(h => (
                             <button
                                 key={h.id}
                                 onClick={() => handleSelectHorse(h.id)}
-                                className="w-full text-left p-3 hover:bg-gray-50 border rounded transition-colors"
+                                className="w-full text-left p-4 hover:bg-[#1a3c34]/5 border border-stone-200 rounded-lg transition-all duration-200 text-lg text-[#1a3c34] font-medium block group"
                             >
                                 {h.name}
                             </button>
@@ -279,7 +319,7 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block bg-gray-100">
+        <div className="min-h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100">
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-4 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
                 <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start gap-4">
@@ -321,7 +361,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full flex justify-center overflow-x-auto pb-8">
+            <div className="w-full flex justify-center overflow-x-auto pb-8 print:pb-0 print:overflow-visible">
                 <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
             </div>
         </div>

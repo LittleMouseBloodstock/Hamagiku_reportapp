@@ -16,7 +16,8 @@ const translations: Translations = {
     dashboardTitle: { ja: "レポート管理ダッシュボード", en: "Report Management Dashboard" },
     reportInventory: { ja: "レポート一覧", en: "Report Inventory" },
     dashboard: { ja: "ダッシュボード", en: "Dashboard" },
-    clients: { ja: "クライアント", en: "Clients" },
+    clients: { ja: "クライアント一覧", en: "Clients" },
+    horses: { ja: "馬一覧", en: "Horses" },
     settings: { ja: "設定", en: "Settings" },
 
     // Dashboard Header
@@ -45,6 +46,7 @@ const translations: Translations = {
     showingReports: { ja: "全24件中 1-5件を表示", en: "Showing 1-5 of 24 reports" },
 
     newReport: { ja: "新規レポート作成", en: "Create New Report" },
+    recentReports: { ja: "最近のレポート", en: "Recent Reports" },
     loading: { ja: "読み込み中...", en: "Loading..." },
 
     // Columns
@@ -73,6 +75,46 @@ const translations: Translations = {
     age: { ja: "年齢", en: "Age" },
     weight: { ja: "体重", en: "Weight" },
     comment: { ja: "コメント", en: "Comment" },
+
+    // Report Builder Sidebar
+    basicInfo: { ja: "基本情報", en: "Basic Info" },
+    reportDate: { ja: "レポート年月", en: "Report Date" },
+    photo: { ja: "写真", en: "Photo" },
+    selectImage: { ja: "画像を選択", en: "Select Image" },
+    uploadNewPhoto: { ja: "新しい写真をアップロード", en: "Upload New Photo" },
+    statusStats: { ja: "ステータス・統計", en: "Status & Stats" },
+    currentWeight: { ja: "現在の体重", en: "Current Weight" },
+    training: { ja: "調教状況", en: "Training" },
+    condition: { ja: "体調", en: "Condition" },
+    target: { ja: "目標", en: "Target" },
+    weightHistory: { ja: "体重推移", en: "Weight History" },
+    aiComments: { ja: "AIコメント生成", en: "AI Comments" },
+    englishComment: { ja: "英語コメント", en: "English Comment" },
+    japaneseTranslation: { ja: "日本語翻訳", en: "Japanese Translation" },
+
+    // Client Form
+    clientBasicInfo: { ja: "基本情報", en: "Basic Information" },
+    clientName: { ja: "クライアント名 / 会社名", en: "Client Name / Company Name" },
+    representativeName: { ja: "代表者名", en: "Representative Name" },
+    contactInfo: { ja: "連絡先情報", en: "Contact Information" },
+    email: { ja: "メールアドレス", en: "Email" },
+    phone: { ja: "電話番号", en: "Phone" },
+    address: { ja: "住所", en: "Address" },
+    zipCode: { ja: "郵便番号", en: "Zip Code" },
+    prefecture: { ja: "都道府県", en: "Prefecture" },
+    city: { ja: "市区町村", en: "City" },
+    street: { ja: "番地・建物名", en: "Street / Building" },
+    notes: { ja: "備考", en: "Notes" },
+    cancel: { ja: "キャンセル", en: "Cancel" },
+    saveChanges: { ja: "変更を保存", en: "Save Changes" },
+    createClient: { ja: "クライアント登録", en: "Create Client" },
+    saving: { ja: "保存中...", en: "Saving..." },
+    editClient: { ja: "クライアント編集", en: "Edit Client" },
+    newClient: { ja: "新規クライアント登録", en: "New Client" },
+
+    // Report Preview Labels
+    trainersComment: { ja: "コメント", en: "COMMENT" },
+    monthlyReport: { ja: "月次レポート", en: "MONTHLY REPORT" },
 };
 
 interface LanguageContextType {

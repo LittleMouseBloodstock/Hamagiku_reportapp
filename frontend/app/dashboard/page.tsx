@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
@@ -18,41 +17,63 @@ export default function Dashboard() {
         author: string;
         status: string;
         languages: string[];
+        horses?: { name: string; name_en: string; };
     }
 
     const [reports, setReports] = useState<DashboardReport[]>([]);
     const [loading, setLoading] = useState(true);
+    // Hardcoded stats for demo (replace with real data later)
+    const [stats, setStats] = useState({
+        totalReports: 124,
+        activeHorses: 45,
+        clients: 12,
+        pendingReview: 3
+    });
 
     useEffect(() => {
         const fetchReports = async () => {
-            // Fetch reports with horse name
+            setLoading(true);
+
+            // 1. Fetch Reports & Pending Reports
             const { data, error } = await supabase
                 .from('reports')
-                .select(`
-                    *,
-                    horses (name, name_en)
-                `)
+                .select('*, horse_id, horses(name, name_en)')
                 .order('created_at', { ascending: false });
+
+            // 2. Fetch Stats Counts
+            const { count: reportsCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+            const { count: horsesCount } = await supabase.from('horses').select('*', { count: 'exact', head: true });
+            const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true });
+            const { count: pendingCount } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status_training', false); // assuming false means draft/pending
+
+            setStats({
+                totalReports: reportsCount || 0,
+                activeHorses: horsesCount || 0,
+                clients: clientsCount || 0,
+                pendingReview: pendingCount || 0
+            });
 
             if (error) {
                 console.error('Error fetching reports:', error);
             } else {
-                const formatted = data?.map(r => {
-                    // Determine title: Use report title or Horse Name + Date
+                const formatted = data?.map((r: any) => {
+                    // Determine title
                     const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
-                    // Determine languages: Check fields
+                    // Determine languages
                     const langs = [];
                     if (r.body) langs.push('JP');
                     if (r.metrics_json?.commentEn) langs.push('EN');
-                    if (langs.length === 0) langs.push('JP'); // default
+                    if (langs.length === 0) langs.push('JP');
 
                     return {
-                        id: r.id, // UUID
+                        id: r.id,
                         title: title,
                         created: new Date(r.created_at).toLocaleDateString(),
-                        author: 'You', // Placeholder as auth not fully linked to names yet
-                        status: r.status_training ? 'published' : 'draft', // Simple logic
-                        languages: langs
+                        author: 'You',
+                        status: r.status_training ? 'published' : 'draft',
+                        languages: langs,
+                        horses: r.horses,
+                        horse_id: r.horse_id
                     };
                 }) || [];
                 setReports(formatted);
@@ -62,177 +83,124 @@ export default function Dashboard() {
         fetchReports();
     }, [language]);
 
-    const toggleLanguage = () => {
-        setLanguage(language === 'ja' ? 'en' : 'ja');
-    };
-
     return (
-        <div className="flex h-screen w-full bg-background-light text-stone-850 font-sans antialiased overflow-hidden">
-            <aside className="w-20 lg:w-64 flex flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
-                <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
-                    <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
-                        <Image
-                            src="/HamagikuLogoSVG.svg"
-                            alt="Hamagiku Farm"
-                            fill
-                            className="object-contain object-left"
-                            priority
-                        />
-                    </div>
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
+            <header className="h-16 flex items-center justify-between px-6 bg-[#FDFCF8] border-b border-stone-200">
+                <div className="text-xl font-bold text-[#1a3c34] flex items-center gap-2 font-display">
+                    <span className="material-symbols-outlined">dashboard</span>
+                    {t('dashboard')}
                 </div>
-                <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
-                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
-                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">dashboard</span>
-                        <span className="hidden lg:block text-sm font-medium">{t('dashboard')}</span>
-                    </a>
-                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20" href="#">
-                        <span className="material-symbols-outlined fill-1">article</span>
-                        <span className="hidden lg:block text-sm font-medium">{t('reportInventory')}</span>
-                    </a>
-                    <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/horses">
-                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">group</span>
-                        <span className="hidden lg:block text-sm font-medium">{t('clients')}</span>
-                    </Link>
-                    <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
-                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">settings</span>
-                        <span className="hidden lg:block text-sm font-medium">{t('settings')}</span>
-                    </a>
-                </nav>
-                <div className="p-4 mt-auto">
-                    <div
-                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors cursor-pointer border border-transparent hover:border-stone-200"
-                        onClick={toggleLanguage}
-                        title="Toggle Language"
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/reports/new"
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"
                     >
-                        <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 shrink-0 shadow-sm bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-                            {language.toUpperCase()}
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        <span className="text-sm font-medium">{t('newReport')}</span>
+                    </Link>
+                </div>
+            </header>
+
+            <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">description</span>
+                            </div>
                         </div>
-                        <div className="hidden lg:flex flex-col overflow-hidden">
-                            <h1 className="text-stone-900 text-sm font-semibold truncate">Eleanor Pena</h1>
-                            <p className="text-stone-500 text-xs truncate">Senior Editor</p>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">Total Reports</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.totalReports}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">format_list_bulleted</span>
+                            </div>
                         </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">Active Horses</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.activeHorses}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">group</span>
+                            </div>
+                        </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">Clients</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.clients}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">schedule</span>
+                            </div>
+                        </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">Pending Review</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.pendingReview}</p>
                     </div>
                 </div>
-            </aside>
-            <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-background-light to-transparent pointer-events-none z-10"></div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="max-w-[1200px] mx-auto w-full p-6 lg:p-12 pb-24">
-                        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 relative z-20">
-                            <div className="flex flex-col gap-2 max-w-2xl">
-                                <span className="text-primary font-medium text-sm uppercase tracking-wider mb-1">{t('deliverables')}</span>
-                                <h1 className="text-stone-900 text-4xl lg:text-5xl font-display font-medium leading-tight">
-                                    {t('reportInventory')}
-                                </h1>
-                                <p className="text-stone-500 text-lg font-light mt-2 max-w-lg">
-                                    {t('manageReportsDesc')}
-                                </p>
-                            </div>
-                            <Link href="/reports/new" className="flex items-center justify-center gap-2 bg-primary text-white hover:bg-primary-dark transition-all duration-300 px-6 py-3 rounded-full shadow-lg hover:shadow-primary/30 group">
-                                <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform">add</span>
-                                <span className="text-sm font-bold tracking-wide">{t('createReportBtn')}</span>
-                            </Link>
-                        </header>
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 sticky top-0 bg-background-light/95 backdrop-blur-md py-4 z-30 transition-all border-b border-stone-200/50">
-                            <div className="relative w-full md:max-w-md group">
-                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-stone-400 group-focus-within:text-primary transition-colors">
-                                    <span className="material-symbols-outlined">search</span>
-                                </div>
-                                <input className="block w-full p-3 pl-10 text-sm text-stone-900 bg-transparent border-b border-stone-300 focus:border-primary focus:ring-0 placeholder-stone-400 transition-colors rounded-none" placeholder={t('searchPlaceholder')} type="text" />
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="relative group">
-                                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-full hover:border-primary hover:text-primary transition-all shadow-sm">
-                                        <span>{t('statusAll')}</span>
-                                        <span className="material-symbols-outlined text-lg">keyboard_arrow_down</span>
-                                    </button>
-                                </div>
-                                <div className="relative group">
-                                    <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 bg-white border border-stone-200 rounded-full hover:border-primary hover:text-primary transition-all shadow-sm">
-                                        <span>{t('languageAll')}</span>
-                                        <span className="material-symbols-outlined text-lg">keyboard_arrow_down</span>
-                                    </button>
-                                </div>
-                                <button className="p-2 text-stone-400 hover:text-primary transition-colors ml-2" title="Filter Settings">
-                                    <span className="material-symbols-outlined">tune</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div className="w-full">
-                            <div className="overflow-hidden rounded-xl bg-white shadow-sm border border-stone-100">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-stone-100 text-xs uppercase tracking-wider text-stone-400 font-medium bg-[#FBFBF9]">
-                                            <th className="px-6 py-5 font-medium w-[40%]">{t('reportTitle')}</th>
-                                            <th className="px-6 py-5 font-medium hidden sm:table-cell">{t('created')}</th>
-                                            <th className="px-6 py-5 font-medium">{t('status')}</th>
-                                            <th className="px-6 py-5 font-medium hidden md:table-cell">{t('language')}</th>
-                                            <th className="px-6 py-5 font-medium text-right">{t('action')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-stone-100">
-                                        {loading ? (
-                                            <tr><td colSpan={5} className="p-6 text-center text-gray-400">Loading reports...</td></tr>
-                                        ) : reports.length === 0 ? (
-                                            <tr><td colSpan={5} className="p-6 text-center text-gray-400">No reports found. Create one!</td></tr>
-                                        ) : (
-                                            reports.map((report) => (
-                                                <tr
-                                                    key={report.id}
-                                                    onClick={() => router.push(`/reports/${report.id}`)}
-                                                    className="group hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
-                                                >
-                                                    <td className="px-6 py-6">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xl font-display font-medium text-stone-900 group-hover:text-primary transition-colors">{report.title}</span>
-                                                            <span className="text-xs text-stone-400 mt-1 sm:hidden">
-                                                                {report.created} • {report.languages.join('/')}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-sm text-stone-500 hidden sm:table-cell">
-                                                        {report.created}
-                                                        <div className="text-xs text-stone-400 mt-0.5">by {report.author}</div>
-                                                    </td>
-                                                    <td className="px-6 py-6">
-                                                        {/* Simple Status Badge Logic for now */}
-                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
-                                                            <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
-                                                            {report.status}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-6 hidden md:table-cell">
-                                                        <div className="flex items-center gap-2">
-                                                            {report.languages.map((lang: string) => (
-                                                                <span key={lang} className="px-2 py-1 bg-stone-100 text-stone-600 text-xs rounded border border-stone-200 font-medium">
-                                                                    {lang}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-6 text-right">
-                                                        <button className="text-stone-400 hover:text-primary p-2 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100">
-                                                            <span className="material-symbols-outlined">edit</span>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                                <div className="flex items-center justify-between px-6 py-4 border-t border-stone-100 bg-stone-50/50">
-                                    <div className="text-xs text-stone-400">{t('showingReports')}</div>
-                                    <div className="flex items-center gap-2">
-                                        <button className="p-1 rounded-md hover:bg-white hover:text-primary text-stone-400 transition-colors disabled:opacity-50">
-                                            <span className="material-symbols-outlined text-lg">chevron_left</span>
-                                        </button>
-                                        <button className="p-1 rounded-md hover:bg-white hover:text-primary text-stone-400 transition-colors">
-                                            <span className="material-symbols-outlined text-lg">chevron_right</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div className="p-6 border-b border-stone-200 flex justify-between items-center">
+                        <h2 className="text-lg font-bold text-stone-800">{t('recentReports') || 'Recent Reports'}</h2>
+                        <button className="text-stone-400 hover:text-stone-600">
+                            <span className="material-symbols-outlined">more_horiz</span>
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-stone-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('horseName')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('reportTitle')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('date')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('status')}</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">{t('actions')}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-200">
+                                {reports.map((report) => (
+                                    <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(`/reports/${report.id}`)}>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="h-8 w-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 font-bold text-xs mr-3">
+                                                    {(language === 'ja' ? report.horses?.name : report.horses?.name_en)?.charAt(0) || 'H'}
+                                                </div>
+                                                <div className="text-sm font-medium text-stone-900">
+                                                    {language === 'ja' ? report.horses?.name : report.horses?.name_en || 'Unknown Horse'}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                            {report.title}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                            {/* Date */}
+                                            {report.created}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {report.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <span className="text-stone-400 hover:text-stone-600">
+                                                <span className="material-symbols-outlined text-lg">chevron_right</span>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {reports.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-stone-500 text-sm">
+                                            No recent reports found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </main>

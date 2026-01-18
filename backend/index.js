@@ -32,7 +32,7 @@ app.post('/translate', async (req, res) => {
     const dynamicGenAI = new GoogleGenerativeAI(apiKey);
 
     try {
-        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
         const instruction = targetLang === 'ja'
             ? "以下のテキストを、日本の競馬業界の専門用語を使った自然な日本語に翻訳してください。"
             : "Translate the following text into natural English for a horse racing report.";
@@ -50,9 +50,9 @@ app.post('/translate', async (req, res) => {
     }
 });
 
-// Content Generation Endpoint
+// Content Generation Endpoint (Dual Language)
 app.post('/generate', async (req, res) => {
-    const { prompt, lang, apiKey: clientApiKey } = req.body;
+    const { prompt, apiKey: clientApiKey } = req.body;
 
     const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "API Key not configured" });
@@ -60,20 +60,66 @@ app.post('/generate', async (req, res) => {
     const dynamicGenAI = new GoogleGenerativeAI(apiKey);
 
     try {
-        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const systemInstruction = lang === 'ja'
-            ? `あなたはプロの競走馬調教師です。以下のキーワードを元に月次レポート用コメントを書いてください。200文字程度。`
-            : `You are a racehorse trainer. Write a monthly report comment based on these keywords. Around 100 words.`;
+        const model = dynamicGenAI.getGenerativeModel({
+            model: "gemini-2.5-flash-lite",
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
+        const systemInstruction = `
+        You are a professional racehorse trainer.
+        Based on the provided keywords, write a monthly report comment (approx 150-200 characters for Japanese, 50-80 words for English).
+        
+        Output valid JSON with exactly these keys:
+        {
+          "ja": "Japanese comment here (professional tone)",
+          "en": "English comment here (professional, natural translation of the Japanese)"
+        }
+        
+        Ensure the English and Japanese meanings align.
+        `;
 
         const fullPrompt = `${systemInstruction}\n\nKeywords: ${prompt}`;
 
         const result = await model.generateContent(fullPrompt);
         const response = await result.response;
-        const generatedText = response.text();
+        const text = response.text();
 
-        res.json({ generatedText });
+        // Parse JSON
+        const jsonResponse = JSON.parse(text);
+
+        res.json(jsonResponse);
     } catch (e) {
         console.error("Generation Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Name Translation Endpoint
+app.post('/translate-name', async (req, res) => {
+    const { name, targetLang } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) return res.status(500).json({ error: "API Key not configured" });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        // Prompt for Name conversion
+        const prompt = `
+        Translate or transliterate the racehorse name "${name}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
+        Return ONLY the translated name as a string. No JSON, no explanations.
+        Example: "Lucky Vega" -> "ラッキーベガ"
+        Example: "クロフネ" -> "Kurofune"
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const translatedName = response.text().trim();
+
+        res.json({ translatedName });
+    } catch (e) {
+        console.error("Name Translation Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
