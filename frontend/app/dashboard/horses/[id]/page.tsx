@@ -8,7 +8,6 @@ import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 import Link from 'next/link';
-import Image from 'next/image';
 
 type Horse = {
     id: string;
@@ -29,6 +28,7 @@ type Report = {
     status_training: string | null;
     weight: number | null;
     horse_id: string;
+    metrics_json?: any;
 };
 
 export default function HorseDetail() {
@@ -128,27 +128,7 @@ export default function HorseDetail() {
             <main className="max-w-4xl mx-auto px-4 py-8">
                 {/* Horse Header */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8 flex flex-col md:flex-row gap-6 items-start border border-gray-100">
-                    <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-200">
-                        {horse.photo_url ? (
-                            <Image
-                                src={horse.photo_url}
-                                alt={horse.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                                onError={(e) => {
-                                    // Fallback UI handled by CSS or generic icon if needed, 
-                                    // but next/image onError is tricky. 
-                                    // We'll trust the URL or show Placeholder if null.
-                                    // Actually better to just use a placeholder if URL is obviously bad?
-                                }}
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                <ImageIcon size={32} />
-                            </div>
-                        )}
-                    </div>
+
 
                     <div className="flex-1 w-full">
                         {editMode ? (
@@ -230,7 +210,12 @@ export default function HorseDetail() {
                                             <div className="font-bold text-gray-700">{report.title || (language === 'ja' ? '無題のレポート' : 'Untitled Report')}</div>
                                             <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
                                                 <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
-                                                {report.status_training && <span className="flex items-center gap-1"><Activity size={10} /> {report.status_training}</span>}
+                                                {(report.status_training || report.metrics_json?.statusEn) && (
+                                                    <span className="flex items-center gap-1">
+                                                        <Activity size={10} />
+                                                        {language === 'ja' ? (report.status_training || report.metrics_json?.statusJp) : (report.metrics_json?.statusEn || report.status_training)}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
