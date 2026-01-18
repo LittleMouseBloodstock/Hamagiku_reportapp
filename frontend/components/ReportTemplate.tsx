@@ -36,6 +36,7 @@ const Fonts = () => (
         left: 0 !important;
         width: 210mm !important;
         height: 280mm !important; /* Reduced further to 280mm */
+        min-height: 0 !important; /* Override inline min-height to prevent overflow */
         margin: 0 !important;
         padding: 30px 50px 10px 50px !important;
         background-color: white !important;
@@ -856,23 +857,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         <div className="flex justify-between items-end mb-5">
                             <div>
                                 {lang === 'ja' ? (
-                                    <>
-                                        <h1 className="text-4xl font-bold font-serif-jp text-gray-800 leading-tight">
-                                            {data.horseNameJp || '（馬名を入力）'}
-                                        </h1>
-                                        <p className="font-serif-en text-[#c5a059] text-xl mt-1">
-                                            {data.horseNameEn || '(Horse Name)'}
-                                        </p>
-                                    </>
+                                    <h1 className="text-4xl font-bold font-serif-jp text-gray-800 leading-tight">
+                                        {data.horseNameJp || '（馬名を入力）'}
+                                    </h1>
                                 ) : (
-                                    <>
-                                        <h1 className="text-4xl font-bold font-serif-en text-gray-800 leading-tight">
-                                            {data.horseNameEn || '(Horse Name)'}
-                                        </h1>
-                                        <p className="font-serif-jp text-[#c5a059] text-xl mt-1 font-bold">
-                                            {data.horseNameJp || '（馬名を入力）'}
-                                        </p>
-                                    </>
+                                    <h1 className="text-4xl font-bold font-serif-en text-gray-800 leading-tight">
+                                        {data.horseNameEn || '(Horse Name)'}
+                                    </h1>
                                 )}
                             </div>
                             <div className="text-[15px] text-[#666] bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34]">
