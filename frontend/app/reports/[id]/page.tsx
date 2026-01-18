@@ -24,7 +24,7 @@ export default function ReportEditor() {
 
     // Horse Selection (for New Reports)
     const [showHorseSelector, setShowHorseSelector] = useState(false);
-    const [horses, setHorses] = useState<{ id: string, name: string }[]>([]);
+    const [horses, setHorses] = useState<{ id: string, name: string, name_en: string }[]>([]);
 
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
@@ -74,7 +74,7 @@ export default function ReportEditor() {
                     setLoading(false);
                 } else {
                     // No horse selected, fetch list and show selector
-                    const { data: allHorses } = await supabase.from('horses').select('id, name').order('name');
+                    const { data: allHorses } = await supabase.from('horses').select('id, name, name_en').order('name');
                     if (allHorses) setHorses(allHorses);
                     setShowHorseSelector(true);
                     setLoading(false);
@@ -334,7 +334,7 @@ export default function ReportEditor() {
                                 onClick={() => handleSelectHorse(h.id)}
                                 className="w-full text-left p-4 hover:bg-[#1a3c34]/5 border border-stone-200 rounded-lg transition-all duration-200 text-lg text-[#1a3c34] font-medium block group"
                             >
-                                {h.name}
+                                {h.name} <span className="text-sm text-stone-400 ml-2 font-normal">{h.name_en}</span>
                             </button>
                         ))}
                     </div>
