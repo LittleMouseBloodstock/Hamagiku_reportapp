@@ -66,6 +66,7 @@ export default function ReportEditor() {
                         sire: horse?.sire || '',
                         dam: horse?.dam || '',
                         mainPhoto: horse?.photo_url || '',
+                        originalPhoto: horse?.photo_url || '',
                         statusEn: 'Training', statusJp: '調整中',
                         weight: '', targetEn: '', targetJp: '',
                         commentEn: '', commentJp: '',
@@ -123,6 +124,7 @@ export default function ReportEditor() {
                 weightHistory: metrics.weightHistory || [],
 
                 mainPhoto: report.main_photo_url || horse?.photo_url || '',
+                originalPhoto: report.main_photo_url || horse?.photo_url || '',
                 logo: null
             });
 
@@ -165,6 +167,7 @@ export default function ReportEditor() {
             sire: horse?.sire || '',
             dam: horse?.dam || '',
             mainPhoto: horse?.photo_url || '',
+            originalPhoto: horse?.photo_url || '',
             statusEn: 'Training', statusJp: '調整中',
             weight: '', targetEn: '', targetJp: '',
             commentEn: '', commentJp: '',
