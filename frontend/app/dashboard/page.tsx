@@ -165,9 +165,7 @@ export default function Dashboard() {
                                     <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(`/reports/${report.id}`)}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 font-bold text-xs mr-3">
-                                                    {(language === 'ja' ? report.horses?.name : report.horses?.name_en)?.charAt(0) || 'H'}
-                                                </div>
+                                                <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
                                                 <div className="text-sm font-medium text-stone-900">
                                                     {language === 'ja' ? report.horses?.name : report.horses?.name_en || 'Unknown Horse'}
                                                 </div>
