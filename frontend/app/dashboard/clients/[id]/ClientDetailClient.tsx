@@ -85,11 +85,20 @@ export default function ClientDetailClient({ id }: { id: string }) {
     return (
         <div className="h-full overflow-y-auto">
             <div className="max-w-3xl mx-auto p-6 lg:p-12">
-                <div className="mb-8 flex items-center gap-4">
-                    <Link href="/dashboard/clients" className="text-stone-500 hover:text-stone-800">
-                        <span className="material-symbols-outlined">arrow_back</span>
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link href="/dashboard/clients" className="text-stone-500 hover:text-stone-800">
+                            <span className="material-symbols-outlined">arrow_back</span>
+                        </Link>
+                        <h1 className="text-2xl font-bold text-stone-800">{t('editClient')}: {formData.name}</h1>
+                    </div>
+                    <Link
+                        href={`/dashboard/clients/${id}/reports`}
+                        className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200 transition-colors font-medium border border-stone-200"
+                    >
+                        <span className="material-symbols-outlined text-lg">print</span>
+                        <span>Monthly Reports</span>
                     </Link>
-                    <h1 className="text-2xl font-bold text-stone-800">{t('editClient')}: {formData.name}</h1>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 p-8">
