@@ -10,7 +10,6 @@ export default function Sidebar() {
     const { t } = useLanguage();
     const [mounted, setMounted] = useState(false);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         setMounted(true);
     }, []);

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, ArrowLeft, FileText, Calendar, Activity, Image as ImageIcon } from 'lucide-react';
+import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -28,13 +28,14 @@ type Report = {
     status_training: string | null;
     weight: number | null;
     horse_id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     metrics_json?: any;
 };
 
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
-    const { language, t } = useLanguage();
+    const { language, t } = useLanguage(); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
