@@ -177,7 +177,7 @@ export default function ReportEditor() {
         reportDataRef.current = data;
     }, []);
 
-    async function uploadImage(base64Data: string, path: string): Promise<string | null> {
+    async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: any }> {
         try {
             // Convert Base64 to Blob
             const res = await fetch(base64Data);
@@ -190,7 +190,7 @@ export default function ReportEditor() {
 
             if (error) {
                 console.error("Upload Error:", error);
-                return null;
+                return { url: null, error };
             }
 
             // Get Public URL
@@ -198,10 +198,10 @@ export default function ReportEditor() {
                 .from('report-assets')
                 .getPublicUrl(path);
 
-            return publicUrl;
+            return { url: publicUrl, error: null };
         } catch (e) {
             console.error("Image Processing Error:", e);
-            return null;
+            return { url: null, error: e };
         }
     }
 
@@ -224,11 +224,12 @@ export default function ReportEditor() {
             const reportPathId = isNew ? `temp_${Date.now()}` : id;
             const path = `${horseId}/${reportPathId}/${fileName}`;
 
-            const uploadedUrl = await uploadImage(d.mainPhoto, path);
+            const { url: uploadedUrl, error: uploadError } = await uploadImage(d.mainPhoto, path);
             if (uploadedUrl) {
                 mainPhotoUrl = uploadedUrl;
             } else {
-                alert("Failed to upload image. Please make sure you have executed the 'fix_storage_policies.sql' script in Supabase SQL Editor.");
+                const errorMsg = uploadError?.message || JSON.stringify(uploadError) || "Unknown Error";
+                alert(`Failed to upload image.\nError: ${errorMsg}\n\nPlease check Supabase Storage policies.`);
                 setSaving(false);
                 return;
             }
