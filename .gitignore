@@ -6,3 +6,6 @@ out
 .DS_Store
 *.log
 .vscode
+
+# Local Operational Scripts
+backend/fix_storage_policies.sql
