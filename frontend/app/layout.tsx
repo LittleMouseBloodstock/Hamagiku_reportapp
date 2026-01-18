@@ -36,6 +36,9 @@ const newsreader = Newsreader({
 export const metadata: Metadata = {
   title: "Monthly Report Generator",
   description: "Multilingual Report App",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 import { LanguageProvider } from "@/contexts/LanguageContext";
