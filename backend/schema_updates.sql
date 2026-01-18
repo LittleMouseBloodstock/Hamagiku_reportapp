@@ -23,3 +23,7 @@ ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Enable read access for authenticated users" ON clients FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Enable insert for authenticated users" ON clients FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Enable update for authenticated users" ON clients FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Reports Table Update for Peer Review
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS review_status TEXT CHECK (review_status IN ('draft', 'pending_jp_check', 'pending_en_check', 'approved')) DEFAULT 'draft';
+COMMENT ON COLUMN reports.review_status IS 'Translation review status: draft, pending_jp_check, pending_en_check, approved';

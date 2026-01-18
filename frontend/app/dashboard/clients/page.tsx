@@ -6,41 +6,53 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 
 export default function ClientsPage() {
+    interface Client {
+        id: string;
+        name: string;
+        contact_email?: string;
+        contact_phone?: string;
+        created_at: string;
+    }
+
     const { t } = useLanguage();
-    const [clients, setClients] = useState<any[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .order('name');
+
+                if (error) throw error;
+                setClients(data as Client[] || []);
+            } catch (error: unknown) {
+                console.error('Error fetching clients:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchClients();
     }, []);
 
-    const fetchClients = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('clients')
-                .select('*')
-                .order('name');
-
-            if (error) throw error;
-            setClients(data || []);
-        } catch (error) {
-            console.error('Error fetching clients:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (loading) {
+        return <div className="p-6 text-stone-500">Loading clients...</div>;
+    }
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-            <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-stone-200">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
                 <div className="text-xl font-bold text-stone-800 flex items-center gap-2">
                     <span className="material-symbols-outlined">group</span>
                     {t('clients') || 'Clients'}
                 </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/dashboard/clients/new" className="flex items-center gap-2 px-4 py-2 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all">
+                <div className="flex items-center gap-4 self-end sm:self-auto">
+                    <Link href="/dashboard/clients/new" className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all">
                         <span className="material-symbols-outlined text-sm">add</span>
-                        <span className="text-sm font-medium">Add Client</span>
+                        <span className="text-sm font-medium">{t('addClient')}</span>
                     </Link>
                 </div>
             </header>

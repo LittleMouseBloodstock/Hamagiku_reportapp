@@ -6,53 +6,58 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 
 export default function HorsesPage() {
+    interface Horse {
+        id: string;
+        name: string;
+        name_en: string;
+        owner_id?: string;
+        clients?: { name: string; };
+    }
+
     const { t, language } = useLanguage();
-    const [horses, setHorses] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [horses, setHorses] = useState<Horse[]>([]);
 
     useEffect(() => {
+        const fetchHorses = async () => {
+            try {
+                // Try fetching with clients first
+                const { data, error } = await supabase
+                    .from('horses')
+                    .select('*, clients(name)')
+                    .order('name');
+
+                if (error) {
+                    // Warning: Relationship might not exist yet if SQL wasn't run
+                    console.warn('Fetch with clients failed, falling back to simple fetch:', error.message);
+                    const { data: simpleData, error: simpleError } = await supabase
+                        .from('horses')
+                        .select('*')
+                        .order('name');
+
+                    if (simpleError) throw simpleError;
+                    setHorses(simpleData as Horse[] || []);
+                } else {
+                    setHorses(data as Horse[] || []);
+                }
+            } catch (error: unknown) {
+                console.error('Error fetching horses:', error);
+            }
+        };
+
         fetchHorses();
     }, []);
 
-    const fetchHorses = async () => {
-        try {
-            // Try fetching with clients first
-            const { data, error } = await supabase
-                .from('horses')
-                .select('*, clients(name)')
-                .order('name');
-
-            if (error) {
-                // Warning: Relationship might not exist yet if SQL wasn't run
-                console.warn('Fetch with clients failed, falling back to simple fetch:', error.message);
-                const { data: simpleData, error: simpleError } = await supabase
-                    .from('horses')
-                    .select('*')
-                    .order('name');
-
-                if (simpleError) throw simpleError;
-                setHorses(simpleData || []);
-            } else {
-                setHorses(data || []);
-            }
-        } catch (error: any) {
-            console.error('Error fetching horses:', error.message || error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-            <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-stone-200">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
                 <div className="text-xl font-bold text-stone-800 flex items-center gap-2">
                     <span className="material-symbols-outlined">format_list_bulleted</span>
                     {t('horses') || 'Horses'}
                 </div>
-                <div className="flex items-center gap-4">
-                    <Link href="/dashboard/horses/new" className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark transition-all">
+                <div className="flex items-center gap-4 self-end sm:self-auto">
+                    <Link href="/dashboard/horses/new" className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark transition-all">
                         <span className="material-symbols-outlined text-sm">add</span>
-                        <span className="text-sm font-medium">Add Horse</span>
+                        <span className="text-sm font-medium">{t('addHorse')}</span>
                     </Link>
                 </div>
             </header>

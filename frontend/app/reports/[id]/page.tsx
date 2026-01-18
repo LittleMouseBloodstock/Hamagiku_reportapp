@@ -4,7 +4,7 @@ export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
-import { ArrowLeft, Save, Printer, Check, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 
@@ -16,6 +16,7 @@ export default function ReportEditor() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [reviewStatus, setReviewStatus] = useState<string>('draft');
 
     // Initial Data for Template
     const [initialData, setInitialData] = useState<Partial<ReportData>>({});
@@ -124,6 +125,8 @@ export default function ReportEditor() {
                 mainPhoto: report.main_photo_url || horse?.photo_url || '',
                 logo: null
             });
+
+            setReviewStatus(report.review_status || 'draft');
 
             setLoading(false);
         };
@@ -292,7 +295,29 @@ export default function ReportEditor() {
                 if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
             }
         }
+
     }
+
+    const handleUpdateStatus = async (newStatus: string) => {
+        if (!id || isNew) {
+            alert("Please save the report first.");
+            return;
+        }
+        if (!confirm(`Change status to "${newStatus}"?`)) return;
+
+        setSaving(true);
+        const { error } = await supabase
+            .from('reports')
+            .update({ review_status: newStatus })
+            .eq('id', id);
+
+        if (error) {
+            alert("Error updating status: " + error.message);
+        } else {
+            setReviewStatus(newStatus);
+        }
+        setSaving(false);
+    };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading Report...</div>;
 
@@ -339,17 +364,54 @@ export default function ReportEditor() {
                     <div className="hidden sm:block">
                         <LanguageToggle />
                     </div>
+
+                    {/* Review Workflow Buttons */}
+                    {reviewStatus === 'draft' && (
+                        <button
+                            onClick={() => handleUpdateStatus('pending_jp_check')}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                            title="Request Review"
+                        >
+                            <Send size={16} /> <span className="hidden sm:inline">Request Review</span>
+                        </button>
+                    )}
+
+                    {(reviewStatus === 'pending_jp_check' || reviewStatus === 'pending_en_check') && (
+                        <>
+                            <button
+                                onClick={() => handleUpdateStatus('draft')}
+                                className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                                title="Reject / Back to Draft"
+                            >
+                                <AlertCircle size={16} /> <span className="hidden sm:inline">Reject</span>
+                            </button>
+                            <button
+                                onClick={() => handleUpdateStatus('approved')}
+                                className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                                title="Approve"
+                            >
+                                <ShieldCheck size={16} /> <span className="hidden sm:inline">Approve</span>
+                            </button>
+                        </>
+                    )}
+
+                    {reviewStatus === 'approved' && (
+                        <div className="px-3 py-2 bg-green-100 text-green-800 rounded font-bold text-sm flex items-center gap-2 border border-green-200">
+                            <ShieldCheck size={16} /> Approved
+                        </div>
+                    )}
+
                     <button
                         onClick={saveReport}
                         disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all flex-1 sm:flex-initial justify-center"
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
                     >
                         {saving ? <UploadCloud size={16} className="animate-bounce" /> : <Save size={16} />}
                         {saving ? 'Saving...' : 'Save'}
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="bg-[var(--color-accent)] hover:brightness-110 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all flex-1 sm:flex-initial justify-center"
+                        className="bg-[var(--color-accent)] hover:brightness-110 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
                     >
                         <Printer size={16} /> PDF
                     </button>

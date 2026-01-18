@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
-    const { language, setLanguage, t } = useLanguage();
+    const { language, t } = useLanguage();
     const router = useRouter();
 
     interface DashboardReport {
@@ -18,10 +18,10 @@ export default function Dashboard() {
         status: string;
         languages: string[];
         horses?: { name: string; name_en: string; };
+        horse_id?: string;
     }
 
     const [reports, setReports] = useState<DashboardReport[]>([]);
-    const [loading, setLoading] = useState(true);
     // Hardcoded stats for demo (replace with real data later)
     const [stats, setStats] = useState({
         totalReports: 124,
@@ -32,19 +32,19 @@ export default function Dashboard() {
 
     useEffect(() => {
         const fetchReports = async () => {
-            setLoading(true);
-
             // 1. Fetch Reports & Pending Reports
             const { data, error } = await supabase
                 .from('reports')
                 .select('*, horse_id, horses(name, name_en)')
                 .order('created_at', { ascending: false });
 
+            // ... (stats fetching codes) ...
+
             // 2. Fetch Stats Counts
             const { count: reportsCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
             const { count: horsesCount } = await supabase.from('horses').select('*', { count: 'exact', head: true });
             const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true });
-            const { count: pendingCount } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status_training', false); // assuming false means draft/pending
+            const { count: pendingCount } = await supabase.from('reports').select('*', { count: 'exact', head: true }).in('review_status', ['pending_jp_check', 'pending_en_check']);
 
             setStats({
                 totalReports: reportsCount || 0,
@@ -56,6 +56,7 @@ export default function Dashboard() {
             if (error) {
                 console.error('Error fetching reports:', error);
             } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const formatted = data?.map((r: any) => {
                     // Determine title
                     const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
@@ -68,9 +69,9 @@ export default function Dashboard() {
                     return {
                         id: r.id,
                         title: title,
-                        created: new Date(r.created_at).toLocaleDateString(),
+                        created: new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
                         author: 'You',
-                        status: r.status_training ? 'published' : 'draft',
+                        status: r.review_status || 'draft',
                         languages: langs,
                         horses: r.horses,
                         horse_id: r.horse_id
@@ -78,22 +79,21 @@ export default function Dashboard() {
                 }) || [];
                 setReports(formatted);
             }
-            setLoading(false);
         };
         fetchReports();
     }, [language]);
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
-            <header className="h-16 flex items-center justify-between px-6 bg-[#FDFCF8] border-b border-stone-200">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-[#FDFCF8] border-b border-stone-200 gap-3 sm:gap-0">
                 <div className="text-xl font-bold text-[#1a3c34] flex items-center gap-2 font-display">
                     <span className="material-symbols-outlined">dashboard</span>
                     {t('dashboard')}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 self-end sm:self-auto">
                     <Link
                         href="/reports/new"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"
+                        className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"
                     >
                         <span className="material-symbols-outlined text-sm">add</span>
                         <span className="text-sm font-medium">{t('newReport')}</span>
@@ -103,7 +103,7 @@ export default function Dashboard() {
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
@@ -181,8 +181,13 @@ export default function Dashboard() {
                                             {report.created}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                {report.status}
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                (report.status === 'pending_jp_check' || report.status === 'pending_en_check') ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                {report.status === 'pending_jp_check' ? 'In Review' :
+                                                    report.status === 'pending_en_check' ? 'In Review' :
+                                                        report.status.charAt(0).toUpperCase() + report.status.slice(1)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -194,7 +199,7 @@ export default function Dashboard() {
                                 ))}
                                 {reports.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-stone-500 text-sm">
+                                        <td colSpan={5} className="px-6 py-8 text-center text-stone-500 text-sm">
                                             No recent reports found
                                         </td>
                                     </tr>

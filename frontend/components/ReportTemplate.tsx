@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { RefreshCw, FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check } from 'lucide-react';
+import { FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -28,7 +28,7 @@ const Fonts = () => (
       #report-preview, #report-preview * {
         visibility: visible;
       }
-
+      
       /* Position the preview specifically for print */
       #report-preview {
         position: absolute !important; /* Fixed causes repetition on every page, Absolute prints once */
@@ -120,6 +120,29 @@ const DEFAULT_CONDITION_OPTIONS: OptionPair[] = [
     { en: 'Leggy', ja: '肢長' },
     { en: 'Fatty', ja: '肥満' },
 ];
+
+const formatDateUK = (dateStr: string) => {
+    if (!dateStr) return '';
+    // Handle YYYY.MM or YYYY.MM.DD
+    const parts = dateStr.replace(/-/g, '.').split('.');
+
+    // Fallback if not matching format
+    if (parts.length < 2) return dateStr;
+
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    const day = parts[2] ? parseInt(parts[2]) : null;
+
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return dateStr;
+
+    const date = new Date(year, month - 1, day || 1);
+    const monthName = date.toLocaleString('en-GB', { month: 'long' });
+
+    if (day) {
+        return `${day} ${monthName} ${year}`;
+    }
+    return `${monthName} ${year}`;
+};
 
 export type ReportData = {
     reportDate: string;
@@ -246,7 +269,7 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
         if (!data.reportDate) {
             setData(prev => ({ ...prev, reportDate: new Date().toISOString().slice(0, 7).replace('-', '.') }));
         }
-    }, []);
+    }, [data.reportDate]);
 
     const saveOption = (type: 'training' | 'condition', pair: OptionPair) => {
         if (type === 'training') {
@@ -301,7 +324,6 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
                     ? (targetLang === 'ja' ? 'sireJp' : 'sireEn')
                     : (targetLang === 'ja' ? 'damJp' : 'damEn');
 
-                // @ts-ignore
                 setData(prev => ({ ...prev, [targetKey]: json.translatedName }));
             }
         } catch (e) {
@@ -310,9 +332,7 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
         }
     };
 
-    const handleTranslateDemo = () => {
-        // Placeholder
-    };
+
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [isCropping, setIsCropping] = useState(false);
@@ -930,7 +950,7 @@ export default function ReportTemplate({ initialData, onDataChange }: ReportTemp
 
                         {/* Footer */}
                         <footer className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
-                            HAMAGIKU FARM - HOKKAIDO, JAPAN | {data.reportDate.replace(/\./g, '/')}
+                            HAMAGIKU FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
                         </footer>
 
                     </div>

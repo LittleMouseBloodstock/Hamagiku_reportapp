@@ -26,7 +26,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
     useEffect(() => {
         const fetchClient = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('clients')
                 .select('*')
                 .eq('id', id)
@@ -73,8 +73,8 @@ export default function ClientDetailClient({ id }: { id: string }) {
             if (error) throw error;
             router.push('/dashboard/clients');
             router.refresh();
-        } catch (error: any) {
-            alert('Error updating client: ' + error.message);
+        } catch (error: unknown) {
+            alert('Error updating client: ' + (error as Error).message);
         } finally {
             setSaving(false);
         }

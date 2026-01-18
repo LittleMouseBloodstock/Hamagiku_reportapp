@@ -45,8 +45,8 @@ export default function NewClientPage() {
             if (error) throw error;
             router.push('/dashboard/clients');
             router.refresh();
-        } catch (error: any) {
-            alert('Error creating client: ' + error.message);
+        } catch (error: unknown) {
+            alert('Error creating client: ' + (error as Error).message);
         } finally {
             setSaving(false);
         }

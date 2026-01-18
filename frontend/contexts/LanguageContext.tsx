@@ -111,6 +111,8 @@ const translations: Translations = {
     saving: { ja: "保存中...", en: "Saving..." },
     editClient: { ja: "クライアント編集", en: "Edit Client" },
     newClient: { ja: "新規クライアント登録", en: "New Client" },
+    addClient: { ja: "クライアント追加", en: "Add Client" },
+    addHorse: { ja: "馬を追加", en: "Add Horse" },
 
     // Report Preview Labels
     trainersComment: { ja: "コメント", en: "COMMENT" },

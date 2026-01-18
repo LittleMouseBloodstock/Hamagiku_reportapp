@@ -6,9 +6,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function NewHorsePage() {
+    interface Client {
+        id: string;
+        name: string;
+    }
+
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [clients, setClients] = useState<any[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -28,13 +33,12 @@ export default function NewHorsePage() {
     );
 
     useEffect(() => {
+        const fetchClients = async () => {
+            const { data } = await supabase.from('clients').select('id, name').order('name');
+            if (data) setClients(data);
+        };
         fetchClients();
     }, []);
-
-    const fetchClients = async () => {
-        const { data } = await supabase.from('clients').select('id, name').order('name');
-        if (data) setClients(data);
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,8 +77,8 @@ export default function NewHorsePage() {
             if (error) throw error;
             router.push('/dashboard/horses');
             router.refresh();
-        } catch (error: any) {
-            alert('Error creating horse: ' + error.message);
+        } catch (error: unknown) {
+            alert('Error creating horse: ' + (error as Error).message);
         } finally {
             setLoading(false);
         }
@@ -152,7 +156,7 @@ export default function NewHorsePage() {
                                     ))
                                 ) : (
                                     <div className="px-4 py-2 text-sm text-[#1a3c34] bg-[#1a3c34]/5 font-medium">
-                                        New owner will be created: "{ownerSearch}"
+                                        New owner will be created: &quot;{ownerSearch}&quot;
                                     </div>
                                 )}
                             </div>
