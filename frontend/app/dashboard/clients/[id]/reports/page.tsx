@@ -167,7 +167,7 @@ export default function ClientBatchReports() {
                     <div className="text-gray-500 mt-10">No reports found for this month.</div>
                 ) : (
                     reports.map((item, index) => (
-                        <div key={item.report.id} className="relative w-full max-w-[210mm] print:max-w-none mb-10 print:mb-0 page-break-after-always">
+                        <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
                             <div className="print:h-screen print:flex print:flex-col print:justify-start">
                                 <ReportTemplate initialData={item.data} />
@@ -193,15 +193,16 @@ export default function ClientBatchReports() {
                         position: relative;
                         display: block;
                         width: 210mm;
-                        height: 297mm; /* Full A4 Page container */
-                        overflow: hidden; /* Cut off anything that spills */
+                        height: 270mm; /* SAFE HEIGHT: Less than 297mm to prevent spill */
+                        overflow: hidden;
                         margin: 0 auto;
                         padding: 0;
+                        margin-bottom: 0; /* Avoid extra space */
+                        padding-bottom: 0;
                     }
 
                     /* 
                        Override internal report styles.
-                       Use 100% dimensions to fill the A4 container defined above.
                     */
                     #report-preview {
                         position: relative !important;
@@ -212,7 +213,7 @@ export default function ClientBatchReports() {
                         height: 100% !important; 
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
-                        transform: scale(0.95); /* Slight shrink to ensure margins don't trigger bleed */
+                        transform: scale(0.92); /* Shrink slightly more to be safe */
                         transform-origin: top center;
                     }
                 }
