@@ -221,8 +221,8 @@ export default function ReportEditor() {
         let mainPhotoUrl = d.mainPhoto;
         // const logoUrl = d.logo; // Unused
 
-        // Check if mainPhoto is new (Base64) - only upload if changed
-        if (d.mainPhoto && d.mainPhoto.startsWith('data:')) {
+        // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
+        if (d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'))) {
             const fileName = `main_${Date.now()}.jpg`;
             const reportPathId = isNew ? `temp_${Date.now()}` : id;
             const path = `${horseId}/${reportPathId}/${fileName}`;
