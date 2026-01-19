@@ -104,6 +104,63 @@ export default function Dashboard() {
                     console.log(`Retrying fetch... (${retryCount + 1})`);
                     setTimeout(() => fetchReports(retryCount + 1), 500);
                 } else if (isMounted) {
+                    // FALLBACK: Try raw fetch if Supabase client fails (e.g. AbortError due to locks)
+                    if (session?.access_token) {
+                        try {
+                            console.warn('Attempting raw fetch fallback...');
+                            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                            const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+                            if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                            // 1. Reports Fetch
+                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,horse_id,horses(name,name_en)&order=created_at.desc`, {
+                                headers: {
+                                    'apikey': anonKey,
+                                    'Authorization': `Bearer ${session.access_token}`
+                                }
+                            });
+                            if (!reportsRes.ok) throw new Error('Raw fetch failed');
+                            const rawData = await reportsRes.json();
+
+                            // 2. Stats (Simplified for fallback)
+                            // We might skip these or do simple fetches if critical, but let's just show reports for now to prove it works
+                            // Or try to fetch at least reportsCount
+                            const countRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*`, {
+                                method: 'HEAD',
+                                headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
+                            });
+                            const reportsCount = countRes.headers.get('content-range')?.split('/')[1] || 0;
+
+                            if (isMounted) {
+                                setStats(prev => ({ ...prev, totalReports: Number(reportsCount) }));
+                                // Format data
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const formatted = rawData?.map((r: any) => {
+                                    const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
+                                    const langs = [];
+                                    if (r.body) langs.push('JP');
+                                    if (r.metrics_json?.commentEn) langs.push('EN');
+                                    if (langs.length === 0) langs.push('JP');
+                                    const statusRaw = r.status_training || 'draft';
+                                    return {
+                                        id: r.id,
+                                        title: title,
+                                        created: r.created_at ? new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+                                        author: 'You',
+                                        status: statusRaw,
+                                        languages: langs,
+                                        horses: r.horses,
+                                        horse_id: r.horse_id
+                                    };
+                                }) || [];
+                                setReports(formatted);
+                                return; // Success!
+                            }
+                        } catch (fallbackErr) {
+                            console.error('Fallback fetch also failed:', fallbackErr);
+                        }
+                    }
                     setReports([]);
                 }
             }
@@ -112,7 +169,7 @@ export default function Dashboard() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [language, user?.id]);
+    }, [language, user?.id, session?.access_token]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
