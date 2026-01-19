@@ -239,7 +239,7 @@ export default function Dashboard() {
                                                         handleDeleteReport(report.id);
                                                     }}
                                                     className="text-stone-400 hover:text-red-500 transition-colors"
-                                                    title={language === 'ja' ? '削除' : 'Delete'}
+                                                    title={t('deleteReport')}
                                                 >
                                                     <span className="material-symbols-outlined">delete</span>
                                                 </button>
