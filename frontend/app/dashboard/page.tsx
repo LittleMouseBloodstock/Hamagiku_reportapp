@@ -96,6 +96,24 @@ export default function Dashboard() {
         fetchReports();
     }, [language]);
 
+    const handleDeleteReport = async (reportId: string) => {
+        if (!window.confirm(t('confirmDeleteReport'))) return;
+
+        try {
+            const { error } = await supabase.from('reports').delete().eq('id', reportId);
+
+            if (error) throw error;
+
+            alert(t('deleteSuccess'));
+            setReports(prev => prev.filter(r => r.id !== reportId));
+            setStats(prev => ({ ...prev, totalReports: prev.totalReports - 1 }));
+
+        } catch (error) {
+            console.error('Error deleting report:', error);
+            alert(t('deleteError') + (error as Error).message);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-[#FDFCF8] border-b border-stone-200 gap-3 sm:gap-0">
@@ -214,9 +232,21 @@ export default function Dashboard() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <span className="text-stone-400 hover:text-stone-600">
-                                                <span className="material-symbols-outlined text-lg">chevron_right</span>
-                                            </span>
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteReport(report.id);
+                                                    }}
+                                                    className="text-stone-400 hover:text-red-500 transition-colors"
+                                                    title={language === 'ja' ? '削除' : 'Delete'}
+                                                >
+                                                    <span className="material-symbols-outlined">delete</span>
+                                                </button>
+                                                <span className="text-stone-400 hover:text-stone-600">
+                                                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                                                </span>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

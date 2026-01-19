@@ -150,6 +150,10 @@ const translations: Translations = {
     damJp: { ja: "母 (日本語)", en: "Dam (JP)" },
     damEn: { ja: "母 (英語)", en: "Dam (EN)" },
     owner: { ja: "所有者", en: "Owner" },
+    deleteReport: { ja: "レポート削除", en: "Delete Report" },
+    confirmDeleteReport: { ja: "本当にこのレポートを削除しますか？\nこの操作は取り消せません。", en: "Are you sure you want to delete this report?\nThis action cannot be undone." },
+    deleteSuccess: { ja: "レポートを削除しました", en: "Report deleted successfully" },
+    deleteError: { ja: "削除に失敗しました: ", en: "Failed to delete: " },
 
     // Statuses
     status_Draft: { ja: "下書き", en: "Draft" },
