@@ -111,7 +111,8 @@ export default function Dashboard() {
         fetchReports();
 
         return () => { isMounted = false; };
-    }, [language, user]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [language, user?.id]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
