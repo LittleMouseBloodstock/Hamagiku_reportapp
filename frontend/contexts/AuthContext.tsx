@@ -31,31 +31,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         let mounted = true;
 
-        // 1. Initial Session Check (Failsafe for when onAuthStateChange is delayed/aborted)
-        const initSession = async () => {
-            try {
-                // Determine if we have a session to prevent infinite loading
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (mounted) {
-                    if (error) throw error;
-                    if (session) {
-                        setSession(session);
-                        setUser(session.user);
-                    }
-                }
-            } catch (error) {
-                console.warn('Initial session check failed:', error);
-            } finally {
-                // FAILS AFE: Always stop loading after a short attempt
-                if (mounted) setIsLoading(false);
+        // 1. Setup failsafe timeout (in case auth event never fires due to locks/errors)
+        const timeoutId = setTimeout(() => {
+            if (mounted) {
+                console.warn('Auth check timed out, forcing UI to load');
+                setIsLoading(false);
             }
-        };
-        initSession();
+        }, 2500);
 
-        // 2. Listen for auth changes (Updates, Token Refreshes, Sign Out)
-        // onAuthStateChange fires 'INITIAL_SESSION' immediately, so we don't need getSession()
+        // 2. Listen for auth changes
+        // This usually fires immediately with 'INITIAL_SESSION'
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!mounted) return;
+
+            // Clear timeout since we got a response
+            clearTimeout(timeoutId);
 
             const currentUser = session?.user;
 
