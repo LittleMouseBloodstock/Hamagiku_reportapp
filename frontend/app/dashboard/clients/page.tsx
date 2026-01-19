@@ -15,11 +15,15 @@ export default function ClientsPage() {
     }
 
     const { t } = useLanguage();
+    const { user, session } = useAuth();
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchClients = async () => {
+        if (!user) return;
+
+        let isMounted = true;
+        const fetchClients = async (retryCount = 0) => {
             try {
                 const { data, error } = await supabase
                     .from('clients')
@@ -27,16 +31,45 @@ export default function ClientsPage() {
                     .order('name');
 
                 if (error) throw error;
-                setClients(data as Client[] || []);
-            } catch (error: unknown) {
+                if (isMounted) setClients(data as Client[] || []);
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error('Error fetching clients:', error);
+
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying fetch... (${retryCount + 1})`);
+                    setTimeout(() => fetchClients(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch
+                    try {
+                        console.warn('Attempting raw fetch fallback for clients...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?select=*&order=name`, {
+                            headers: {
+                                'apikey': anonKey,
+                                'Authorization': `Bearer ${session.access_token}`
+                            }
+                        });
+
+                        if (!res.ok) throw new Error('Raw fetch failed');
+                        const rawData = await res.json();
+
+                        if (isMounted) setClients(rawData);
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
+                }
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         fetchClients();
-    }, []);
+
+        return () => { isMounted = false; };
+    }, [user?.id, session?.access_token]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
