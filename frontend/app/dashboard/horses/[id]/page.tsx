@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
-import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
+import { Plus, ArrowLeft, FileText, Calendar, Activity, User } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -19,6 +19,8 @@ type Horse = {
     dam: string;
     dam_en?: string;
     updated_at: string;
+    owner_id: string | null;
+    clients: { id: string, name: string } | null;
 };
 
 type Report = {
@@ -32,6 +34,11 @@ type Report = {
     metrics_json?: any;
 };
 
+type Client = {
+    id: string;
+    name: string;
+};
+
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
@@ -39,27 +46,66 @@ export default function HorseDetail() {
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
-    const [formData, setFormData] = useState({ name: '', name_en: '', sire: '', sire_en: '', dam: '', dam_en: '' });
 
+    // Form & Owner State
+    const [clients, setClients] = useState<Client[]>([]);
+    const [ownerSearch, setOwnerSearch] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const [formData, setFormData] = useState({
+        name: '',
+        name_en: '',
+        sire: '',
+        sire_en: '',
+        dam: '',
+        dam_en: '',
+        owner_id: ''
+    });
+
+    const filteredClients = clients.filter(c =>
+        c.name.toLowerCase().includes(ownerSearch.toLowerCase())
+    );
 
     useEffect(() => {
         const fetchData = async () => {
             if (!id) return;
-            // Fetch Horse
-            const { data: h } = await supabase.from('horses').select('*').eq('id', id).single();
+
+            // 1. Fetch all clients for autocomplete
+            const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
+            if (clientsData) setClients(clientsData);
+
+            // 2. Fetch Horse with Owner Info
+            // Note: We select clients(id, name) to get the joined data
+            const { data: h } = await supabase
+                .from('horses')
+                .select('*, clients(id, name)')
+                .eq('id', id)
+                .single();
+
             if (h) {
-                setHorse(h);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const horseData = h as any; // Cast to handle the joined 'clients' property easily if strict typing issues arise
+                setHorse(horseData);
+
                 setFormData({
-                    name: h.name || '',
-                    name_en: h.name_en || '',
-                    sire: h.sire || '',
-                    sire_en: h.sire_en || '',
-                    dam: h.dam || '',
-                    dam_en: h.dam_en || ''
+                    name: horseData.name || '',
+                    name_en: horseData.name_en || '',
+                    sire: horseData.sire || '',
+                    sire_en: horseData.sire_en || '',
+                    dam: horseData.dam || '',
+                    dam_en: horseData.dam_en || '',
+                    owner_id: horseData.owner_id || ''
                 });
+
+                // Set initial owner search text
+                if (horseData.clients) {
+                    setOwnerSearch(horseData.clients.name);
+                } else {
+                    setOwnerSearch('');
+                }
             }
 
-            // Fetch Reports
+            // 3. Fetch Reports
             const { data: r } = await supabase
                 .from('reports')
                 .select('*')
@@ -71,24 +117,68 @@ export default function HorseDetail() {
     }, [id]);
 
     const handleUpdateHorse = async () => {
-        const { error } = await supabase
-            .from('horses')
-            .update({
-                name: formData.name,
-                name_en: formData.name_en,
-                sire: formData.sire,
-                sire_en: formData.sire_en,
-                dam: formData.dam,
-                dam_en: formData.dam_en,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
+        try {
+            let finalOwnerId = formData.owner_id;
 
-        if (!error && horse) {
-            setHorse({ ...horse, ...formData });
-            setEditMode(false);
-        } else {
-            alert('Failed to update: ' + error?.message);
+            // Owner Update Logic (Same as New Horse Page)
+            // If text is entered but no existing ID matches (or name changed), create/find client
+            if (ownerSearch && (!finalOwnerId || clients.find(c => c.id === finalOwnerId)?.name !== ownerSearch)) {
+                // Check exact match
+                const existing = clients.find(c => c.name.toLowerCase() === ownerSearch.toLowerCase());
+                if (existing) {
+                    finalOwnerId = existing.id;
+                } else {
+                    // Create new client
+                    const { data: newClient, error: clientError } = await supabase
+                        .from('clients')
+                        .insert({ name: ownerSearch })
+                        .select()
+                        .single();
+
+                    if (clientError) throw clientError;
+                    finalOwnerId = newClient.id;
+                }
+            } else if (!ownerSearch) {
+                // If search cleared, remove owner
+                finalOwnerId = null as any; // supabase handles null for optional FK
+            }
+
+            const { error } = await supabase
+                .from('horses')
+                .update({
+                    name: formData.name,
+                    name_en: formData.name_en,
+                    sire: formData.sire,
+                    sire_en: formData.sire_en,
+                    dam: formData.dam,
+                    dam_en: formData.dam_en,
+                    owner_id: finalOwnerId,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Refetch to get updated relation data
+            // Or just update local state if we trust it. Let's refetch for safety on owner change.
+            const { data: h } = await supabase
+                .from('horses')
+                .select('*, clients(id, name)')
+                .eq('id', id)
+                .single();
+
+            if (h) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const horseData = h as any;
+                setHorse(horseData);
+                setEditMode(false);
+                // Update client list if we added one (optional, but good practice)
+                const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
+                if (clientsData) setClients(clientsData);
+            }
+
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert('Failed to update: ' + error.message);
         }
     };
 
@@ -129,43 +219,95 @@ export default function HorseDetail() {
             <main className="max-w-4xl mx-auto px-4 py-8">
                 {/* Horse Header */}
                 <div className="bg-white rounded-xl shadow-sm p-6 mb-8 flex flex-col md:flex-row gap-6 items-start border border-gray-100">
-
-
                     <div className="flex-1 w-full">
                         {editMode ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (JP)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (EN)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Sire (JP)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.sire} onChange={e => setFormData({ ...formData, sire: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Sire (EN)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.sire_en} onChange={e => setFormData({ ...formData, sire_en: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Dam (JP)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.dam} onChange={e => setFormData({ ...formData, dam: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase">Dam (EN)</label>
-                                    <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Name Fields */}
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (JP)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (EN)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} />
+                                    </div>
+
+                                    {/* Owner Selection Field - COPIED FROM NEW PAGE */}
+                                    <div className="col-span-1 md:col-span-2 relative">
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><User size={12} /> Owner (Transfer)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                className="w-full border border-gray-300 rounded p-2 pl-8 focus:ring-2 focus:ring-[#1a3c34] focus:border-transparent outline-none"
+                                                placeholder="Search or create new owner..."
+                                                value={ownerSearch}
+                                                onChange={e => {
+                                                    setOwnerSearch(e.target.value);
+                                                    setFormData({ ...formData, owner_id: '' }); // Clear ID implies change
+                                                    setShowSuggestions(true);
+                                                }}
+                                                onFocus={() => setShowSuggestions(true)}
+                                            />
+                                            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                        </div>
+                                        {/* Suggestions Dropdown */}
+                                        {showSuggestions && ownerSearch && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                                {filteredClients.length > 0 ? (
+                                                    filteredClients.map(client => (
+                                                        <div
+                                                            key={client.id}
+                                                            className="px-4 py-2 hover:bg-stone-50 cursor-pointer text-sm text-stone-700"
+                                                            onClick={() => {
+                                                                setOwnerSearch(client.name);
+                                                                setFormData({ ...formData, owner_id: client.id });
+                                                                setShowSuggestions(false);
+                                                            }}
+                                                        >
+                                                            {client.name}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-4 py-2 text-sm text-[#1a3c34] bg-[#1a3c34]/5 font-medium">
+                                                        New owner will be created: &quot;{ownerSearch}&quot;
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {/* Overlay to close suggestions */}
+                                        {showSuggestions && (
+                                            <div className="fixed inset-0 z-0" onClick={() => setShowSuggestions(false)} />
+                                        )}
+                                    </div>
+
+                                    {/* Sire/Dam Fields */}
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Sire (JP)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.sire} onChange={e => setFormData({ ...formData, sire: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Sire (EN)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.sire_en} onChange={e => setFormData({ ...formData, sire_en: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Dam (JP)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.dam} onChange={e => setFormData({ ...formData, dam: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">Dam (EN)</label>
+                                        <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
+                                    </div>
                                 </div>
                             </div>
                         ) : (
                             <>
                                 <h1 className="text-3xl font-bold text-[var(--color-primary)] mb-1">{displayName}</h1>
                                 <p className="text-lg text-gray-400 font-serif mb-4">{displaySubName}</p>
-                                <div className="flex gap-6 text-sm text-gray-500">
+                                <div className="flex gap-6 text-sm text-gray-500 flex-wrap">
                                     <div><span className="font-bold text-gray-300 block text-xs uppercase">Sire</span> {displaySire || '-'}</div>
                                     <div><span className="font-bold text-gray-300 block text-xs uppercase">Dam</span> {displayDam || '-'}</div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">Owner</span> {horse.clients?.name || 'No Owner'}</div>
                                 </div>
                             </>
                         )}
