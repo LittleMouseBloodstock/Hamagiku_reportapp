@@ -1,0 +1,86 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { usePathname, useRouter } from 'next/navigation';
+
+interface AuthContextType {
+    user: User | null;
+    session: Session | null;
+    isLoading: boolean;
+    signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+    user: null,
+    session: null,
+    isLoading: true,
+    signOut: async () => { },
+});
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [session, setSession] = useState<Session | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        // 1. Check active session
+        const initSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                setSession(session);
+                setUser(session?.user ?? null);
+            } catch (error) {
+                console.error('Session check failed', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        initSession();
+
+        // 2. Listen for changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            setUser(session?.user ?? null);
+            setIsLoading(false);
+            if (_event === 'SIGNED_OUT') {
+                router.replace('/login');
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, [router]);
+
+    // 3. Route Protection Logic
+    useEffect(() => {
+        if (isLoading) return;
+
+        const isLoginPage = pathname === '/login';
+        // Define public paths if needed, e.g. landing page. 
+        // For this app, everything else is protected.
+
+        if (!session && !isLoginPage) {
+            // No user, not on login -> Redirect to login
+            router.replace('/login');
+        } else if (session && isLoginPage) {
+            // User exists, but on login -> Redirect to dashboard
+            router.replace('/dashboard');
+        }
+    }, [session, isLoading, pathname, router]);
+
+    const signOut = async () => {
+        await supabase.auth.signOut();
+    };
+
+    return (
+        <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
+            {!isLoading && children}
+        </AuthContext.Provider>
+    );
+};
