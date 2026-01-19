@@ -32,15 +32,27 @@ export default function Sidebar() {
                     />
                 </div>
             </div>
-        </Link>
-                {/* <a className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="#">
+            <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard">
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">dashboard</span>
+                    <span className="hidden lg:block text-sm font-medium">{t('dashboard')}</span>
+                </Link>
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/horses">
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">format_list_bulleted</span>
+                    <span className="hidden lg:block text-sm font-medium">{t('horses') || 'Horses'}</span>
+                </Link>
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/clients">
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">group</span>
+                    <span className="hidden lg:block text-sm font-medium">{t('clients') || 'Clients'}</span>
+                </Link>
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/settings">
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">settings</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('settings')}</span>
-                </a> */}
-            </nav >
-        <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex justify-center lg:block">
-            <LanguageToggle />
-        </div>
+                    <span className="hidden lg:block text-sm font-medium">{t('settings') || 'Settings'}</span>
+                </Link>
+            </nav>
+            <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex justify-center lg:block">
+                <LanguageToggle />
+            </div>
         </aside >
     );
 }
