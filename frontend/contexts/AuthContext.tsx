@@ -37,41 +37,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             const currentUser = session?.user;
 
-            // --- WHITELIST CHECK WITH DB ---
-            // Only perform check if we have a user and we are strictly logging in
+            // 1. Update state IMMEDIATELY to prevent white screen / blocking
+            setSession(session);
+            setUser(currentUser ?? null);
+            setIsLoading(false);
+
+            if (_event === 'SIGNED_OUT') {
+                router.replace('/login');
+                return;
+            }
+
+            // 2. Perform Whitelist Check asynchronously (don't block UI)
+            // Only perform check if we have a user and we are strictly logging in or refreshing
             if (currentUser?.email) {
+                // Determine if we need to check (maybe skip if already checked? simpler to just check)
                 try {
                     const { count, error } = await supabase
                         .from('allowed_users')
                         .select('*', { count: 'exact', head: true })
                         .eq('email', currentUser.email);
 
-                    // Only deny if we are SURE they are not allowed (no error, count is 0)
+                    // Only deny if we are SURE they are not allowed
                     if (!error && count === 0) {
                         console.warn('Access denied for:', currentUser.email);
                         await supabase.auth.signOut();
                         alert('Access Denied: Your email is not permitted to access this application.');
                         router.replace('/login');
-                        return;
                     }
                     if (error) {
-                        // silently warn but don't block auth if RLS/Network fails temporarily
                         console.warn('Whitelist check failed (non-blocking):', error.message);
                     }
                 } catch (err) {
                     console.error('Whitelist check exception:', err);
                 }
-            }
-            // -----------------------
-
-            if (mounted) {
-                setSession(session);
-                setUser(currentUser ?? null);
-                setIsLoading(false);
-            }
-
-            if (_event === 'SIGNED_OUT') {
-                router.replace('/login');
             }
         });
 
