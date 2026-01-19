@@ -29,52 +29,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
 
     useEffect(() => {
-        // 1. Check active session
-        const initSession = async () => {
+        let mounted = true;
+
+        const initAuth = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
-                setSession(session);
-                setUser(session?.user ?? null);
+                // Determine session via onAuthStateChange which fires INITIAL_SESSION
+                // We rely on this for the main logic.
+                // However, getSession is sometimes faster or preferred for checking init state without waiting for event.
+
+                // We'll use getSession just to seed, but handle errors silently
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+
+                if (mounted) {
+                    setSession(session);
+                    setUser(session?.user ?? null);
+                    // Don't set isLoading(false) here, wait for subscription or use separate logic if needed.
+                    // Actually, if we have session here, we are good?
+                    // No, onAuthStateChange will fire and might have newer info or handle the whitelist check.
+                }
             } catch (error) {
-                console.error('Session check failed', error);
-            } finally {
-                setIsLoading(false);
+                // Ignore AbortError and generic errors during init, let onAuthStateChange handle it
+                if (mounted) console.warn('Init session warning:', error);
             }
         };
 
-        initSession();
+        initAuth();
 
-        // 2. Listen for changes
-        // 2. Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (!mounted) return;
+
             const currentUser = session?.user;
 
             // --- WHITELIST CHECK WITH DB ---
+            // Only perform check if we have a user and we are strictly logging in (or session refreshed)
+            // To avoid excessive DB calls, maybe we can optimize, but for now this is fine.
             if (currentUser?.email) {
                 try {
-                    // Check if email exists in 'allowed_users' table
-                    // We use count because we just need existence check
                     const { count, error } = await supabase
                         .from('allowed_users')
                         .select('*', { count: 'exact', head: true })
                         .eq('email', currentUser.email);
 
-                    if (error) {
-                        console.error('Whitelist check error:', error);
-                        // Fallback: If DB check fails, don't let them in easily.
-                    }
-
-                    // If count is 0, user is not in whitelist
-                    if (count === 0) {
+                    if (!error && count === 0) {
                         console.warn('Access denied for:', currentUser.email);
                         await supabase.auth.signOut();
                         alert('Access Denied: Your email is not permitted to access this application.');
                         router.replace('/login');
                         return;
                     }
-
                 } catch (err) {
-                    console.error('Unexpected error during whitelist check:', err);
+                    console.error('Whitelist check error:', err);
                 }
             }
             // -----------------------
@@ -88,7 +93,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
     }, [router]);
 
     // 3. Route Protection Logic
