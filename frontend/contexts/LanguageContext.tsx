@@ -150,6 +150,15 @@ const translations: Translations = {
     damJp: { ja: "母 (日本語)", en: "Dam (JP)" },
     damEn: { ja: "母 (英語)", en: "Dam (EN)" },
     owner: { ja: "所有者", en: "Owner" },
+
+    // Statuses
+    status_Draft: { ja: "下書き", en: "Draft" },
+    status_Training: { ja: "調教中", en: "Training" },
+    status_Resting: { ja: "休養中", en: "Resting" },
+    status_Spelling: { ja: "放牧中", en: "Spelling" },
+    status_Approved: { ja: "公開済み", en: "Published" },
+    status_InReview: { ja: "レビュー中", en: "In Review" },
+    status_Unknown: { ja: "不明", en: "Unknown" },
 };
 
 interface LanguageContextType {

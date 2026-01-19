@@ -196,9 +196,16 @@ export default function Dashboard() {
                                                 (report.status === 'pending_jp_check' || report.status === 'pending_en_check') ? 'bg-yellow-100 text-yellow-800' :
                                                     'bg-gray-100 text-gray-800'
                                                 }`}>
-                                                {report.status === 'pending_jp_check' ? 'In Review' :
-                                                    report.status === 'pending_en_check' ? 'In Review' :
-                                                        report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                                                {(() => {
+                                                    const s = report.status;
+                                                    if (s === 'pending_jp_check' || s === 'pending_en_check') return t('status_InReview');
+                                                    if (s === 'approved') return t('status_Approved');
+                                                    if (s === 'draft') return t('status_Draft');
+                                                    if (s === 'Training') return t('status_Training');
+                                                    if (s === 'Resting') return t('status_Resting');
+                                                    if (s === 'Spelling') return t('status_Spelling');
+                                                    return s; // Fallback to original string if no translation
+                                                })()}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
