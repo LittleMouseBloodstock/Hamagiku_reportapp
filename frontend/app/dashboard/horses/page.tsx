@@ -16,14 +16,14 @@ export default function HorsesPage() {
     }
 
     const { t, language } = useLanguage();
-    const { user } = useAuth();
+    const { user, session } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
 
     useEffect(() => {
         if (!user) return; // Wait for user
 
-        const fetchHorses = async () => {
-            // ... existing fetch logic ...
+        let isMounted = true;
+        const fetchHorses = async (retryCount = 0) => {
             try {
                 // Try fetching with clients first
                 const { data, error } = await supabase
@@ -33,24 +33,60 @@ export default function HorsesPage() {
 
                 if (error) {
                     // Warning: Relationship might not exist yet if SQL wasn't run
-                    console.warn('Fetch with clients failed, falling back to simple fetch:', error.message);
+                    console.warn('Fetch with clients failed, try simple fetch:', error.message);
                     const { data: simpleData, error: simpleError } = await supabase
                         .from('horses')
                         .select('*')
                         .order('name');
 
                     if (simpleError) throw simpleError;
-                    setHorses(simpleData as Horse[] || []);
+                    if (isMounted) setHorses(simpleData as Horse[] || []);
                 } else {
-                    setHorses(data as Horse[] || []);
+                    if (isMounted) setHorses(data as Horse[] || []);
                 }
-            } catch (error: unknown) {
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error('Error fetching horses:', error);
+
+                // Retry logic
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying fetch... (${retryCount + 1})`);
+                    setTimeout(() => fetchHorses(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch
+                    try {
+                        console.warn('Attempting raw fetch fallback for horses...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name)&order=name`, {
+                            headers: {
+                                'apikey': anonKey,
+                                'Authorization': `Bearer ${session.access_token}`
+                            }
+                        });
+
+                        if (!res.ok) throw new Error('Raw fetch failed');
+                        const rawData = await res.json();
+
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const formatted = rawData.map((h: any) => ({
+                            ...h,
+                            clients: h.clients // Ensure structure matches
+                        }));
+
+                        if (isMounted) setHorses(formatted);
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
+                }
             }
         };
 
         fetchHorses();
-    }, [user]);
+
+        return () => { isMounted = false; };
+    }, [user?.id, session?.access_token]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
