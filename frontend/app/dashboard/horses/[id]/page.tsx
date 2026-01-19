@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity, User } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 import Link from 'next/link';
 
@@ -43,6 +44,7 @@ export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
     const { language, t } = useLanguage();
+    const { user } = useAuth();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
@@ -67,6 +69,8 @@ export default function HorseDetail() {
     );
 
     useEffect(() => {
+        if (!user) return; // Wait for user
+
         const fetchData = async () => {
             if (!id) return;
 
@@ -114,7 +118,7 @@ export default function HorseDetail() {
             if (r) setReports(r);
         };
         fetchData();
-    }, [id]);
+    }, [id, user]);
 
     const handleUpdateHorse = async () => {
         try {
