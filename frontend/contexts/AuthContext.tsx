@@ -100,10 +100,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (isLoading) return;
 
         const isLoginPage = pathname === '/login';
+        const isDebugPage = pathname === '/debug-connection';
         // Define public paths if needed, e.g. landing page. 
         // For this app, everything else is protected.
 
-        if (!session && !isLoginPage) {
+        if (!session && !isLoginPage && !isDebugPage) {
             // No user, not on login -> Redirect to login
             router.replace('/login');
         } else if (session && isLoginPage) {

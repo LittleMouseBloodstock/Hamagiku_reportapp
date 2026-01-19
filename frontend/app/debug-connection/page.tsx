@@ -38,31 +38,31 @@ export default function DebugConnectionPage() {
     };
 
     return (
-        <div className="p-10 font-mono text-sm">
-            <h1 className="text-xl font-bold mb-4">Supabase Connection Debugger</h1>
+        <div className="p-10 font-mono text-sm min-h-screen bg-white text-gray-900">
+            <h1 className="text-xl font-bold mb-4 text-black">Supabase Connection Debugger</h1>
 
-            <div className="mb-6 p-4 bg-gray-100 rounded">
+            <div className="mb-6 p-4 bg-gray-100 rounded text-gray-800 border border-gray-300">
                 <p><strong>URL:</strong> {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
                 <p><strong>Key:</strong> {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 10)}...</p>
             </div>
 
             <button
                 onClick={checkConnection}
-                className="bg-blue-600 text-white px-4 py-2 rounded mb-6"
+                className="bg-blue-600 text-white px-4 py-2 rounded mb-6 hover:bg-blue-700"
                 disabled={loading}
             >
                 {loading ? 'Checking...' : 'Run Connection Test'}
             </button>
 
             {session && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200">
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-900">
                     <p>✅ <strong>Auth:</strong> Logged in as {session.user.email}</p>
                     <p>ID: {session.user.id}</p>
                 </div>
             )}
 
             {result && (
-                <div className="p-4 border border-gray-300 rounded bg-white">
+                <div className="p-4 border border-gray-300 rounded bg-white text-gray-700 overflow-auto">
                     <pre>{JSON.stringify(result, null, 2)}</pre>
                 </div>
             )}
