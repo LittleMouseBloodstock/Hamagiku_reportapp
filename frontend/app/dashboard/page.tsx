@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
-    const { user } = useAuth(); // Get user from AuthContext
+    const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
 
     interface DashboardReport {
