@@ -117,6 +117,25 @@ const translations: Translations = {
     // Report Preview Labels
     trainersComment: { ja: "コメント", en: "COMMENT" },
     monthlyReport: { ja: "月次レポート", en: "MONTHLY REPORT" },
+    // User Management Settings
+    settingsTitle: { ja: "設定", en: "Settings" },
+    settingsDesc: { ja: "アプリケーションのアクセス権限と設定を管理します。", en: "Manage application access and configuration." },
+    userManagement: { ja: "ユーザー管理", en: "User Management" },
+    userManagementDesc: { ja: "このアプリケーションにアクセスできるユーザーを制御します。", en: "Control who can access this application." },
+    addNewEmail: { ja: "新しいメールアドレスを追加", en: "Add New Email" },
+    addUser: { ja: "ユーザー追加", en: "Add User" },
+    adding: { ja: "追加中...", en: "Adding..." },
+    allowedUsers: { ja: "許可されたユーザー", en: "Allowed Users" },
+    noUsersFound: { ja: "ユーザーが見つかりません。", en: "No users found." },
+    confirmRemoveUser: { ja: "{email} を削除してもよろしいですか？このユーザーはログインできなくなります。", en: "Are you sure you want to remove {email}? They will no longer be able to login." },
+    userAdded: { ja: "ユーザーを追加しました", en: "User added successfully" },
+    userRemoved: { ja: "ユーザーを削除しました", en: "User removed successfully" },
+    errorAdding: { ja: "ユーザー追加エラー: ", en: "Error adding user: " },
+    errorDeleting: { ja: "ユーザー削除エラー: ", en: "Error deleting user: " },
+    failedLoadUsers: { ja: "ユーザー一覧の読み込みに失敗しました: ", en: "Failed to load users: " },
+    loadingUsers: { ja: "ユーザー読み込み中...", en: "Loading users..." },
+    adminRole: { ja: "管理者", en: "Admin" },
+    removeAccess: { ja: "アクセス権を削除", en: "Remove Access" },
 };
 
 interface LanguageContextType {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AllowedUser {
     id: string;
@@ -11,6 +12,7 @@ interface AllowedUser {
 }
 
 export default function SettingsPage() {
+    const { t } = useLanguage();
     const [users, setUsers] = useState<AllowedUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [newUserEmail, setNewUserEmail] = useState('');
@@ -65,7 +67,7 @@ export default function SettingsPage() {
     };
 
     const handleDeleteUser = async (email: string) => {
-        if (!window.confirm(`Are you sure you want to remove ${email}? They will no longer be able to login.`)) {
+        if (!window.confirm(t('confirmRemoveUser').replace('{email}', email))) {
             return;
         }
 
@@ -77,10 +79,10 @@ export default function SettingsPage() {
 
             if (error) throw error;
 
-            setMessage({ text: 'User removed successfully', type: 'success' });
+            setMessage({ text: t('userRemoved'), type: 'success' });
             fetchUsers(); // Refresh list
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            setMessage({ text: 'Error deleting user: ' + error.message, type: 'error' });
+            setMessage({ text: t('errorDeleting') + error.message, type: 'error' });
         }
     };
 
@@ -89,16 +91,16 @@ export default function SettingsPage() {
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-[#1a3c34]">Settings</h1>
-                    <p className="text-stone-500 mt-2">Manage application access and configuration.</p>
+                    <h1 className="text-3xl font-display font-bold text-[#1a3c34]">{t('settingsTitle')}</h1>
+                    <p className="text-stone-500 mt-2">{t('settingsDesc')}</p>
                 </div>
 
                 {/* User Management Section */}
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
                     <div className="p-6 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center">
                         <div>
-                            <h2 className="text-lg font-bold text-[#1a3c34]">User Management</h2>
-                            <p className="text-sm text-stone-500">Control who can access this application.</p>
+                            <h2 className="text-lg font-bold text-[#1a3c34]">{t('userManagement')}</h2>
+                            <p className="text-sm text-stone-500">{t('userManagementDesc')}</p>
                         </div>
                     </div>
 
@@ -111,9 +113,9 @@ export default function SettingsPage() {
                         )}
 
                         {/* Add User Form */}
-                        <form onSubmit={handleAddUser} className="flex gap-4 mb-8 items-end">
-                            <div className="flex-grow">
-                                <label className="block text-xs font-bold text-gray-700 mb-1">Add New Email</label>
+                        <form onSubmit={handleAddUser} className="flex flex-col md:flex-row gap-4 mb-8 items-end">
+                            <div className="flex-grow w-full">
+                                <label className="block text-xs font-bold text-gray-700 mb-1">{t('addNewEmail')}</label>
                                 <input
                                     type="email"
                                     required
@@ -126,44 +128,47 @@ export default function SettingsPage() {
                             <button
                                 type="submit"
                                 disabled={adding}
-                                className="bg-[#1a3c34] hover:bg-[#122b25] text-white font-bold py-2.5 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-70 h-[42px]"
+                                className="w-full md:w-auto bg-[#1a3c34] hover:bg-[#122b25] text-white font-bold py-2.5 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-70 h-[42px] whitespace-nowrap"
                             >
-                                {adding ? 'Adding...' : 'Add User'}
+                                {adding ? t('adding') : t('addUser')}
                             </button>
                         </form>
 
                         {/* User List */}
                         <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Allowed Users ({users.length})</h3>
+                            <h3 className="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">{t('allowedUsers')} ({users.length})</h3>
 
-                            {loading ? (
-                                <div className="text-stone-500 text-sm py-4">Loading users...</div>
-                            ) : users.length === 0 ? (
-                                <div className="text-stone-500 text-sm py-4">No users found. (This shouldn&apos;t happen if you&apos;re logged in!)</div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {users.map((user) => (
-                                        <div key={user.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-100 group hover:border-stone-300 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-[#1a3c34]/10 text-[#1a3c34] flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-sm">person</span>
+                            {/* Horizontal Scroll Wrapper for Mobile */}
+                            <div className="overflow-x-auto pb-2">
+                                <div className="min-w-[500px] space-y-2">
+                                    {loading ? (
+                                        <div className="text-stone-500 text-sm py-4">{t('loadingUsers')}</div>
+                                    ) : users.length === 0 ? (
+                                        <div className="text-stone-500 text-sm py-4">{t('noUsersFound')}</div>
+                                    ) : (
+                                        users.map((user) => (
+                                            <div key={user.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg border border-stone-100 group hover:border-stone-300 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-[#1a3c34]/10 text-[#1a3c34] flex items-center justify-center shrink-0">
+                                                        <span className="material-symbols-outlined text-sm">person</span>
+                                                    </div>
+                                                    <span className="text-stone-700 font-medium">{user.email}</span>
+                                                    {user.role === 'admin' && (
+                                                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium shrink-0">{t('adminRole')}</span>
+                                                    )}
                                                 </div>
-                                                <span className="text-stone-700 font-medium">{user.email}</span>
-                                                {user.role === 'admin' && (
-                                                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">Admin</span>
-                                                )}
+                                                <button
+                                                    onClick={() => handleDeleteUser(user.email)}
+                                                    className="text-stone-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors shrink-0"
+                                                    title={t('removeAccess')}
+                                                >
+                                                    <span className="material-symbols-outlined">delete</span>
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => handleDeleteUser(user.email)}
-                                                className="text-stone-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors"
-                                                title="Remove Access"
-                                            >
-                                                <span className="material-symbols-outlined">delete</span>
-                                            </button>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
