@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import LanguageToggle from '@/components/LanguageToggle';
 
 export default function Sidebar() {
     const { t } = useLanguage();
+    const { signOut } = useAuth();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -50,7 +52,14 @@ export default function Sidebar() {
                     <span className="hidden lg:block text-sm font-medium">{t('settings') || 'Settings'}</span>
                 </Link>
             </nav>
-            <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex justify-center lg:block">
+            <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex flex-col gap-4 justify-center lg:block">
+                <button
+                    onClick={() => signOut()}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-red-600 hover:bg-red-50 transition-colors group mb-2"
+                >
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">logout</span>
+                    <span className="hidden lg:block text-sm font-medium">Original Sign Out</span>
+                </button>
                 <LanguageToggle />
             </div>
         </aside >
