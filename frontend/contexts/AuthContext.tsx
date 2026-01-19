@@ -31,13 +31,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         let mounted = true;
 
-        // Listen for changes (initial session is also handled here)
+        // 1. Initial Session Check (Fast, from local storage)
+        const initSession = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (mounted) {
+                    if (error) throw error;
+                    // If we have a session, set it. 
+                    // If not, onAuthStateChange will also help, but this creates a base state.
+                    if (session) {
+                        setSession(session);
+                        setUser(session.user);
+                    }
+                    // IMPORTANT: Ensure we stop loading irrespective of session existence
+                    setIsLoading(false);
+                }
+            } catch (error) {
+                console.warn('Initial session check failed:', error);
+                if (mounted) setIsLoading(false);
+            }
+        };
+        initSession();
+
+        // 2. Listen for auth changes (Updates, Token Refreshes, Sign Out)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!mounted) return;
 
             const currentUser = session?.user;
 
-            // 1. Update state IMMEDIATELY to prevent white screen / blocking
+            // Update state
             setSession(session);
             setUser(currentUser ?? null);
             setIsLoading(false);
@@ -47,25 +69,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             }
 
-            // 2. Perform Whitelist Check asynchronously (don't block UI)
-            // Only perform check if we have a user and we are strictly logging in or refreshing
+            // 3. Background Whitelist Check (Only on meaningful changes)
             if (currentUser?.email) {
-                // Determine if we need to check (maybe skip if already checked? simpler to just check)
                 try {
                     const { count, error } = await supabase
                         .from('allowed_users')
                         .select('*', { count: 'exact', head: true })
                         .eq('email', currentUser.email);
 
-                    // Only deny if we are SURE they are not allowed
                     if (!error && count === 0) {
                         console.warn('Access denied for:', currentUser.email);
                         await supabase.auth.signOut();
                         alert('Access Denied: Your email is not permitted to access this application.');
                         router.replace('/login');
-                    }
-                    if (error) {
-                        console.warn('Whitelist check failed (non-blocking):', error.message);
                     }
                 } catch (err) {
                     console.error('Whitelist check exception:', err);
