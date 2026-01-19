@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Printer } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const runtime = 'edge';
 
@@ -44,93 +45,180 @@ export default function ClientBatchReports() {
     // Month Selection (Default: Current Month)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
+    const { user, session } = useAuth(); // Add useAuth
+
     useEffect(() => {
-        const fetchData = async () => {
-            if (!id) return;
+        if (!id || !user) return; // Wait for user
+
+        let isMounted = true;
+        const fetchData = async (retryCount = 0) => {
             setLoading(true);
 
-            // 1. Fetch Client
-            const { data: client } = await supabase.from('clients').select('*').eq('id', id).single();
-            if (client) setOwner(client);
+            try {
+                // 1. Fetch Client
+                const { data: client, error: cError } = await supabase.from('clients').select('*').eq('id', id).single();
+                if (cError) throw cError;
+                if (isMounted && client) setOwner(client);
 
-            // 2. Fetch Horses owned by client
-            const { data: horses } = await supabase.from('horses').select('*').eq('owner_id', id);
+                // 2. Fetch Horses owned by client
+                const { data: horses, error: hError } = await supabase.from('horses').select('*').eq('owner_id', id);
+                if (hError) throw hError;
 
-            if (horses && horses.length > 0) {
-                const horseIds = horses.map(h => h.id);
+                if (horses && horses.length > 0) {
+                    const horseIds = horses.map(h => h.id);
 
-                // 3. Fetch Reports for these horses in the selected month
-                // Filter by created_at range
-                const startOfMonth = `${selectedDate}-01`;
-                // Calculate end of month roughly or just match YYYY-MM string match if possible? 
-                // Supabase date filtering:
-                const nextMonthDate = new Date(selectedDate + "-01");
-                nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-                const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
+                    // 3. Fetch Reports for these horses in the selected month
+                    const startOfMonth = `${selectedDate}-01`;
+                    const nextMonthDate = new Date(selectedDate + "-01");
+                    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+                    const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
 
-                const { data: reportsData } = await supabase
-                    .from('reports')
-                    .select('*')
-                    .in('horse_id', horseIds)
-                    .gte('created_at', startOfMonth)
-                    .lt('created_at', endOfMonth)
-                    .order('horse_id'); // Group by horse
+                    const { data: reportsData, error: rError } = await supabase
+                        .from('reports')
+                        .select('*')
+                        .in('horse_id', horseIds)
+                        .gte('created_at', startOfMonth)
+                        .lt('created_at', endOfMonth)
+                        .order('horse_id');
 
-                if (reportsData) {
-                    // Map to ReportData format
-                    const formattedReports = reportsData.map(r => {
-                        const horse = horses.find(h => h.id === r.horse_id);
-                        if (!horse) return null;
+                    if (rError) throw rError;
 
-                        const metrics = r.metrics_json || {};
-                        const rData: ReportData = {
-                            reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
-                            horseNameJp: horse.name,
-                            horseNameEn: horse.name_en,
-                            sire: horse.sire,
-                            sireEn: metrics.sireEn || '',
-                            sireJp: metrics.sireJp || '',
-                            dam: horse.dam,
-                            damEn: metrics.damEn || '',
-                            damJp: metrics.damJp || '',
+                    if (isMounted && reportsData) {
+                        const formattedReports = reportsData.map(r => {
+                            const horse = horses.find(h => h.id === r.horse_id);
+                            if (!horse) return null;
 
-                            commentJp: r.body || '',
-                            commentEn: metrics.commentEn || '',
+                            const metrics = r.metrics_json || {};
+                            const rData: ReportData = {
+                                reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
+                                horseNameJp: horse.name,
+                                horseNameEn: horse.name_en,
+                                sire: horse.sire,
+                                sireEn: metrics.sireEn || '',
+                                sireJp: metrics.sireJp || '',
+                                dam: horse.dam,
+                                damEn: metrics.damEn || '',
+                                damJp: metrics.damJp || '',
+                                commentJp: r.body || '',
+                                commentEn: metrics.commentEn || '',
+                                weight: r.weight ? `${r.weight}kg` : '',
+                                statusJp: r.status_training || '',
+                                statusEn: metrics.statusEn || '',
+                                trainingStatusJp: r.status_training || '',
+                                trainingStatusEn: metrics.statusEn || '',
+                                targetJp: r.target || '',
+                                targetEn: metrics.targetEn || '',
+                                conditionJp: '', conditionEn: '',
+                                weightHistory: metrics.weightHistory || [],
+                                mainPhoto: r.main_photo_url || horse.photo_url || '',
+                                logo: null
+                            };
+                            return { report: r, horse: horse, data: rData };
+                        }).filter(item => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
 
-                            weight: r.weight ? `${r.weight}kg` : '',
-
-                            statusJp: r.status_training || '',
-                            statusEn: metrics.statusEn || '',
-
-                            trainingStatusJp: r.status_training || '',
-                            trainingStatusEn: metrics.statusEn || '', // Compatibility
-
-                            targetJp: r.target || '',
-                            targetEn: metrics.targetEn || '',
-
-                            conditionJp: '', conditionEn: '', // Not always stored separately
-
-                            weightHistory: metrics.weightHistory || [],
-                            mainPhoto: r.main_photo_url || horse.photo_url || '',
-                            logo: null
-                        };
-
-                        return { report: r, horse: horse, data: rData };
-                    }).filter(item => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
-
-                    // Remove duplicates (keep latest per horse if multiple? For now show all)
-                    setReports(formattedReports);
-                } else {
+                        setReports(formattedReports);
+                    } else if (isMounted) {
+                        setReports([]);
+                    }
+                } else if (isMounted) {
                     setReports([]);
                 }
-            } else {
-                setReports([]);
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                console.error("Error loading batch reports:", error);
+
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying batch load... (${retryCount + 1})`);
+                    setTimeout(() => fetchData(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch
+                    try {
+                        console.warn('Attempting raw fetch fallback for batch reports...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const headers = {
+                            'apikey': anonKey,
+                            'Authorization': `Bearer ${session.access_token}`
+                        };
+
+                        // 1. Fetch Client
+                        const clientRes = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, { headers });
+                        if (!clientRes.ok) throw new Error("Raw fetch client failed");
+                        const clientData = await clientRes.json();
+                        const client = clientData[0];
+                        if (isMounted && client) setOwner(client);
+
+                        // 2. Fetch Horses
+                        const horsesRes = await fetch(`${supabaseUrl}/rest/v1/horses?owner_id=eq.${id}&select=*`, { headers });
+                        if (!horsesRes.ok) throw new Error("Raw fetch horses failed");
+                        const horses = await horsesRes.json();
+
+                        if (horses && horses.length > 0) {
+                            const horseIds = horses.map((h: any) => h.id).join(',');
+
+                            const startOfMonth = `${selectedDate}-01`;
+                            const nextMonthDate = new Date(selectedDate + "-01");
+                            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+                            const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
+
+                            // 3. Fetch Reports (using 'in' operator format for REST is tricky, let's try standard)
+                            // REST syntax for IN: column=in.(val1,val2)
+                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=in.(${horseIds})&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`, { headers });
+                            if (!reportsRes.ok) throw new Error("Raw fetch reports failed");
+                            const reportsData = await reportsRes.json();
+
+                            if (isMounted && reportsData) {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const formattedReports = reportsData.map((r: any) => {
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    const horse = horses.find((h: any) => h.id === r.horse_id);
+                                    if (!horse) return null;
+
+                                    const metrics = r.metrics_json || {};
+                                    const rData: ReportData = {
+                                        reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
+                                        horseNameJp: horse.name,
+                                        horseNameEn: horse.name_en,
+                                        sire: horse.sire,
+                                        sireEn: metrics.sireEn || '',
+                                        sireJp: metrics.sireJp || '',
+                                        dam: horse.dam,
+                                        damEn: metrics.damEn || '',
+                                        damJp: metrics.damJp || '',
+                                        commentJp: r.body || '',
+                                        commentEn: metrics.commentEn || '',
+                                        weight: r.weight ? `${r.weight}kg` : '',
+                                        statusJp: r.status_training || '',
+                                        statusEn: metrics.statusEn || '',
+                                        trainingStatusJp: r.status_training || '',
+                                        trainingStatusEn: metrics.statusEn || '',
+                                        targetJp: r.target || '',
+                                        targetEn: metrics.targetEn || '',
+                                        conditionJp: '', conditionEn: '',
+                                        weightHistory: metrics.weightHistory || [],
+                                        mainPhoto: r.main_photo_url || horse.photo_url || '',
+                                        logo: null
+                                    };
+                                    return { report: r, horse: horse, data: rData };
+                                }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                                setReports(formattedReports);
+                            } else if (isMounted) setReports([]);
+                        } else if (isMounted) setReports([]);
+
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
+                }
+            } finally {
+                if (isMounted) setLoading(false);
             }
-            setLoading(false);
         };
 
         fetchData();
-    }, [id, selectedDate]);
+        return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, selectedDate, user?.id, session?.access_token]);
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
