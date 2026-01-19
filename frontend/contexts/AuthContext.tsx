@@ -45,22 +45,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         initSession();
 
         // 2. Listen for changes
+        // 2. Listen for changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             const currentUser = session?.user;
 
-            // --- WHITELIST CHECK ---
-            // Replace these emails with the actual allowed users
-            const ALLOWED_EMAILS = [
-                'littlemousebloodstock@gmail.com', // Admin (You) - Please update this!
-                'kaori@hamagikufarm.com',
-                'james@hamagikufarm.com',
-            ];
+            // --- WHITELIST CHECK WITH DB ---
+            if (currentUser?.email) {
+                try {
+                    // Check if email exists in 'allowed_users' table
+                    // We use count because we just need existence check
+                    const { count, error } = await supabase
+                        .from('allowed_users')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('email', currentUser.email);
 
-            if (currentUser?.email && !ALLOWED_EMAILS.includes(currentUser.email)) {
-                await supabase.auth.signOut();
-                alert('Access Denied: This account is not authorized.');
-                router.replace('/login');
-                return;
+                    if (error) {
+                        console.error('Whitelist check error:', error);
+                        // Fallback: If DB check fails, don't let them in easily.
+                    }
+
+                    // If count is 0, user is not in whitelist
+                    if (count === 0) {
+                        console.warn('Access denied for:', currentUser.email);
+                        await supabase.auth.signOut();
+                        alert('Access Denied: Your email is not permitted to access this application.');
+                        router.replace('/login');
+                        return;
+                    }
+
+                } catch (err) {
+                    console.error('Unexpected error during whitelist check:', err);
+                }
             }
             // -----------------------
 
