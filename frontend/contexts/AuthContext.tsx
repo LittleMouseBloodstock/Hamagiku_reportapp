@@ -31,39 +31,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         let mounted = true;
 
-        const initAuth = async () => {
-            try {
-                // Determine session via onAuthStateChange which fires INITIAL_SESSION
-                // We rely on this for the main logic.
-                // However, getSession is sometimes faster or preferred for checking init state without waiting for event.
-
-                // We'll use getSession just to seed, but handle errors silently
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) throw error;
-
-                if (mounted) {
-                    setSession(session);
-                    setUser(session?.user ?? null);
-                    // Don't set isLoading(false) here, wait for subscription or use separate logic if needed.
-                    // Actually, if we have session here, we are good?
-                    // No, onAuthStateChange will fire and might have newer info or handle the whitelist check.
-                }
-            } catch (error) {
-                // Ignore AbortError and generic errors during init, let onAuthStateChange handle it
-                if (mounted) console.warn('Init session warning:', error);
-            }
-        };
-
-        initAuth();
-
+        // Listen for changes (initial session is also handled here)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!mounted) return;
 
             const currentUser = session?.user;
 
             // --- WHITELIST CHECK WITH DB ---
-            // Only perform check if we have a user and we are strictly logging in (or session refreshed)
-            // To avoid excessive DB calls, maybe we can optimize, but for now this is fine.
+            // Only perform check if we have a user and we are strictly logging in
             if (currentUser?.email) {
                 try {
                     const { count, error } = await supabase
@@ -71,6 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         .select('*', { count: 'exact', head: true })
                         .eq('email', currentUser.email);
 
+                    // Only deny if we are SURE they are not allowed (no error, count is 0)
                     if (!error && count === 0) {
                         console.warn('Access denied for:', currentUser.email);
                         await supabase.auth.signOut();
@@ -78,15 +54,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         router.replace('/login');
                         return;
                     }
+                    if (error) {
+                        // silently warn but don't block auth if RLS/Network fails temporarily
+                        console.warn('Whitelist check failed (non-blocking):', error.message);
+                    }
                 } catch (err) {
-                    console.error('Whitelist check error:', err);
+                    console.error('Whitelist check exception:', err);
                 }
             }
             // -----------------------
 
-            setSession(session);
-            setUser(currentUser ?? null);
-            setIsLoading(false);
+            if (mounted) {
+                setSession(session);
+                setUser(currentUser ?? null);
+                setIsLoading(false);
+            }
 
             if (_event === 'SIGNED_OUT') {
                 router.replace('/login');
