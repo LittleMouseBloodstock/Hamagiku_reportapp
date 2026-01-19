@@ -45,7 +45,21 @@ export default function HorsesPage() {
         };
 
         fetchHorses();
+        fetchHorses();
     }, []);
+
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
+
+        try {
+            const { error } = await supabase.from('horses').delete().eq('id', id);
+            if (error) throw error;
+            setHorses(prev => prev.filter(h => h.id !== id));
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            console.error('Delete error:', error);
+            alert(`Failed to delete: ${error.message || 'Unknown error'}`);
+        }
+    };
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
@@ -98,9 +112,16 @@ export default function HorsesPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark">
+                                        <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark mr-4">
                                             View
                                         </Link>
+                                        <button
+                                            onClick={() => handleDelete(horse.id, language === 'ja' ? horse.name : horse.name_en)}
+                                            className="text-stone-400 hover:text-red-500 transition-colors"
+                                            title="Delete"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
