@@ -11,7 +11,6 @@ export default function Dashboard() {
     const { language, t } = useLanguage();
     const { user } = useAuth(); // Get user from AuthContext
     const router = useRouter();
-    const [debugError, setDebugError] = useState<string | null>(null);
 
     interface DashboardReport {
         id: string;
@@ -38,7 +37,6 @@ export default function Dashboard() {
 
         const fetchReports = async () => {
             try {
-                setDebugError(null);
                 // 1. Fetch Reports
                 const { data, error } = await supabase
                     .from('reports')
@@ -103,7 +101,6 @@ export default function Dashboard() {
                 }
             } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error("Dashboard fetch error:", err);
-                setDebugError(err.message || JSON.stringify(err));
                 setReports([]);
             }
         };
@@ -147,14 +144,6 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
-                {/* DEBUG INFO */}
-                {(debugError || user) && (
-                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs break-all">
-                        <p><strong>Logged in as:</strong> {user?.email} ({user?.id})</p>
-                        {debugError && <p className="text-red-600 mt-1"><strong>Error:</strong> {debugError}</p>}
-                    </div>
-                )}
-
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
