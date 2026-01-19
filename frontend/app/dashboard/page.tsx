@@ -35,7 +35,8 @@ export default function Dashboard() {
     useEffect(() => {
         if (!user) return; // Optional: Don't fetch if no user (though RLS handles it, this saves a call)
 
-        const fetchReports = async () => {
+        let isMounted = true;
+        const fetchReports = async (retryCount = 0) => {
             try {
                 // 1. Fetch Reports
                 const { data, error } = await supabase
@@ -61,17 +62,14 @@ export default function Dashboard() {
                 // Let's count reports that are "Training" as 'active'? Or just 0 for now to prevent error.
                 const pendingCount = 0;
 
-                setStats({
-                    totalReports: reportsCount || 0,
-                    activeHorses: horsesCount || 0,
-                    clients: clientsCount || 0,
-                    pendingReview: pendingCount || 0
-                });
+                if (isMounted) {
+                    setStats({
+                        totalReports: reportsCount || 0,
+                        activeHorses: horsesCount || 0,
+                        clients: clientsCount || 0,
+                        pendingReview: pendingCount || 0
+                    });
 
-                if (error) {
-                    console.error('Error fetching reports:', error);
-                    setReports([]);
-                } else {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const formatted = data?.map((r: any) => {
                         // Determine title
@@ -101,10 +99,18 @@ export default function Dashboard() {
                 }
             } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error("Dashboard fetch error:", err);
-                setReports([]);
+                // Retry specifically for AbortError or network glitches
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying fetch... (${retryCount + 1})`);
+                    setTimeout(() => fetchReports(retryCount + 1), 500);
+                } else if (isMounted) {
+                    setReports([]);
+                }
             }
         };
         fetchReports();
+
+        return () => { isMounted = false; };
     }, [language, user]);
 
     const handleDeleteReport = async (reportId: string) => {
