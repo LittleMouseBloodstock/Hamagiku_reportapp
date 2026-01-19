@@ -118,10 +118,9 @@ export default function ClientsPage() {
                                 ))}
                             </tbody>
                         </table>
-                    </table>
+                    </div>
                 </div>
+            </main>
         </div>
-            </main >
-        </div >
     );
 }

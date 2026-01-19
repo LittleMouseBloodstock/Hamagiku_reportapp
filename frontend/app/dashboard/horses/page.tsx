@@ -128,10 +128,9 @@ export default function HorsesPage() {
                                 ))}
                             </tbody>
                         </table>
-                    </table>
+                    </div>
                 </div>
+            </main>
         </div>
-            </main >
-        </div >
     );
 }
