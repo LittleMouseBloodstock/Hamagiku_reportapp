@@ -78,57 +78,60 @@ export default function HorsesPage() {
 
             <main className="flex-1 overflow-y-auto p-6">
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-stone-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-200">
-                            {horses.map((horse) => (
-                                <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
-                                            <div>
-                                                <div className="text-sm font-medium text-stone-900">
-                                                    {language === 'ja' ? horse.name : horse.name_en}
-                                                </div>
-                                                <div className="text-xs text-stone-500">
-                                                    {language === 'ja' ? horse.name_en : horse.name}
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-stone-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-200">
+                                {horses.map((horse) => (
+                                    <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-stone-900">
+                                                        {language === 'ja' ? horse.name : horse.name_en}
+                                                    </div>
+                                                    <div className="text-xs text-stone-500">
+                                                        {language === 'ja' ? horse.name_en : horse.name}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                                        {horse.clients?.name || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            Active
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark mr-4">
-                                            View
-                                        </Link>
-                                        <button
-                                            onClick={() => handleDelete(horse.id, language === 'ja' ? horse.name : horse.name_en)}
-                                            className="text-stone-400 hover:text-red-500 transition-colors"
-                                            title="Delete"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                            {horse.clients?.name || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                Active
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark mr-4">
+                                                View
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(horse.id, language === 'ja' ? horse.name : horse.name_en)}
+                                                className="text-stone-400 hover:text-red-500 transition-colors"
+                                                title="Delete"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </table>
                 </div>
-            </main>
         </div>
+            </main >
+        </div >
     );
 }

@@ -73,52 +73,55 @@ export default function ClientsPage() {
 
             <main className="flex-1 overflow-y-auto p-6">
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-stone-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Phone</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-200">
-                            {clients.map((client) => (
-                                <tr key={client.id} className="hover:bg-stone-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs mr-3">
-                                                {client.name?.charAt(0) || 'C'}
-                                            </div>
-                                            <div className="text-sm font-medium text-stone-900">
-                                                {client.name}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                                        {client.contact_email || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                                        {client.contact_phone || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <Link href={`/dashboard/clients/${client.id}`} className="text-primary hover:text-primary-dark mr-4">
-                                            View
-                                        </Link>
-                                        <button
-                                            onClick={() => handleDelete(client.id, client.name)}
-                                            className="text-stone-400 hover:text-red-500 transition-colors"
-                                            title="Delete"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                        </button>
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-stone-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Phone</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
+                            </thead>
+                            <tbody className="divide-y divide-stone-200">
+                                {clients.map((client) => (
+                                    <tr key={client.id} className="hover:bg-stone-50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs mr-3">
+                                                    {client.name?.charAt(0) || 'C'}
+                                                </div>
+                                                <div className="text-sm font-medium text-stone-900">
+                                                    {client.name}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                            {client.contact_email || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
+                                            {client.contact_phone || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <Link href={`/dashboard/clients/${client.id}`} className="text-primary hover:text-primary-dark mr-4">
+                                                View
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(client.id, client.name)}
+                                                className="text-stone-400 hover:text-red-500 transition-colors"
+                                                title="Delete"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </table>
                 </div>
-            </main>
         </div>
+            </main >
+        </div >
     );
 }
