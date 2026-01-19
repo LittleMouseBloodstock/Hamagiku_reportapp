@@ -44,7 +44,7 @@ export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
     const { language, t } = useLanguage();
-    const { user } = useAuth();
+    const { user, session } = useAuth();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
@@ -69,56 +69,125 @@ export default function HorseDetail() {
     );
 
     useEffect(() => {
-        if (!user) return; // Wait for user
+        if (!user || !id) return; // Wait for user and id
 
-        const fetchData = async () => {
-            if (!id) return;
+        let isMounted = true;
+        const fetchData = async (retryCount = 0) => {
+            try {
+                // 1. Fetch all clients for autocomplete
+                const { data: clientsData, error: err1 } = await supabase.from('clients').select('id, name').order('name');
+                if (err1) throw err1;
+                if (isMounted && clientsData) setClients(clientsData);
 
-            // 1. Fetch all clients for autocomplete
-            const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
-            if (clientsData) setClients(clientsData);
+                // 2. Fetch Horse with Owner Info
+                const { data: h, error: err2 } = await supabase
+                    .from('horses')
+                    .select('*, clients(id, name)')
+                    .eq('id', id)
+                    .single();
 
-            // 2. Fetch Horse with Owner Info
-            // Note: We select clients(id, name) to get the joined data
-            const { data: h } = await supabase
-                .from('horses')
-                .select('*, clients(id, name)')
-                .eq('id', id)
-                .single();
+                if (err2) throw err2;
 
-            if (h) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const horseData = h as any; // Cast to handle the joined 'clients' property easily if strict typing issues arise
-                setHorse(horseData);
+                if (h && isMounted) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const horseData = h as any;
+                    setHorse(horseData);
 
-                setFormData({
-                    name: horseData.name || '',
-                    name_en: horseData.name_en || '',
-                    sire: horseData.sire || '',
-                    sire_en: horseData.sire_en || '',
-                    dam: horseData.dam || '',
-                    dam_en: horseData.dam_en || '',
-                    owner_id: horseData.owner_id || ''
-                });
+                    setFormData({
+                        name: horseData.name || '',
+                        name_en: horseData.name_en || '',
+                        sire: horseData.sire || '',
+                        sire_en: horseData.sire_en || '',
+                        dam: horseData.dam || '',
+                        dam_en: horseData.dam_en || '',
+                        owner_id: horseData.owner_id || ''
+                    });
 
-                // Set initial owner search text
-                if (horseData.clients) {
-                    setOwnerSearch(horseData.clients.name);
-                } else {
-                    setOwnerSearch('');
+                    if (horseData.clients) {
+                        setOwnerSearch(horseData.clients.name);
+                    } else {
+                        setOwnerSearch('');
+                    }
+                }
+
+                // 3. Fetch Reports
+                const { data: r, error: err3 } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .eq('horse_id', id)
+                    .order('created_at', { ascending: false });
+
+                if (err3) throw err3;
+                if (r && isMounted) setReports(r);
+
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                console.error('Error fetching horse details:', error);
+
+                // Retry logic
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying detail fetch... (${retryCount + 1})`);
+                    setTimeout(() => fetchData(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch for all 3
+                    try {
+                        console.warn('Attempting raw fetch fallback for details...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const headers = {
+                            'apikey': anonKey,
+                            'Authorization': `Bearer ${session.access_token}`
+                        };
+
+                        const [clientsRes, horseRes, reportsRes] = await Promise.all([
+                            fetch(`${supabaseUrl}/rest/v1/clients?select=id,name&order=name`, { headers }),
+                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name)&id=eq.${id}`, { headers }), // Note: single logic simulation
+                            fetch(`${supabaseUrl}/rest/v1/reports?select=*&horse_id=eq.${id}&order=created_at.desc`, { headers })
+                        ]);
+
+                        if (clientsRes.ok) {
+                            const cData = await clientsRes.json();
+                            if (isMounted) setClients(cData);
+                        }
+
+                        if (horseRes.ok) {
+                            const hData = await horseRes.json();
+                            if (hData && hData.length > 0) {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const horseData = hData[0] as any;
+                                if (isMounted) {
+                                    setHorse(horseData);
+                                    setFormData({
+                                        name: horseData.name || '',
+                                        name_en: horseData.name_en || '',
+                                        sire: horseData.sire || '',
+                                        sire_en: horseData.sire_en || '',
+                                        dam: horseData.dam || '',
+                                        dam_en: horseData.dam_en || '',
+                                        owner_id: horseData.owner_id || ''
+                                    });
+                                    if (horseData.clients) setOwnerSearch(horseData.clients.name);
+                                    else setOwnerSearch('');
+                                }
+                            }
+                        }
+
+                        if (reportsRes.ok) {
+                            const rData = await reportsRes.json();
+                            if (isMounted) setReports(rData);
+                        }
+
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
                 }
             }
-
-            // 3. Fetch Reports
-            const { data: r } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('horse_id', id)
-                .order('created_at', { ascending: false });
-            if (r) setReports(r);
         };
+
         fetchData();
-    }, [id, user]);
+        return () => { isMounted = false; };
+    }, [id, user?.id, session?.access_token]);
 
     const handleUpdateHorse = async () => {
         try {
