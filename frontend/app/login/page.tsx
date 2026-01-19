@@ -16,25 +16,30 @@ export default function LoginPage() {
         setMessage(null);
 
         try {
+            console.log('Attempting auth:', isSignUp ? 'Sign Up' : 'Sign In', { email });
+
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
                         emailRedirectTo: `${window.location.origin}/dashboard`
                     }
                 });
+                console.log('Sign Up Result:', { data, error });
                 if (error) throw error;
                 setMessage({ text: 'Confirmation email sent! Please check your inbox.', type: 'success' });
             } else {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email,
                     password
                 });
+                console.log('Sign In Result:', { data, error });
                 if (error) throw error;
                 // Redirect is handled by AuthContext
             }
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            console.error('Auth Error:', error);
             setMessage({ text: error.message, type: 'error' });
         } finally {
             setLoading(false);
