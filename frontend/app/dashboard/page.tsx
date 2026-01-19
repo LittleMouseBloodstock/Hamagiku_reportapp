@@ -123,17 +123,33 @@ export default function Dashboard() {
                             if (!reportsRes.ok) throw new Error('Raw fetch failed');
                             const rawData = await reportsRes.json();
 
-                            // 2. Stats (Simplified for fallback)
-                            // We might skip these or do simple fetches if critical, but let's just show reports for now to prove it works
-                            // Or try to fetch at least reportsCount
-                            const countRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*`, {
-                                method: 'HEAD',
-                                headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
-                            });
-                            const reportsCount = countRes.headers.get('content-range')?.split('/')[1] || 0;
+                            // 2. Stats Fetch (Raw HEAD requests)
+                            const [reportsHead, horsesHead, clientsHead] = await Promise.all([
+                                fetch(`${supabaseUrl}/rest/v1/reports?select=*`, {
+                                    method: 'HEAD',
+                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
+                                }),
+                                fetch(`${supabaseUrl}/rest/v1/horses?select=*`, {
+                                    method: 'HEAD',
+                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
+                                }),
+                                fetch(`${supabaseUrl}/rest/v1/clients?select=*`, {
+                                    method: 'HEAD',
+                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
+                                })
+                            ]);
+
+                            const reportsCount = reportsHead.headers.get('content-range')?.split('/')[1] || 0;
+                            const horsesCount = horsesHead.headers.get('content-range')?.split('/')[1] || 0;
+                            const clientsCount = clientsHead.headers.get('content-range')?.split('/')[1] || 0;
 
                             if (isMounted) {
-                                setStats(prev => ({ ...prev, totalReports: Number(reportsCount) }));
+                                setStats({
+                                    totalReports: Number(reportsCount),
+                                    activeHorses: Number(horsesCount),
+                                    clients: Number(clientsCount),
+                                    pendingReview: 0 // Keep 0 for now as it requires complex filtering
+                                });
                                 // Format data
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 const formatted = rawData?.map((r: any) => {
