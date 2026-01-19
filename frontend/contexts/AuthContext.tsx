@@ -47,22 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 router.replace('/login');
                 return;
             }
-            if (!mounted) return;
-
-            const currentUser = session?.user;
-
-            // Update state
-            setSession(session);
-            setUser(currentUser ?? null);
-            setIsLoading(false);
-
-            if (_event === 'SIGNED_OUT') {
-                router.replace('/login');
-                return;
-            }
-
             // 3. Background Whitelist Check (Only on meaningful changes)
-            // 3. Background Whitelist Check
             if (currentUser?.email) {
                 try {
                     const { count, error } = await supabase
