@@ -42,7 +42,7 @@ type Client = {
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
-    const { language, t } = useLanguage(); // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { language, t } = useLanguage();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
@@ -118,7 +118,7 @@ export default function HorseDetail() {
 
     const handleUpdateHorse = async () => {
         try {
-            let finalOwnerId = formData.owner_id;
+            let finalOwnerId: string | null = formData.owner_id;
 
             // Owner Update Logic (Same as New Horse Page)
             // If text is entered but no existing ID matches (or name changed), create/find client
@@ -140,7 +140,7 @@ export default function HorseDetail() {
                 }
             } else if (!ownerSearch) {
                 // If search cleared, remove owner
-                finalOwnerId = null as any; // supabase handles null for optional FK
+                finalOwnerId = null;
             }
 
             const { error } = await supabase
