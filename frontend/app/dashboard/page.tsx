@@ -197,14 +197,19 @@ export default function Dashboard() {
                                                     'bg-gray-100 text-gray-800'
                                                 }`}>
                                                 {(() => {
-                                                    const s = report.status;
+                                                    const s = (report.status || '').trim();
+                                                    // Exact matches (after trim)
                                                     if (s === 'pending_jp_check' || s === 'pending_en_check') return t('status_InReview');
-                                                    if (s === 'approved') return t('status_Approved');
-                                                    if (s === 'draft') return t('status_Draft');
+                                                    if (s.toLowerCase() === 'approved') return t('status_Approved');
+                                                    if (s.toLowerCase() === 'draft') return t('status_Draft');
                                                     if (s === 'Training') return t('status_Training');
                                                     if (s === 'Resting') return t('status_Resting');
                                                     if (s === 'Spelling') return t('status_Spelling');
-                                                    return s; // Fallback to original string if no translation
+
+                                                    // Handle "調整中" or other variations if needed
+                                                    if (s === '調整中') return language === 'en' ? 'Training' : s; // Or map to 'Training' translation if desired
+
+                                                    return s;
                                                 })()}
                                             </span>
                                         </td>
