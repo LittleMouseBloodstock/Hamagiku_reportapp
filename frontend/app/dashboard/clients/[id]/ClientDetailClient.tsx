@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ClientDetailClient({ id }: { id: string }) {
     const router = useRouter();
@@ -24,31 +25,85 @@ export default function ClientDetailClient({ id }: { id: string }) {
         notes: ''
     });
 
-    useEffect(() => {
-        const fetchClient = async () => {
-            const { data } = await supabase
-                .from('clients')
-                .select('*')
-                .eq('id', id)
-                .single();
+    const { user, session } = useAuth(); // Add useAuth
 
-            if (data) {
-                setFormData({
-                    name: data.name || '',
-                    contact_email: data.contact_email || '',
-                    contact_phone: data.contact_phone || '',
-                    zip_code: data.zip_code || '',
-                    address_prefecture: data.address_prefecture || '',
-                    address_city: data.address_city || '',
-                    address_street: data.address_street || '',
-                    representative_name: data.representative_name || '',
-                    notes: data.notes || ''
-                });
+    useEffect(() => {
+        if (!user) return;
+
+        let isMounted = true;
+        const fetchClient = async (retryCount = 0) => {
+            try {
+                const { data, error } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) throw error;
+                if (data && isMounted) {
+                    setFormData({
+                        name: data.name || '',
+                        contact_email: data.contact_email || '',
+                        contact_phone: data.contact_phone || '',
+                        zip_code: data.zip_code || '',
+                        address_prefecture: data.address_prefecture || '',
+                        address_city: data.address_city || '',
+                        address_street: data.address_street || '',
+                        representative_name: data.representative_name || '',
+                        notes: data.notes || ''
+                    });
+                }
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                console.error("Error loading client data:", error);
+
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying client load... (${retryCount + 1})`);
+                    setTimeout(() => fetchClient(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch
+                    try {
+                        console.warn('Attempting raw fetch fallback for client details...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, {
+                            headers: {
+                                'apikey': anonKey,
+                                'Authorization': `Bearer ${session.access_token}`
+                            }
+                        });
+
+                        if (!res.ok) throw new Error("Raw fetch failed");
+                        const rawData = await res.json();
+                        const data = rawData[0];
+
+                        if (data && isMounted) {
+                            setFormData({
+                                name: data.name || '',
+                                contact_email: data.contact_email || '',
+                                contact_phone: data.contact_phone || '',
+                                zip_code: data.zip_code || '',
+                                address_prefecture: data.address_prefecture || '',
+                                address_city: data.address_city || '',
+                                address_street: data.address_street || '',
+                                representative_name: data.representative_name || '',
+                                notes: data.notes || ''
+                            });
+                        }
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
+                }
+            } finally {
+                if (isMounted) setLoading(false);
             }
-            setLoading(false);
         };
+
         fetchClient();
-    }, [id]);
+        return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, user?.id, session?.access_token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
