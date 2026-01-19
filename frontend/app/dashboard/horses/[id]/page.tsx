@@ -360,41 +360,42 @@ export default function HorseDetail() {
                 ) : (
                     <div className="space-y-3">
                         {reports.map(report => (
-                            <Link href={`/reports/${report.id}`} key={report.id}>
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 hover:border-[var(--color-accent)] hover:shadow-md transition-all cursor-pointer flex items-center justify-between group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-[var(--color-light-bg)] group-hover:text-[var(--color-primary)] transition-colors">
-                                            <FileText size={20} />
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-gray-700">{report.title || (language === 'ja' ? '無題のレポート' : 'Untitled Report')}</div>
-                                            <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
-                                                <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
-                                                {(report.status_training || report.metrics_json?.statusEn) && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Activity size={10} />
-                                                        {language === 'ja' ? (report.status_training || report.metrics_json?.statusJp) : (report.metrics_json?.statusEn || report.status_training)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                            <div
+                                key={report.id}
+                                onClick={() => router.push(`/reports/${report.id}`)}
+                                className="bg-white p-4 rounded-lg border border-gray-200 hover:border-[var(--color-accent)] hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-[var(--color-light-bg)] group-hover:text-[var(--color-primary)] transition-colors">
+                                        <FileText size={20} />
                                     </div>
-                                    <div className="text-right flex flex-col items-end justify-between">
-                                        <span className="text-sm font-bold text-[var(--color-primary)] mb-2">{report.weight ? `${report.weight}kg` : '-'}</span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleDeleteReport(report.id);
-                                            }}
-                                            className="text-gray-300 hover:text-red-500 transition-colors"
-                                            title={t('deleteReport')}
-                                        >
-                                            <span className="material-symbols-outlined text-xl">delete</span>
-                                        </button>
+                                    <div>
+                                        <div className="font-bold text-gray-700">{report.title || (language === 'ja' ? '無題のレポート' : 'Untitled Report')}</div>
+                                        <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
+                                            <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
+                                            {(report.status_training || report.metrics_json?.statusEn) && (
+                                                <span className="flex items-center gap-1">
+                                                    <Activity size={10} />
+                                                    {language === 'ja' ? (report.status_training || report.metrics_json?.statusJp) : (report.metrics_json?.statusEn || report.status_training)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </Link>
+                                <div className="text-right flex flex-col items-end justify-between">
+                                    <span className="text-sm font-bold text-[var(--color-primary)] mb-2">{report.weight ? `${report.weight}kg` : '-'}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Only stopPropagation needed as there is no default link behavior
+                                            handleDeleteReport(report.id);
+                                        }}
+                                        className="text-gray-300 hover:text-red-500 transition-colors"
+                                        title={t('deleteReport')}
+                                    >
+                                        <span className="material-symbols-outlined text-xl">delete</span>
+                                    </button>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
