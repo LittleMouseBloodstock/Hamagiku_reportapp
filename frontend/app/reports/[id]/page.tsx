@@ -335,7 +335,10 @@ export default function ReportEditor() {
         return (
             <div className="min-h-screen flex items-start justify-center pt-10 sm:pt-20 bg-gray-100 font-sans px-4">
                 <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-2xl border border-stone-200">
-                    <h2 className="text-2xl font-bold mb-3 text-[#1a3c34]">Select a Horse</h2>
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-2xl font-bold text-[#1a3c34]">Select a Horse</h2>
+                        <LanguageToggle />
+                    </div>
                     <p className="text-stone-500 mb-6 text-sm">Please select a horse to create a report for.</p>
                     <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
                         {horses.map(h => (

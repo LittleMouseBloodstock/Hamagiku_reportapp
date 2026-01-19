@@ -38,7 +38,7 @@ const Fonts = () => (
         height: 280mm !important; /* Reduced further to 280mm */
         min-height: 0 !important; /* Override inline min-height to prevent overflow */
         margin: 0 !important;
-        padding: 30px 50px 10px 50px !important;
+        padding: 20px 30px 10px 30px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
         overflow: hidden !important;
@@ -819,7 +819,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     style={{
                         width: '210mm',
                         minHeight: '297mm',
-                        padding: '30px 50px 10px 50px',
+                        padding: '20px 30px 10px 30px',
                         boxSizing: 'border-box'
                     }}
                 >
@@ -838,6 +838,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 alt="Logo"
                                 fill
                                 className="object-contain"
+                                unoptimized
                             />
                         </div>
 

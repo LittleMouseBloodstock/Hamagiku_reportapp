@@ -24,10 +24,10 @@ export default function Dashboard() {
     const [reports, setReports] = useState<DashboardReport[]>([]);
     // Hardcoded stats for demo (replace with real data later)
     const [stats, setStats] = useState({
-        totalReports: 124,
-        activeHorses: 45,
-        clients: 12,
-        pendingReview: 3
+        totalReports: 0,
+        activeHorses: 0,
+        clients: 0,
+        pendingReview: 0
     });
 
     useEffect(() => {
