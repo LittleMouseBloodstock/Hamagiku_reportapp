@@ -187,6 +187,7 @@ export default function HorseDetail() {
 
         fetchData();
         return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, user?.id, session?.access_token]);
 
     const handleUpdateHorse = async () => {

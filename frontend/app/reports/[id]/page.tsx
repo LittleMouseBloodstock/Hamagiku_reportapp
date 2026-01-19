@@ -181,9 +181,11 @@ export default function ReportEditor() {
                                     const rData = await reportsRes.json();
                                     const horse = hData[0];
 
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const weightHistory = rData.map((r: any) => ({
                                         label: `${new Date(r.created_at).getMonth() + 1}月`,
                                         value: r.weight || 0
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     })).filter((item: any) => item.value > 0) || [];
 
                                     if (isMounted) {

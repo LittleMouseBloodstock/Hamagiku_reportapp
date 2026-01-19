@@ -155,6 +155,7 @@ export default function ClientBatchReports() {
                         const horses = await horsesRes.json();
 
                         if (horses && horses.length > 0) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             const horseIds = horses.map((h: any) => h.id).join(',');
 
                             const startOfMonth = `${selectedDate}-01`;
@@ -169,6 +170,7 @@ export default function ClientBatchReports() {
                             const reportsData = await reportsRes.json();
 
                             if (isMounted && reportsData) {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 const formattedReports = reportsData.map((r: any) => {
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -201,6 +203,7 @@ export default function ClientBatchReports() {
                                         logo: null
                                     };
                                     return { report: r, horse: horse, data: rData };
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
                                 setReports(formattedReports);
                             } else if (isMounted) setReports([]);
