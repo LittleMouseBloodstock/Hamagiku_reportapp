@@ -70,23 +70,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             // 3. Background Whitelist Check (Only on meaningful changes)
-            if (currentUser?.email) {
-                try {
-                    const { count, error } = await supabase
-                        .from('allowed_users')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('email', currentUser.email);
+            // 3. Background Whitelist Check (Temporarily Disabled for Debugging)
+            // if (currentUser?.email) {
+            //     try {
+            //         const { count, error } = await supabase
+            //             .from('allowed_users')
+            //             .select('*', { count: 'exact', head: true })
+            //             .eq('email', currentUser.email);
 
-                    if (!error && count === 0) {
-                        console.warn('Access denied for:', currentUser.email);
-                        await supabase.auth.signOut();
-                        alert('Access Denied: Your email is not permitted to access this application.');
-                        router.replace('/login');
-                    }
-                } catch (err) {
-                    console.error('Whitelist check exception:', err);
-                }
-            }
+            //         if (!error && count === 0) {
+            //             console.warn('Access denied for:', currentUser.email);
+            //             // await supabase.auth.signOut();
+            //             // alert('Access Denied: Your email is not permitted to access this application.');
+            //             // router.replace('/login');
+            //         }
+            //     } catch (err) {
+            //         console.error('Whitelist check exception:', err);
+            //     }
+            // }
         });
 
         return () => {
