@@ -51,9 +51,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // --- WHITELIST CHECK ---
             // Replace these emails with the actual allowed users
             const ALLOWED_EMAILS = [
-                'jkhor.000@gmail.com', // Admin (You) - Please update this!
-                'manager@example.com',
-                'staff@example.com'
+                'littlemousebloodstock@gmail.com', // Admin (You) - Please update this!
+                'kaori@hamagikufarm.com',
+                'james@hamagikufarm.com',
             ];
 
             if (currentUser?.email && !ALLOWED_EMAILS.includes(currentUser.email)) {
