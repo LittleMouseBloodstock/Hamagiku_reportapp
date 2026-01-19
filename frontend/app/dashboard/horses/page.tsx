@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
 export default function HorsesPage() {
@@ -15,10 +16,14 @@ export default function HorsesPage() {
     }
 
     const { t, language } = useLanguage();
+    const { user } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
 
     useEffect(() => {
+        if (!user) return; // Wait for user
+
         const fetchHorses = async () => {
+            // ... existing fetch logic ...
             try {
                 // Try fetching with clients first
                 const { data, error } = await supabase
@@ -45,7 +50,7 @@ export default function HorsesPage() {
         };
 
         fetchHorses();
-    }, []);
+    }, [user]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;

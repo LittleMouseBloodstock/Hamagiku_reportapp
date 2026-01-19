@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
+    const { user } = useAuth(); // Get user from AuthContext
     const router = useRouter();
 
     interface DashboardReport {
@@ -31,6 +33,8 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
+        if (!user) return; // Optional: Don't fetch if no user (though RLS handles it, this saves a call)
+
         const fetchReports = async () => {
             try {
                 // 1. Fetch Reports
@@ -94,7 +98,7 @@ export default function Dashboard() {
             }
         };
         fetchReports();
-    }, [language]);
+    }, [language, user]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
