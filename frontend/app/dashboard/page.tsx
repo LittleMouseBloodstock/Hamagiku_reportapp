@@ -11,6 +11,7 @@ export default function Dashboard() {
     const { language, t } = useLanguage();
     const { user } = useAuth(); // Get user from AuthContext
     const router = useRouter();
+    const [debugError, setDebugError] = useState<string | null>(null);
 
     interface DashboardReport {
         id: string;
@@ -37,16 +38,24 @@ export default function Dashboard() {
 
         const fetchReports = async () => {
             try {
+                setDebugError(null);
                 // 1. Fetch Reports
                 const { data, error } = await supabase
                     .from('reports')
                     .select('*, horse_id, horses(name, name_en)')
                     .order('created_at', { ascending: false });
 
+                if (error) throw error;
+
                 // 2. Fetch Stats Counts
-                const { count: reportsCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
-                const { count: horsesCount } = await supabase.from('horses').select('*', { count: 'exact', head: true });
-                const { count: clientsCount } = await supabase.from('clients').select('*', { count: 'exact', head: true });
+                const { count: reportsCount, error: err1 } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+                if (err1) throw err1;
+
+                const { count: horsesCount, error: err2 } = await supabase.from('horses').select('*', { count: 'exact', head: true });
+                if (err2) throw err2;
+
+                const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true });
+                if (err3) throw err3;
 
                 // Pending Review: Check 'status_training' or simply count recent ones if no explicit review status exists
                 // We'll trust the 'status_training' column or 'metrics_json' for now.
@@ -92,8 +101,9 @@ export default function Dashboard() {
                     }) || [];
                     setReports(formatted);
                 }
-            } catch (err) {
+            } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error("Dashboard fetch error:", err);
+                setDebugError(err.message || JSON.stringify(err));
                 setReports([]);
             }
         };
@@ -137,6 +147,14 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
+                {/* DEBUG INFO */}
+                {(debugError || user) && (
+                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-xs break-all">
+                        <p><strong>Logged in as:</strong> {user?.email} ({user?.id})</p>
+                        {debugError && <p className="text-red-600 mt-1"><strong>Error:</strong> {debugError}</p>}
+                    </div>
+                )}
+
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
