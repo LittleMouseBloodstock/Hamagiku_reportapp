@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -166,7 +166,7 @@ export default function ClientBatchReports() {
                 {reports.length === 0 ? (
                     <div className="text-gray-500 mt-10">No reports found for this month.</div>
                 ) : (
-                    reports.map((item, index) => (
+                    reports.map((item) => (
                         <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
                             <div className="print:h-screen print:flex print:flex-col print:justify-start">

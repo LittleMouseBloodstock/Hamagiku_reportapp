@@ -139,7 +139,7 @@ export default function SettingsPage() {
                             {loading ? (
                                 <div className="text-stone-500 text-sm py-4">Loading users...</div>
                             ) : users.length === 0 ? (
-                                <div className="text-stone-500 text-sm py-4">No users found. (This shouldn't happen if you're logged in!)</div>
+                                <div className="text-stone-500 text-sm py-4">No users found. (This shouldn&apos;t happen if you&apos;re logged in!)</div>
                             ) : (
                                 <div className="space-y-2">
                                     {users.map((user) => (
