@@ -45,10 +45,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         initSession();
 
         // 2. Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            const currentUser = session?.user;
+
+            // --- WHITELIST CHECK ---
+            // Replace these emails with the actual allowed users
+            const ALLOWED_EMAILS = [
+                'jkhor.000@gmail.com', // Admin (You) - Please update this!
+                'manager@example.com',
+                'staff@example.com'
+            ];
+
+            if (currentUser?.email && !ALLOWED_EMAILS.includes(currentUser.email)) {
+                await supabase.auth.signOut();
+                alert('Access Denied: This account is not authorized.');
+                router.replace('/login');
+                return;
+            }
+            // -----------------------
+
             setSession(session);
-            setUser(session?.user ?? null);
+            setUser(currentUser ?? null);
             setIsLoading(false);
+
             if (_event === 'SIGNED_OUT') {
                 router.replace('/login');
             }
