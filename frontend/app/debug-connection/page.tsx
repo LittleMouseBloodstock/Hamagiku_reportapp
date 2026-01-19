@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function DebugConnectionPage() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [session, setSession] = useState<any>(null);
 
     const checkConnection = async () => {
@@ -30,7 +32,7 @@ export default function DebugConnectionPage() {
                 sessionError: sessErr
             });
 
-        } catch (err: any) {
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             setResult({ exception: err.message });
         } finally {
             setLoading(false);
