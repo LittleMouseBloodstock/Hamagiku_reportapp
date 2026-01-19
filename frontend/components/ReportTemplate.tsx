@@ -857,15 +857,14 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         {/* Horse Profile */}
                         <div className="flex justify-between items-end mb-5">
                             <div>
-                                {lang === 'ja' ? (
-                                    <h1 className="text-4xl font-bold font-serif-jp text-gray-800 leading-tight">
-                                        {data.horseNameJp || '（馬名を入力）'}
-                                    </h1>
-                                ) : (
-                                    <h1 className="text-4xl font-bold font-serif-en text-gray-800 leading-tight">
-                                        {data.horseNameEn || '(Horse Name)'}
-                                    </h1>
-                                )}
+                                <h1 className="leading-tight">
+                                    <span className={`block font-bold text-gray-800 ${lang === 'ja' ? 'text-4xl font-serif-jp' : 'text-4xl font-serif-en'}`}>
+                                        {lang === 'ja' ? (data.horseNameJp || '（馬名を入力）') : (data.horseNameEn || '(Horse Name)')}
+                                    </span>
+                                    <span className={`block font-bold text-[#c5a059] mt-1 ${lang === 'ja' ? 'text-xl font-serif-en' : 'text-lg font-serif-jp'}`}>
+                                        {lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '')}
+                                    </span>
+                                </h1>
                             </div>
                             <div className="text-[15px] text-[#666] bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34]">
                                 {/* Multilingual Sire/Dam Display */}
