@@ -36,15 +36,18 @@ export default function ClientsPage() {
         };
 
         fetchClients();
-        fetchClients();
     }, []);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
 
         try {
-            const { error } = await supabase.from('clients').delete().eq('id', id);
+            const { data, error } = await supabase.from('clients').delete().eq('id', id).select();
             if (error) throw error;
+            if (!data || data.length === 0) {
+                // If RLS denies delete, it often returns no error but deletes 0 rows.
+                throw new Error('Delete operation affected 0 rows. Check RLS policies.');
+            }
             setClients(prev => prev.filter(c => c.id !== id));
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error('Delete error:', error);
