@@ -194,6 +194,23 @@ export default function HorseDetail() {
         }
     };
 
+    const handleDeleteReport = async (reportId: string) => {
+        if (!window.confirm(t('confirmDeleteReport'))) return;
+
+        try {
+            const { error } = await supabase.from('reports').delete().eq('id', reportId);
+
+            if (error) throw error;
+
+            alert(t('deleteSuccess'));
+            setReports(prev => prev.filter(r => r.id !== reportId));
+
+        } catch (error) {
+            console.error('Error deleting report:', error);
+            alert(t('deleteError') + (error as Error).message);
+        }
+    };
+
     if (!horse) return <div className="p-10 text-center">Loading...</div>;
 
     const displayName = language === 'ja' ? horse.name : horse.name_en;
@@ -362,8 +379,19 @@ export default function HorseDetail() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="text-sm font-bold text-[var(--color-primary)]">{report.weight ? `${report.weight}kg` : '-'}</span>
+                                    <div className="text-right flex flex-col items-end justify-between">
+                                        <span className="text-sm font-bold text-[var(--color-primary)] mb-2">{report.weight ? `${report.weight}kg` : '-'}</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleDeleteReport(report.id);
+                                            }}
+                                            className="text-gray-300 hover:text-red-500 transition-colors"
+                                            title={t('deleteReport')}
+                                        >
+                                            <span className="material-symbols-outlined text-xl">delete</span>
+                                        </button>
                                     </div>
                                 </div>
                             </Link>
