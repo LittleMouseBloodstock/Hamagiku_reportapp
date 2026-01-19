@@ -31,30 +31,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         let mounted = true;
 
-        // 1. Initial Session Check (Fast, from local storage)
-        const initSession = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (mounted) {
-                    if (error) throw error;
-                    // If we have a session, set it. 
-                    // If not, onAuthStateChange will also help, but this creates a base state.
-                    if (session) {
-                        setSession(session);
-                        setUser(session.user);
-                    }
-                    // IMPORTANT: Ensure we stop loading irrespective of session existence
-                    setIsLoading(false);
-                }
-            } catch (error) {
-                console.warn('Initial session check failed:', error);
-                if (mounted) setIsLoading(false);
-            }
-        };
-        initSession();
-
-        // 2. Listen for auth changes (Updates, Token Refreshes, Sign Out)
+        // 1. Listen for auth changes (Updates, Token Refreshes, Sign Out)
+        // onAuthStateChange fires 'INITIAL_SESSION' immediately, so we don't need getSession()
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (!mounted) return;
+
+            const currentUser = session?.user;
+
+            // Update state
+            setSession(session);
+            setUser(currentUser ?? null);
+            setIsLoading(false);
+
+            if (_event === 'SIGNED_OUT') {
+                router.replace('/login');
+                return;
+            }
             if (!mounted) return;
 
             const currentUser = session?.user;
