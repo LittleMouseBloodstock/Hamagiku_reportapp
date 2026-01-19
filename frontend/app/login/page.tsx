@@ -7,7 +7,6 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isSignUp, setIsSignUp] = useState(false);
     const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null);
 
     const handleGoogleLogin = async () => {
@@ -33,24 +32,12 @@ export default function LoginPage() {
         setMessage(null);
 
         try {
-            if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        emailRedirectTo: `${window.location.origin}/dashboard`
-                    }
-                });
-                if (error) throw error;
-                setMessage({ text: 'Confirmation email sent! Please check your inbox.', type: 'success' });
-            } else {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-                if (error) throw error;
-                // Redirect is handled by AuthContext
-            }
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            if (error) throw error;
+            // Redirect is handled by AuthContext
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             setMessage({ text: error.message, type: 'error' });
         } finally {
@@ -143,19 +130,9 @@ export default function LoginPage() {
                             disabled={loading}
                             className="w-full bg-[#1a3c34] hover:bg-[#122b25] text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm"
                         >
-                            {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                            {loading ? 'Processing...' : 'Sign In'}
                         </button>
                     </form>
-
-                    <div className="text-xs text-center text-gray-500">
-                        {isSignUp ? "Already have an account? " : "Don't have an account? "}
-                        <button
-                            onClick={() => { setIsSignUp(!isSignUp); setMessage(null); }}
-                            className="text-[#1a3c34] font-bold hover:underline"
-                        >
-                            {isSignUp ? 'Sign In' : 'Sign Up'}
-                        </button>
-                    </div>
                 </div>
 
                 <div className="mt-8 text-xs text-stone-400">
