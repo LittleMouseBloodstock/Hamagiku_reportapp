@@ -25,6 +25,7 @@ DROP POLICY IF EXISTS "Enable all for authenticated users" ON clients;
 
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON allowed_users;
 DROP POLICY IF EXISTS "Enable all access for authenticated users" ON allowed_users;
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON allowed_users;
 
 
 -- 3. Apply Permissive Policies for Authenticated Users
