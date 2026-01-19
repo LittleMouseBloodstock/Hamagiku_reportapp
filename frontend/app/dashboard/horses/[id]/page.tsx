@@ -225,22 +225,22 @@ export default function HorseDetail() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Name Fields */}
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (JP)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseNameJp')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Horse Name (EN)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseNameEn')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} />
                                     </div>
 
                                     {/* Owner Selection Field - COPIED FROM NEW PAGE */}
                                     <div className="col-span-1 md:col-span-2 relative">
-                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><User size={12} /> Owner (Transfer)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><User size={12} /> {t('ownerTransfer')}</label>
                                         <div className="relative">
                                             <input
                                                 type="text"
                                                 className="w-full border border-gray-300 rounded p-2 pl-8 focus:ring-2 focus:ring-[#1a3c34] focus:border-transparent outline-none"
-                                                placeholder="Search or create new owner..."
+                                                placeholder={t('searchOwnerPlaceholder')}
                                                 value={ownerSearch}
                                                 onChange={e => {
                                                     setOwnerSearch(e.target.value);
@@ -270,7 +270,7 @@ export default function HorseDetail() {
                                                     ))
                                                 ) : (
                                                     <div className="px-4 py-2 text-sm text-[#1a3c34] bg-[#1a3c34]/5 font-medium">
-                                                        New owner will be created: &quot;{ownerSearch}&quot;
+                                                        {t('newOwnerWillBeCreated')} &quot;{ownerSearch}&quot;
                                                     </div>
                                                 )}
                                             </div>
@@ -283,19 +283,19 @@ export default function HorseDetail() {
 
                                     {/* Sire/Dam Fields */}
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Sire (JP)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sireJp')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.sire} onChange={e => setFormData({ ...formData, sire: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Sire (EN)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sireEn')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.sire_en} onChange={e => setFormData({ ...formData, sire_en: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Dam (JP)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('damJp')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.dam} onChange={e => setFormData({ ...formData, dam: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">Dam (EN)</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('damEn')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
                                     </div>
                                 </div>
@@ -305,9 +305,9 @@ export default function HorseDetail() {
                                 <h1 className="text-3xl font-bold text-[var(--color-primary)] mb-1">{displayName}</h1>
                                 <p className="text-lg text-gray-400 font-serif mb-4">{displaySubName}</p>
                                 <div className="flex gap-6 text-sm text-gray-500 flex-wrap">
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Sire</span> {displaySire || '-'}</div>
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">Dam</span> {displayDam || '-'}</div>
-                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">Owner</span> {horse.clients?.name || 'No Owner'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('sire')}</span> {displaySire || '-'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('dam')}</span> {displayDam || '-'}</div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{t('owner')}</span> {horse.clients?.name || t('noOwner')}</div>
                                 </div>
                             </>
                         )}
@@ -318,16 +318,16 @@ export default function HorseDetail() {
                             onClick={createReport}
                             className="bg-[var(--color-primary)] hover:brightness-110 text-white px-5 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all whitespace-nowrap"
                         >
-                            <Plus size={18} /> {language === 'ja' ? '新規レポート' : 'New Report'}
+                            <Plus size={18} /> {t('createReportBtn')}
                         </button>
                         {editMode ? (
                             <div className="flex gap-2">
-                                <button onClick={handleUpdateHorse} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex-1">{language === 'ja' ? '保存' : 'Save'}</button>
-                                <button onClick={() => setEditMode(false)} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold flex-1">{language === 'ja' ? 'キャンセル' : 'Cancel'}</button>
+                                <button onClick={handleUpdateHorse} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex-1">{t('save')}</button>
+                                <button onClick={() => setEditMode(false)} className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold flex-1">{t('cancel')}</button>
                             </div>
                         ) : (
                             <button onClick={() => setEditMode(true)} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-5 py-2 rounded-full text-sm font-bold transition-all">
-                                {language === 'ja' ? '編集' : 'Edit Profile'}
+                                {t('editProfile')}
                             </button>
                         )}
                     </div>

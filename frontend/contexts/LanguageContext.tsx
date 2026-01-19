@@ -136,6 +136,20 @@ const translations: Translations = {
     loadingUsers: { ja: "ユーザー読み込み中...", en: "Loading users..." },
     adminRole: { ja: "管理者", en: "Admin" },
     removeAccess: { ja: "アクセス権を削除", en: "Remove Access" },
+
+    // Horse Detail & Transfer
+    ownerTransfer: { ja: "所有者変更 (譲渡)", en: "Owner (Transfer)" },
+    searchOwnerPlaceholder: { ja: "所有者を検索または新規作成...", en: "Search or create new owner..." },
+    newOwnerWillBeCreated: { ja: "新しい所有者が作成されます: ", en: "New owner will be created: " },
+    noOwner: { ja: "所有者なし", en: "No Owner" },
+    editProfile: { ja: "プロフィール編集", en: "Edit Profile" },
+    horseNameJp: { ja: "馬名 (日本語)", en: "Horse Name (JP)" },
+    horseNameEn: { ja: "馬名 (英語)", en: "Horse Name (EN)" },
+    sireJp: { ja: "父 (日本語)", en: "Sire (JP)" },
+    sireEn: { ja: "父 (英語)", en: "Sire (EN)" },
+    damJp: { ja: "母 (日本語)", en: "Dam (JP)" },
+    damEn: { ja: "母 (英語)", en: "Dam (EN)" },
+    owner: { ja: "所有者", en: "Owner" },
 };
 
 interface LanguageContextType {
