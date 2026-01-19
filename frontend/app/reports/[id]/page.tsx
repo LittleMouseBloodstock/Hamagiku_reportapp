@@ -7,6 +7,7 @@ import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ReportEditor() {
     const { id } = useParams();
@@ -29,112 +30,246 @@ export default function ReportEditor() {
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | null>(null);
 
+    const { user, session } = useAuth(); // Add useAuth
+
     useEffect(() => {
-        if (!id) return;
+        if (!id || !user) return; // Wait for user
 
-        const fetchReportData = async () => {
-            if (isNew) {
-                // Determine horseId from URL params (if linked from Horse Detail)
-                const params = new URLSearchParams(window.location.search);
-                const paramHorseId = params.get('horseId');
-                const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
+        let isMounted = true;
+        const fetchReportData = async (retryCount = 0) => {
+            try {
+                if (isNew) {
+                    // Determine horseId from URL params (if linked from Horse Detail)
+                    const params = new URLSearchParams(window.location.search);
+                    const paramHorseId = params.get('horseId');
+                    const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
 
-                if (paramHorseId) {
-                    setHorseId(paramHorseId);
-                    // Fetch horse details to prepopulate
-                    const { data: horse } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
+                    if (paramHorseId) {
+                        if (isMounted) setHorseId(paramHorseId);
+                        // Fetch horse details to prepopulate
+                        const { data: horse, error: hErr } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
+                        if (hErr) throw hErr;
 
-                    // Fetch past weight history
-                    const { data: reports } = await supabase
-                        .from('reports')
-                        .select('created_at, weight')
-                        .eq('horse_id', paramHorseId)
-                        .order('created_at', { ascending: true });
+                        // Fetch past weight history
+                        const { data: reports, error: rErr } = await supabase
+                            .from('reports')
+                            .select('created_at, weight')
+                            .eq('horse_id', paramHorseId)
+                            .order('created_at', { ascending: true });
+                        if (rErr) throw rErr;
 
-                    const weightHistory = reports?.map(r => {
-                        const d = new Date(r.created_at);
-                        return {
-                            label: `${d.getMonth() + 1}月`,
-                            value: r.weight || 0
-                        };
-                    }).filter(item => item.value > 0) || [];
+                        const weightHistory = reports?.map(r => {
+                            const d = new Date(r.created_at);
+                            return {
+                                label: `${d.getMonth() + 1}月`,
+                                value: r.weight || 0
+                            };
+                        }).filter(item => item.value > 0) || [];
 
+                        if (isMounted) {
+                            setInitialData({
+                                reportDate: defaultDate,
+                                horseNameJp: horse?.name || '',
+                                horseNameEn: horse?.name_en || '',
+                                sire: horse?.sire || '',
+                                dam: horse?.dam || '',
+                                mainPhoto: horse?.photo_url || '',
+                                originalPhoto: horse?.photo_url || '',
+                                statusEn: 'Training', statusJp: '調整中',
+                                weight: '', targetEn: '', targetJp: '',
+                                commentEn: '', commentJp: '',
+                                weightHistory: weightHistory
+                            });
+                            setLoading(false);
+                        }
+                    } else {
+                        // No horse selected, fetch list and show selector
+                        const { data: allHorses, error: ahErr } = await supabase.from('horses').select('id, name, name_en').order('name');
+                        if (ahErr) throw ahErr;
+                        if (isMounted) {
+                            if (allHorses) setHorses(allHorses);
+                            setShowHorseSelector(true);
+                            setLoading(false);
+                        }
+                    }
+                    return;
+                }
+
+                // Existing Report Logic
+                const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
+                if (error) throw error;
+                if (!report) throw new Error("Report not found");
+
+                // Fetch Horse Data
+                const { data: horse, error: hErr2 } = await supabase.from('horses').select('*').eq('id', report.horse_id).single();
+                if (hErr2) throw hErr2;
+
+                if (isMounted) {
+                    setHorseId(report.horse_id);
+
+                    // Parse metrics_json for extra fields
+                    const metrics = report.metrics_json || {};
+
+                    // Map DB to ReportData
                     setInitialData({
-                        reportDate: defaultDate,
+                        reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                         horseNameJp: horse?.name || '',
                         horseNameEn: horse?.name_en || '',
                         sire: horse?.sire || '',
+                        sireEn: metrics.sireEn || '',
+                        sireJp: metrics.sireJp || '',
                         dam: horse?.dam || '',
-                        mainPhoto: horse?.photo_url || '',
-                        originalPhoto: horse?.photo_url || '',
-                        statusEn: 'Training', statusJp: '調整中',
-                        weight: '', targetEn: '', targetJp: '',
-                        commentEn: '', commentJp: '',
-                        weightHistory: weightHistory
+                        damEn: metrics.damEn || '',
+                        damJp: metrics.damJp || '',
+
+                        commentJp: report.body || '',
+                        commentEn: metrics.commentEn || '',
+
+                        weight: report.weight ? `${report.weight} kg` : '',
+
+                        statusJp: report.status_training || '',
+                        statusEn: metrics.statusEn || '',
+
+                        targetJp: report.target || '',
+                        targetEn: metrics.targetEn || '',
+
+                        weightHistory: metrics.weightHistory || [],
+
+                        mainPhoto: report.main_photo_url || horse?.photo_url || '',
+                        originalPhoto: report.main_photo_url || horse?.photo_url || '',
+                        logo: null
                     });
-                    setLoading(false);
-                } else {
-                    // No horse selected, fetch list and show selector
-                    const { data: allHorses } = await supabase.from('horses').select('id, name, name_en').order('name');
-                    if (allHorses) setHorses(allHorses);
-                    setShowHorseSelector(true);
+
+                    setReviewStatus(report.review_status || 'draft');
                     setLoading(false);
                 }
-                return;
+            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                console.error("Error loading report data:", error);
+
+                // Retry logic
+                if (isMounted && retryCount < 2) {
+                    console.log(`Retrying report load... (${retryCount + 1})`);
+                    setTimeout(() => fetchReportData(retryCount + 1), 500);
+                } else if (isMounted && session?.access_token) {
+                    // FALLBACK: Raw Fetch
+                    try {
+                        console.warn('Attempting raw fetch fallback for report editor...');
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
+
+                        const headers = {
+                            'apikey': anonKey,
+                            'Authorization': `Bearer ${session.access_token}`
+                        };
+
+                        if (isNew) {
+                            // New Report Fallback
+                            const params = new URLSearchParams(window.location.search);
+                            const paramHorseId = params.get('horseId');
+                            const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
+
+                            if (paramHorseId) {
+                                if (isMounted) setHorseId(paramHorseId);
+                                const [horseRes, reportsRes] = await Promise.all([
+                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*`, { headers }),
+                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=created_at,weight&order=created_at.asc`, { headers })
+                                ]);
+
+                                if (horseRes.ok && reportsRes.ok) {
+                                    const hData = await horseRes.json();
+                                    const rData = await reportsRes.json();
+                                    const horse = hData[0];
+
+                                    const weightHistory = rData.map((r: any) => ({
+                                        label: `${new Date(r.created_at).getMonth() + 1}月`,
+                                        value: r.weight || 0
+                                    })).filter((item: any) => item.value > 0) || [];
+
+                                    if (isMounted) {
+                                        setInitialData({
+                                            reportDate: defaultDate,
+                                            horseNameJp: horse?.name || '',
+                                            horseNameEn: horse?.name_en || '',
+                                            sire: horse?.sire || '',
+                                            dam: horse?.dam || '',
+                                            mainPhoto: horse?.photo_url || '',
+                                            originalPhoto: horse?.photo_url || '',
+                                            statusEn: 'Training', statusJp: '調整中',
+                                            weight: '', targetEn: '', targetJp: '',
+                                            commentEn: '', commentJp: '',
+                                            weightHistory: weightHistory
+                                        });
+                                        setLoading(false);
+                                    }
+                                }
+                            } else {
+                                // List horses fallback
+                                const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=id,name,name_en&order=name`, { headers });
+                                if (res.ok) {
+                                    const allHorses = await res.json();
+                                    if (isMounted) {
+                                        setHorses(allHorses);
+                                        setShowHorseSelector(true);
+                                        setLoading(false);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Edit Report Fallback
+                            const reportRes = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}&select=*`, { headers });
+                            if (!reportRes.ok) throw new Error("Report fetch failed");
+                            const rData = await reportRes.json();
+                            const report = rData[0];
+                            if (!report) throw new Error("Report not found");
+
+                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*`, { headers });
+                            const hData = await horseRes.json();
+                            const horse = hData[0];
+
+                            if (isMounted) {
+                                setHorseId(report.horse_id);
+                                const metrics = report.metrics_json || {};
+                                setInitialData({
+                                    reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
+                                    horseNameJp: horse?.name || '',
+                                    horseNameEn: horse?.name_en || '',
+                                    sire: horse?.sire || '',
+                                    sireEn: metrics.sireEn || '',
+                                    sireJp: metrics.sireJp || '',
+                                    dam: horse?.dam || '',
+                                    damEn: metrics.damEn || '',
+                                    damJp: metrics.damJp || '',
+                                    commentJp: report.body || '',
+                                    commentEn: metrics.commentEn || '',
+                                    weight: report.weight ? `${report.weight} kg` : '',
+                                    statusJp: report.status_training || '',
+                                    statusEn: metrics.statusEn || '',
+                                    targetJp: report.target || '',
+                                    targetEn: metrics.targetEn || '',
+                                    weightHistory: metrics.weightHistory || [],
+                                    mainPhoto: report.main_photo_url || horse?.photo_url || '',
+                                    originalPhoto: report.main_photo_url || horse?.photo_url || '',
+                                    logo: null
+                                });
+                                setReviewStatus(report.review_status || 'draft');
+                                setLoading(false);
+                            }
+                        }
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                        if (isMounted) setLoading(false);
+                    }
+                } else if (isMounted) {
+                    setLoading(false);
+                }
             }
-
-            // Existing Report Logic
-            const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
-            if (error || !report) {
-                console.error("Report not found");
-                return;
-            }
-
-            // Fetch Horse Data
-            const { data: horse } = await supabase.from('horses').select('*').eq('id', report.horse_id).single();
-
-            setHorseId(report.horse_id);
-
-            // Parse metrics_json for extra fields
-            const metrics = report.metrics_json || {};
-
-            // Map DB to ReportData
-            setInitialData({
-                reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
-                horseNameJp: horse?.name || '',
-                horseNameEn: horse?.name_en || '',
-                sire: horse?.sire || '',
-                sireEn: metrics.sireEn || '',
-                sireJp: metrics.sireJp || '',
-                dam: horse?.dam || '',
-                damEn: metrics.damEn || '',
-                damJp: metrics.damJp || '',
-
-                commentJp: report.body || '',
-                commentEn: metrics.commentEn || '',
-
-                weight: report.weight ? `${report.weight} kg` : '',
-
-                statusJp: report.status_training || '',
-                statusEn: metrics.statusEn || '',
-
-                targetJp: report.target || '',
-                targetEn: metrics.targetEn || '',
-
-                weightHistory: metrics.weightHistory || [],
-
-                mainPhoto: report.main_photo_url || horse?.photo_url || '',
-                originalPhoto: report.main_photo_url || horse?.photo_url || '',
-                logo: null
-            });
-
-            setReviewStatus(report.review_status || 'draft');
-
-            setLoading(false);
         };
 
         fetchReportData();
-    }, [id, isNew]);
+        return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, isNew, user?.id, session?.access_token]);
 
     const handleSelectHorse = async (selectedHorseId: string) => {
         setHorseId(selectedHorseId);

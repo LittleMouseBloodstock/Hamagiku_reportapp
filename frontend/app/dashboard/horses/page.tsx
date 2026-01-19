@@ -86,6 +86,7 @@ export default function HorsesPage() {
         fetchHorses();
 
         return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, session?.access_token]);
 
     const handleDelete = async (id: string, name: string) => {
