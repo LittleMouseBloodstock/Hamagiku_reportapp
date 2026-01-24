@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
-    const { language, t } = useLanguage();
+    const { language, setLanguage, t } = useLanguage();
     const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
 
@@ -213,6 +213,12 @@ export default function Dashboard() {
                     {t('dashboard')}
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
+                    <button
+                        onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
+                        className="px-3 py-1 text-sm font-medium text-[#1a3c34] border border-[#1a3c34] rounded hover:bg-[#1a3c34] hover:text-white transition-colors"
+                    >
+                        {language === 'ja' ? 'English' : '日本語'}
+                    </button>
                     <Link
                         href="/reports/new"
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"

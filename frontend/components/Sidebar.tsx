@@ -24,14 +24,8 @@ export default function Sidebar() {
     return (
         <aside className="w-20 lg:w-64 shrink-0 flex flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
             <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
-                <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
-                    <Image
-                        src="/HamagikuLogoSVG.svg"
-                        alt="Hamagiku Farm"
-                        fill
-                        className="object-contain object-left"
-                        priority
-                    />
+                <div className="relative w-full h-16 lg:h-20 max-w-[180px] flex items-center">
+                    <div className="text-2xl font-bold text-emerald-900">Demo Farm</div>
                 </div>
             </div>
             <nav className="flex-1 px-4 flex flex-col gap-2 py-4">

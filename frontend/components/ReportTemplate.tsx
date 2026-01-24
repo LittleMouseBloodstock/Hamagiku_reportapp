@@ -228,7 +228,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     // Default Data
     const defaultData: ReportData = {
         reportDate: '', // Set in useEffect to avoid hydration mismatch
-        horseNameEn: 'Hamagiku Vega',
+        horseNameEn: 'Demo Vega',
         horseNameJp: 'ハマギクベガ',
         sire: 'Lucky Vega',
         dam: 'Xmas',
@@ -467,7 +467,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             Report Builder
                         </h1>
 
-                        <p className="text-xs text-gray-300 mt-1">Hamagiku Farm Official Tool</p>
+                        <p className="text-xs text-gray-300 mt-1">Demo Farm Official Tool</p>
                     </div>
 
                     <div className="p-6 space-y-8 pb-48">
@@ -826,20 +826,19 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     {/* Header */}
                     <header className="flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[140px] pt-4">
                         <div className="flex flex-col justify-center items-start z-10">
-                            <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
+                            <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">DEMO FARM</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
                         </div>
 
                         {/* Centered Watermark Logo - 150px (Reduced size as requested) */}
                         {/* Centered Watermark Logo - 150px (Reduced size as requested, Moved Up) */}
                         <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-50 pointer-events-none logo-container">
-                            <Image
+                            {/* <img
                                 src="/HamagikuLogoSVG.svg"
-                                alt="Logo"
-                                fill
-                                className="object-contain"
-                                unoptimized
-                            />
+                                alt="Demo Farm"
+                                className="w-full h-full object-contain opacity-80"
+                            /> */}
+                            <div className="w-full h-full flex items-center justify-center text-[#1a3c34] font-bold border border-[#1a3c34] rounded opacity-50">LOGO</div>
                         </div>
 
                         <div className="flex flex-col justify-center items-end z-10">
@@ -945,7 +944,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Footer */}
                         <footer className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
-                            HAMAGIKU FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
+                            DEMO FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
                         </footer>
 
                     </div>

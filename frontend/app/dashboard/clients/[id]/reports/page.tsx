@@ -65,7 +65,7 @@ export default function ClientBatchReports() {
                 if (hError) throw hError;
 
                 if (horses && horses.length > 0) {
-                    const horseIds = horses.map(h => h.id);
+                    const horseIds = horses.map((h: Horse) => h.id);
 
                     // 3. Fetch Reports for these horses in the selected month
                     const startOfMonth = `${selectedDate}-01`;
@@ -84,8 +84,8 @@ export default function ClientBatchReports() {
                     if (rError) throw rError;
 
                     if (isMounted && reportsData) {
-                        const formattedReports = reportsData.map(r => {
-                            const horse = horses.find(h => h.id === r.horse_id);
+                        const formattedReports = reportsData.map((r: Report) => {
+                            const horse = horses.find((h: Horse) => h.id === r.horse_id);
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
@@ -114,7 +114,7 @@ export default function ClientBatchReports() {
                                 logo: null
                             };
                             return { report: r, horse: horse, data: rData };
-                        }).filter(item => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                        }).filter((item: { report: Report, horse: Horse, data: ReportData } | null) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
 
                         setReports(formattedReports);
                     } else if (isMounted) {
@@ -170,7 +170,7 @@ export default function ClientBatchReports() {
                             const reportsData = await reportsRes.json();
 
                             if (isMounted && reportsData) {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                 const formattedReports = reportsData.map((r: any) => {
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any

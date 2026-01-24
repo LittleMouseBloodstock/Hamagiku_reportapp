@@ -112,7 +112,7 @@ export default function NewHorsePage() {
                             <input
                                 type="text"
                                 className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
-                                placeholder="e.g. Hamagiku Vega"
+                                placeholder="e.g. Demo Vega"
                                 value={formData.name_en}
                                 onChange={e => setFormData({ ...formData, name_en: e.target.value })}
                             />

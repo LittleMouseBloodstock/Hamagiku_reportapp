@@ -54,7 +54,7 @@ export default function LoginPage() {
                     <div className="w-16 h-16 bg-[#1a3c34] rounded-full flex items-center justify-center mb-4 shadow-md">
                         <span className="material-symbols-outlined text-white text-3xl">description</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-[#1a3c34] font-display">Hamagiku Farm</h1>
+                    <h1 className="text-2xl font-bold text-[#1a3c34] font-display">Demo Farm</h1>
                     <p className="text-stone-500 text-sm mt-1">Report Management System</p>
                 </div>
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-8 text-xs text-stone-400">
-                    &copy; 2026 Hamagiku Farm. All rights reserved.
+                    &copy; 2026 Demo Farm. All rights reserved.
                 </div>
             </div>
         </div>

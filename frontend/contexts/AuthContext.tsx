@@ -2,8 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
     user: User | null;
@@ -21,89 +20,36 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// DEMO VERSION: Always Authenticated
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
-    const pathname = usePathname();
 
     useEffect(() => {
-        let mounted = true;
-
-        // 1. Setup failsafe timeout (in case auth event never fires due to locks/errors)
-        const timeoutId = setTimeout(() => {
-            if (mounted) {
-                console.warn('Auth check timed out, forcing UI to load');
-                setIsLoading(false);
-            }
-        }, 2500);
-
-        // 2. Listen for auth changes
-        // This usually fires immediately with 'INITIAL_SESSION'
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (!mounted) return;
-
-            // Clear timeout since we got a response
-            clearTimeout(timeoutId);
-
-            const currentUser = session?.user;
-
-            // Update state
-            setSession(session);
-            setUser(currentUser ?? null);
-            setIsLoading(false);
-
-            if (_event === 'SIGNED_OUT') {
-                router.replace('/login');
-                return;
-            }
-            // 3. Background Whitelist Check (Only on meaningful changes)
-            if (currentUser?.email) {
-                try {
-                    const { count, error } = await supabase
-                        .from('allowed_users')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('email', currentUser.email);
-
-                    if (!error && count === 0) {
-                        console.warn('Access denied for:', currentUser.email);
-                        await supabase.auth.signOut();
-                        alert('Access Denied: Your email is not permitted to access this application.');
-                        router.replace('/login');
-                    }
-                } catch (err) {
-                    console.error('Whitelist check exception:', err);
-                }
-            }
-        });
-
-        return () => {
-            mounted = false;
-            subscription.unsubscribe();
+        // Simulate immediate login
+        const mockUser: any = {
+            id: 'demo-user',
+            email: 'demo@demofarm.com',
+            aud: 'authenticated',
+            role: 'authenticated',
         };
-    }, [router]);
 
-    // 3. Route Protection Logic
-    useEffect(() => {
-        if (isLoading) return;
+        const mockSession: any = {
+            access_token: 'demo-token',
+            token_type: 'bearer',
+            user: mockUser,
+        };
 
-        const isLoginPage = pathname === '/login';
-        const isDebugPage = pathname === '/debug-connection';
-        // Define public paths if needed, e.g. landing page. 
-        // For this app, everything else is protected.
-
-        if (!session && !isLoginPage && !isDebugPage) {
-            // No user, not on login -> Redirect to login
-            router.replace('/login');
-        } else if (session && isLoginPage) {
-            // User exists, but on login -> Redirect to dashboard
-            router.replace('/dashboard');
-        }
-    }, [session, isLoading, pathname, router]);
+        setUser(mockUser);
+        setSession(mockSession);
+        setIsLoading(false);
+    }, []);
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        // Do nothing in demo
+        alert("Sign out is disabled in Demo Mode.");
     };
 
     return (
@@ -112,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 <div className="flex items-center justify-center min-h-screen bg-[#FDFCF8]">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-12 h-12 border-4 border-[#1a3c34]/20 border-t-[#1a3c34] rounded-full animate-spin"></div>
-                        <p className="text-[#1a3c34] font-medium animate-pulse">Loading...</p>
+                        <p className="text-[#1a3c34] font-medium animate-pulse">Loading Demo...</p>
                     </div>
                 </div>
             ) : (

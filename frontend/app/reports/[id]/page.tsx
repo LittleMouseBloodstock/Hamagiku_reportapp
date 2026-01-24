@@ -58,13 +58,13 @@ export default function ReportEditor() {
                             .order('created_at', { ascending: true });
                         if (rErr) throw rErr;
 
-                        const weightHistory = reports?.map(r => {
+                        const weightHistory = reports?.map((r: { created_at: string; weight: number | null }) => {
                             const d = new Date(r.created_at);
                             return {
                                 label: `${d.getMonth() + 1}月`,
                                 value: r.weight || 0
                             };
-                        }).filter(item => item.value > 0) || [];
+                        }).filter((item: { label: string; value: number }) => item.value > 0) || [];
 
                         if (isMounted) {
                             setInitialData({
@@ -289,13 +289,13 @@ export default function ReportEditor() {
             .eq('horse_id', selectedHorseId)
             .order('created_at', { ascending: true });
 
-        const weightHistory = reports?.map(r => {
+        const weightHistory = reports?.map((r: { created_at: string; weight: number | null }) => {
             const d = new Date(r.created_at);
             return {
                 label: `${d.getMonth() + 1}月`,
                 value: r.weight || 0
             };
-        }).filter(item => item.value > 0) || [];
+        }).filter((item: { label: string; value: number }) => item.value > 0) || [];
 
         setInitialData({
             reportDate: defaultDate,

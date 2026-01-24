@@ -43,6 +43,8 @@ export const metadata: Metadata = {
 
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import DemoInit from "@/components/DemoInit";
+import { Suspense } from "react";
 
 export default function RootLayout({
   children,
@@ -59,6 +61,9 @@ export default function RootLayout({
       <body
         className={`${newsreader.variable} ${noto.variable} ${notoJP.variable} ${cormorant.variable} ${shippori.variable} antialiased bg-background-light dark:bg-background-dark text-stone-850 dark:text-gray-100 font-sans overflow-hidden`}
       >
+        <Suspense>
+          <DemoInit />
+        </Suspense>
         <AuthProvider>
           <LanguageProvider>
             {children}
