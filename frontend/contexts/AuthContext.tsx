@@ -37,7 +37,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 console.warn('Auth check timed out, forcing UI to load');
                 setIsLoading(false);
             }
-        }, 2500);
+        }, 8000);
+
+        // 1.5 Try to read current session immediately (avoids relying solely on auth events)
+        (async () => {
+            try {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                if (!mounted) return;
+                setSession(currentSession ?? null);
+                setUser(currentSession?.user ?? null);
+                setIsLoading(false);
+            } catch (err) {
+                console.error('Initial session fetch failed:', err);
+            }
+        })();
 
         // 2. Listen for auth changes
         // This usually fires immediately with 'INITIAL_SESSION'
