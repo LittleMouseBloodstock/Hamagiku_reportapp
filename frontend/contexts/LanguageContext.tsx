@@ -19,6 +19,8 @@ const translations: Translations = {
     clients: { ja: "クライアント一覧", en: "Clients" },
     horses: { ja: "馬一覧", en: "Horses" },
     settings: { ja: "設定", en: "Settings" },
+    trainers: { ja: "調教師一覧", en: "Trainers" },
+    weights: { ja: "体重管理", en: "Weight Management" },
 
     // Dashboard Header
     deliverables: { ja: "Deliverables", en: "Deliverables" }, // Kept as English in JP design
@@ -73,8 +75,12 @@ const translations: Translations = {
     sire: { ja: "父", en: "Sire" },
     dam: { ja: "母", en: "Dam" },
     age: { ja: "年齢", en: "Age" },
+    birthDate: { ja: "生年月日", en: "Birth Date" },
     weight: { ja: "体重", en: "Weight" },
     comment: { ja: "コメント", en: "Comment" },
+    reportOutputMode: { ja: "レポート出力形式", en: "Report Output Mode" },
+    reportOutputPdf: { ja: "PDF", en: "PDF" },
+    reportOutputPrint: { ja: "印刷", en: "Print" },
 
     // Report Builder Sidebar
     basicInfo: { ja: "基本情報", en: "Basic Info" },
@@ -91,6 +97,12 @@ const translations: Translations = {
     aiComments: { ja: "AIコメント生成", en: "AI Comments" },
     englishComment: { ja: "英語コメント", en: "English Comment" },
     japaneseTranslation: { ja: "日本語翻訳", en: "Japanese Translation" },
+    measurementDate: { ja: "測定日", en: "Measurement Date" },
+    latestWeight: { ja: "最新体重", en: "Latest Weight" },
+    inputWeight: { ja: "入力体重", en: "Input Weight" },
+    saveWeights: { ja: "保存", en: "Save" },
+    savingWeights: { ja: "保存中...", en: "Saving..." },
+    noActiveHorses: { ja: "アクティブな馬がいません", en: "No active horses" },
 
     // Client Form
     clientBasicInfo: { ja: "基本情報", en: "Basic Information" },
@@ -113,6 +125,8 @@ const translations: Translations = {
     newClient: { ja: "新規クライアント登録", en: "New Client" },
     addClient: { ja: "クライアント追加", en: "Add Client" },
     addHorse: { ja: "馬を追加", en: "Add Horse" },
+    addTrainer: { ja: "調教師追加", en: "Add Trainer" },
+    editTrainer: { ja: "編集", en: "Edit" },
 
     // Report Preview Labels
     trainersComment: { ja: "コメント", en: "COMMENT" },
@@ -142,6 +156,15 @@ const translations: Translations = {
     searchOwnerPlaceholder: { ja: "所有者を検索または新規作成...", en: "Search or create new owner..." },
     newOwnerWillBeCreated: { ja: "新しい所有者が作成されます: ", en: "New owner will be created: " },
     noOwner: { ja: "所有者なし", en: "No Owner" },
+    trainer: { ja: "調教師", en: "Trainer" },
+    trainerNameJp: { ja: "調教師名 (日本語)", en: "Trainer Name (JP)" },
+    trainerNameEn: { ja: "調教師名 (英語)", en: "Trainer Name (EN)" },
+    trainerLocation: { ja: "所属・場所", en: "Base / Location" },
+    trainerSelectPlaceholder: { ja: "調教師を選択...", en: "Select a trainer..." },
+    newTrainerWillBeCreated: { ja: "新しい調教師が作成されます: ", en: "New trainer will be created: " },
+    noTrainer: { ja: "調教師なし", en: "No Trainer" },
+    addNewTrainer: { ja: "新しい調教師を追加", en: "Add new trainer" },
+    useExistingTrainer: { ja: "既存の調教師を使う", en: "Use existing trainer" },
     editProfile: { ja: "プロフィール編集", en: "Edit Profile" },
     horseNameJp: { ja: "馬名 (日本語)", en: "Horse Name (JP)" },
     horseNameEn: { ja: "馬名 (英語)", en: "Horse Name (EN)" },
@@ -149,11 +172,20 @@ const translations: Translations = {
     sireEn: { ja: "父 (英語)", en: "Sire (EN)" },
     damJp: { ja: "母 (日本語)", en: "Dam (JP)" },
     damEn: { ja: "母 (英語)", en: "Dam (EN)" },
-    owner: { ja: "所有者", en: "Owner" },
+    owner: { ja: "馬主", en: "Owner" },
     deleteReport: { ja: "レポート削除", en: "Delete Report" },
     confirmDeleteReport: { ja: "本当にこのレポートを削除しますか？\nこの操作は取り消せません。", en: "Are you sure you want to delete this report?\nThis action cannot be undone." },
     deleteSuccess: { ja: "レポートを削除しました", en: "Report deleted successfully" },
     deleteError: { ja: "削除に失敗しました: ", en: "Failed to delete: " },
+    sortByName: { ja: "並び替え: 馬名", en: "Sort: Name" },
+    sortByTrainer: { ja: "並び替え: 調教師", en: "Sort: Trainer" },
+    horseStatusLabel: { ja: "ステータス", en: "Status" },
+    horseStatusActive: { ja: "稼働中", en: "Active" },
+    horseStatusResting: { ja: "休養中", en: "Resting" },
+    horseStatusInjured: { ja: "怪我", en: "Injured" },
+    horseStatusRetired: { ja: "引退", en: "Retired" },
+    horseStatusSold: { ja: "売却", en: "Sold" },
+    horseStatusOther: { ja: "その他", en: "Other" },
 
     // Statuses
     status_Draft: { ja: "下書き", en: "Draft" },

@@ -22,7 +22,8 @@ export default function ClientDetailClient({ id }: { id: string }) {
         address_city: '',
         address_street: '',
         representative_name: '',
-        notes: ''
+        notes: '',
+        report_output_mode: 'pdf'
     });
 
     const { user, session } = useAuth(); // Add useAuth
@@ -50,7 +51,8 @@ export default function ClientDetailClient({ id }: { id: string }) {
                         address_city: data.address_city || '',
                         address_street: data.address_street || '',
                         representative_name: data.representative_name || '',
-                        notes: data.notes || ''
+                        notes: data.notes || '',
+                        report_output_mode: data.report_output_mode || 'pdf'
                     });
                 }
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -88,7 +90,8 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                 address_city: data.address_city || '',
                                 address_street: data.address_street || '',
                                 representative_name: data.representative_name || '',
-                                notes: data.notes || ''
+                                notes: data.notes || '',
+                                report_output_mode: data.report_output_mode || 'pdf'
                             });
                         }
                     } catch (fallbackError) {
@@ -121,7 +124,8 @@ export default function ClientDetailClient({ id }: { id: string }) {
                     address_city: formData.address_city,
                     address_street: formData.address_street,
                     representative_name: formData.representative_name,
-                    notes: formData.notes
+                    notes: formData.notes,
+                    report_output_mode: formData.report_output_mode
                 })
                 .eq('id', id);
 
@@ -183,6 +187,17 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                         value={formData.representative_name}
                                         onChange={e => setFormData({ ...formData, representative_name: e.target.value })}
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('reportOutputMode')}</label>
+                                    <select
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={formData.report_output_mode}
+                                        onChange={e => setFormData({ ...formData, report_output_mode: e.target.value })}
+                                    >
+                                        <option value="pdf">{t('reportOutputPdf')}</option>
+                                        <option value="print">{t('reportOutputPrint')}</option>
+                                    </select>
                                 </div>
                             </div>
                         </section>

@@ -2,6 +2,7 @@
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE horses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trainers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE allowed_users ENABLE ROW LEVEL SECURITY;
 
 -- 2. Clean up existing policies (Reset)
@@ -23,6 +24,12 @@ DROP POLICY IF EXISTS "Enable update for authenticated users" ON clients;
 DROP POLICY IF EXISTS "Enable delete for authenticated users" ON clients;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON clients;
 
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable update for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable delete for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON trainers;
+
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON allowed_users;
 DROP POLICY IF EXISTS "Enable all access for authenticated users" ON allowed_users;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON allowed_users;
@@ -40,6 +47,9 @@ CREATE POLICY "Enable all for authenticated users" ON horses FOR ALL TO authenti
 
 -- Clients
 CREATE POLICY "Enable all for authenticated users" ON clients FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Trainers
+CREATE POLICY "Enable all for authenticated users" ON trainers FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Allowed Users (Read/Write for admin features)
 CREATE POLICY "Enable all for authenticated users" ON allowed_users FOR ALL TO authenticated USING (true) WITH CHECK (true);

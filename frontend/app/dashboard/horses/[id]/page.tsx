@@ -20,8 +20,12 @@ type Horse = {
     dam: string;
     dam_en?: string;
     updated_at: string;
+    birth_date?: string | null;
+    horse_status?: string | null;
     owner_id: string | null;
     clients: { id: string, name: string } | null;
+    trainer_id?: string | null;
+    trainers?: { id: string; trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; } | null;
 };
 
 type Report = {
@@ -39,6 +43,12 @@ type Client = {
     id: string;
     name: string;
 };
+type Trainer = {
+    id: string;
+    trainer_name: string;
+    trainer_name_en?: string | null;
+    trainer_location?: string | null;
+};
 
 export default function HorseDetail() {
     const { id } = useParams();
@@ -51,8 +61,23 @@ export default function HorseDetail() {
 
     // Form & Owner State
     const [clients, setClients] = useState<Client[]>([]);
+    const [trainers, setTrainers] = useState<Trainer[]>([]);
     const [ownerSearch, setOwnerSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [trainerId, setTrainerId] = useState('');
+    const [isNewTrainer, setIsNewTrainer] = useState(false);
+    const [newTrainer, setNewTrainer] = useState({
+        trainer_name: '',
+        trainer_name_en: '',
+        trainer_location: ''
+    });
+
+    const calculateHorseAge = (birthDate?: string | null) => {
+        if (!birthDate) return '';
+        const year = new Date(birthDate).getFullYear();
+        if (Number.isNaN(year)) return '';
+        return `${new Date().getFullYear() - year}`;
+    };
 
     const [formData, setFormData] = useState({
         name: '',
@@ -61,7 +86,9 @@ export default function HorseDetail() {
         sire_en: '',
         dam: '',
         dam_en: '',
-        owner_id: ''
+        owner_id: '',
+        birth_date: '',
+        horse_status: 'Active'
     });
 
     const filteredClients = clients.filter(c =>
@@ -79,10 +106,18 @@ export default function HorseDetail() {
                 if (err1) throw err1;
                 if (isMounted && clientsData) setClients(clientsData);
 
-                // 2. Fetch Horse with Owner Info
+                // 2. Fetch all trainers
+                const { data: trainersData, error: errTr } = await supabase
+                    .from('trainers')
+                    .select('id, trainer_name, trainer_name_en, trainer_location')
+                    .order('trainer_name');
+                if (errTr) throw errTr;
+                if (isMounted && trainersData) setTrainers(trainersData);
+
+                // 3. Fetch Horse with Owner Info
                 const { data: h, error: err2 } = await supabase
                     .from('horses')
-                    .select('*, clients(id, name)')
+                    .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location)')
                     .eq('id', id)
                     .single();
 
@@ -100,8 +135,11 @@ export default function HorseDetail() {
                         sire_en: horseData.sire_en || '',
                         dam: horseData.dam || '',
                         dam_en: horseData.dam_en || '',
-                        owner_id: horseData.owner_id || ''
+                        owner_id: horseData.owner_id || '',
+                        birth_date: horseData.birth_date || '',
+                        horse_status: horseData.horse_status || 'Active'
                     });
+                    setTrainerId(horseData.trainer_id || '');
 
                     if (horseData.clients) {
                         setOwnerSearch(horseData.clients.name);
@@ -110,7 +148,7 @@ export default function HorseDetail() {
                     }
                 }
 
-                // 3. Fetch Reports
+                // 4. Fetch Reports
                 const { data: r, error: err3 } = await supabase
                     .from('reports')
                     .select('*')
@@ -140,15 +178,21 @@ export default function HorseDetail() {
                             'Authorization': `Bearer ${session.access_token}`
                         };
 
-                        const [clientsRes, horseRes, reportsRes] = await Promise.all([
+                        const [clientsRes, trainersRes, horseRes, reportsRes] = await Promise.all([
                             fetch(`${supabaseUrl}/rest/v1/clients?select=id,name&order=name`, { headers }),
-                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name)&id=eq.${id}`, { headers }), // Note: single logic simulation
+                            fetch(`${supabaseUrl}/rest/v1/trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name`, { headers }),
+                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location)&id=eq.${id}`, { headers }), // Note: single logic simulation
                             fetch(`${supabaseUrl}/rest/v1/reports?select=*&horse_id=eq.${id}&order=created_at.desc`, { headers })
                         ]);
 
                         if (clientsRes.ok) {
                             const cData = await clientsRes.json();
                             if (isMounted) setClients(cData);
+                        }
+
+                        if (trainersRes.ok) {
+                            const tData = await trainersRes.json();
+                            if (isMounted) setTrainers(tData);
                         }
 
                         if (horseRes.ok) {
@@ -165,8 +209,11 @@ export default function HorseDetail() {
                                         sire_en: horseData.sire_en || '',
                                         dam: horseData.dam || '',
                                         dam_en: horseData.dam_en || '',
-                                        owner_id: horseData.owner_id || ''
+                                        owner_id: horseData.owner_id || '',
+                                        birth_date: horseData.birth_date || '',
+                                        horse_status: horseData.horse_status || 'Active'
                                     });
+                                    setTrainerId(horseData.trainer_id || '');
                                     if (horseData.clients) setOwnerSearch(horseData.clients.name);
                                     else setOwnerSearch('');
                                 }
@@ -217,6 +264,24 @@ export default function HorseDetail() {
                 finalOwnerId = null;
             }
 
+            let finalTrainerId: string | null = trainerId || null;
+            if (isNewTrainer) {
+                if (!newTrainer.trainer_name.trim()) {
+                    throw new Error('Trainer name (JP) is required');
+                }
+                const { data: createdTrainer, error: trainerError } = await supabase
+                    .from('trainers')
+                    .insert({
+                        trainer_name: newTrainer.trainer_name,
+                        trainer_name_en: newTrainer.trainer_name_en || null,
+                        trainer_location: newTrainer.trainer_location || null
+                    })
+                    .select()
+                    .single();
+                if (trainerError) throw trainerError;
+                finalTrainerId = createdTrainer.id;
+            }
+
             const { error } = await supabase
                 .from('horses')
                 .update({
@@ -227,6 +292,9 @@ export default function HorseDetail() {
                     dam: formData.dam,
                     dam_en: formData.dam_en,
                     owner_id: finalOwnerId,
+                    trainer_id: finalTrainerId,
+                    birth_date: formData.birth_date || null,
+                    horse_status: formData.horse_status || 'Active',
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', id);
@@ -237,7 +305,7 @@ export default function HorseDetail() {
             // Or just update local state if we trust it. Let's refetch for safety on owner change.
             const { data: h } = await supabase
                 .from('horses')
-                .select('*, clients(id, name)')
+                .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location)')
                 .eq('id', id)
                 .single();
 
@@ -245,10 +313,13 @@ export default function HorseDetail() {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const horseData = h as any;
                 setHorse(horseData);
+                setTrainerId(horseData.trainer_id || '');
                 setEditMode(false);
                 // Update client list if we added one (optional, but good practice)
                 const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
                 if (clientsData) setClients(clientsData);
+                const { data: trainersData } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location').order('trainer_name');
+                if (trainersData) setTrainers(trainersData);
             }
 
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -372,6 +443,52 @@ export default function HorseDetail() {
                                         )}
                                     </div>
 
+                                    {/* Trainer Selection */}
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1">{t('trainer')}</label>
+                                        <select
+                                            className="w-full border border-gray-300 rounded p-2"
+                                            value={trainerId}
+                                            onChange={(e) => setTrainerId(e.target.value)}
+                                            disabled={isNewTrainer}
+                                        >
+                                            <option value="">{t('noTrainer')}</option>
+                                            {trainers.map((trainer) => (
+                                                <option key={trainer.id} value={trainer.id}>
+                                                    {trainer.trainer_name}{trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}{trainer.trainer_location ? ` (${trainer.trainer_location})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="mt-2">
+                                            <button
+                                                type="button"
+                                                className="text-xs text-[#1a3c34] hover:underline"
+                                                onClick={() => {
+                                                    setIsNewTrainer((prev) => !prev);
+                                                    if (!isNewTrainer) setTrainerId('');
+                                                }}
+                                            >
+                                                {isNewTrainer ? t('useExistingTrainer') : t('addNewTrainer')}
+                                            </button>
+                                        </div>
+                                        {isNewTrainer && (
+                                            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerNameJp')}</label>
+                                                    <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_name} onChange={e => setNewTrainer({ ...newTrainer, trainer_name: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerNameEn')}</label>
+                                                    <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_name_en} onChange={e => setNewTrainer({ ...newTrainer, trainer_name_en: e.target.value })} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerLocation')}</label>
+                                                    <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_location} onChange={e => setNewTrainer({ ...newTrainer, trainer_location: e.target.value })} />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Sire/Dam Fields */}
                                     <div>
                                         <label className="text-xs font-bold text-gray-400 uppercase">{t('sireJp')}</label>
@@ -389,6 +506,31 @@ export default function HorseDetail() {
                                         <label className="text-xs font-bold text-gray-400 uppercase">{t('damEn')}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
                                     </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('birthDate')}</label>
+                                        <input
+                                            type="date"
+                                            className="w-full border border-gray-300 rounded p-2"
+                                            value={formData.birth_date}
+                                            onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                                        />
+                                        <div className="text-xs text-gray-500 mt-1">{t('age')}: {calculateHorseAge(formData.birth_date) || '-'}</div>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseStatusLabel')}</label>
+                                        <select
+                                            className="w-full border border-gray-300 rounded p-2"
+                                            value={formData.horse_status}
+                                            onChange={e => setFormData({ ...formData, horse_status: e.target.value })}
+                                        >
+                                            <option value="Active">{t('horseStatusActive')}</option>
+                                            <option value="Resting">{t('horseStatusResting')}</option>
+                                            <option value="Injured">{t('horseStatusInjured')}</option>
+                                            <option value="Retired">{t('horseStatusRetired')}</option>
+                                            <option value="Sold">{t('horseStatusSold')}</option>
+                                            <option value="Other">{t('horseStatusOther')}</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -398,7 +540,23 @@ export default function HorseDetail() {
                                 <div className="flex gap-6 text-sm text-gray-500 flex-wrap">
                                     <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('sire')}</span> {displaySire || '-'}</div>
                                     <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('dam')}</span> {displayDam || '-'}</div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('birthDate')}</span>
+                                        {horse.birth_date || '-'} / {t('age')}: {calculateHorseAge(horse.birth_date) || '-'}
+                                    </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{t('owner')}</span> {horse.clients?.name || t('noOwner')}</div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('trainer')}</span>
+                                        {horse.trainers
+                                            ? `${language === 'ja'
+                                                ? horse.trainers.trainer_name
+                                                : (horse.trainers.trainer_name_en || horse.trainers.trainer_name)}${horse.trainers.trainer_location ? ` (${horse.trainers.trainer_location})` : ''}`
+                                            : t('noTrainer')}
+                                    </div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('horseStatusLabel')}</span>
+                                        {horse.horse_status ? t(`horseStatus${horse.horse_status}`) : t('horseStatusActive')}
+                                    </div>
                                 </div>
                             </>
                         )}

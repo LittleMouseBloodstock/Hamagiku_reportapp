@@ -2,6 +2,7 @@
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE horses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trainers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE allowed_users ENABLE ROW LEVEL SECURITY;
 
 -- 1. Reports Policy
@@ -37,7 +38,18 @@ CREATE POLICY "Enable insert for authenticated users" ON clients FOR INSERT TO a
 CREATE POLICY "Enable update for authenticated users" ON clients FOR UPDATE TO authenticated USING (true);
 CREATE POLICY "Enable delete for authenticated users" ON clients FOR DELETE TO authenticated USING (true);
 
--- 4. Allowed Users Policy (Read Only for App Users, Write might be restricted but we allow auth for now to manage settings)
+-- 4. Trainers Policy
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable update for authenticated users" ON trainers;
+DROP POLICY IF EXISTS "Enable delete for authenticated users" ON trainers;
+
+CREATE POLICY "Enable read access for authenticated users" ON trainers FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable insert for authenticated users" ON trainers FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Enable update for authenticated users" ON trainers FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Enable delete for authenticated users" ON trainers FOR DELETE TO authenticated USING (true);
+
+-- 5. Allowed Users Policy (Read Only for App Users, Write might be restricted but we allow auth for now to manage settings)
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON allowed_users;
 DROP POLICY IF EXISTS "Enable all access for authenticated users" ON allowed_users;
 

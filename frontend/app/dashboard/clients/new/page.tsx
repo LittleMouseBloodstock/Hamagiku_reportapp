@@ -20,7 +20,8 @@ export default function NewClientPage() {
         address_city: '',
         address_street: '',
         representative_name: '',
-        notes: ''
+        notes: '',
+        report_output_mode: 'pdf'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -39,7 +40,8 @@ export default function NewClientPage() {
                     address_city: formData.address_city,
                     address_street: formData.address_street,
                     representative_name: formData.representative_name,
-                    notes: formData.notes
+                    notes: formData.notes,
+                    report_output_mode: formData.report_output_mode
                 });
 
             if (error) throw error;
@@ -89,6 +91,17 @@ export default function NewClientPage() {
                                         value={formData.representative_name}
                                         onChange={e => setFormData({ ...formData, representative_name: e.target.value })}
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('reportOutputMode')}</label>
+                                    <select
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={formData.report_output_mode}
+                                        onChange={e => setFormData({ ...formData, report_output_mode: e.target.value })}
+                                    >
+                                        <option value="pdf">{t('reportOutputPdf')}</option>
+                                        <option value="print">{t('reportOutputPrint')}</option>
+                                    </select>
                                 </div>
                             </div>
                         </section>

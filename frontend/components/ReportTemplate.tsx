@@ -17,7 +17,7 @@ const Fonts = () => (
     
     /* Print Settings */
     @media print {
-      @page { size: A4; margin: 0; }
+      @page { size: A4; margin: 10mm 0 0 0; }
       
       /* NUCLEAR OPTION: Hide everything by default using visibility */
       body * {
@@ -35,16 +35,62 @@ const Fonts = () => (
         top: 0 !important;
         left: 0 !important;
         width: 210mm !important;
-        height: 280mm !important; /* Reduced further to 280mm */
+        height: 285mm !important; /* Slightly taller to prevent bottom clipping */
         min-height: 0 !important; /* Override inline min-height to prevent overflow */
         margin: 0 !important;
-        padding: 20px 30px 10px 30px !important;
+        padding: 32px 30px 8px 30px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
         overflow: hidden !important;
         box-shadow: none !important;
         transform: none !important;
         border: none !important;
+      }
+
+      #report-preview.print-mode {
+        top: 20mm !important;
+        height: 257mm !important;
+      }
+
+      /* Print Mode Compression */
+      #report-preview.print-mode .report-header {
+        height: 120px !important;
+        padding-top: 6px !important;
+        margin-bottom: 6px !important;
+      }
+
+      #report-preview.print-mode .owner-line {
+        margin-bottom: 6px !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        font-size: 11px !important;
+      }
+
+      #report-preview.print-mode .main-photo {
+        width: 80% !important;
+        margin-bottom: 8px !important;
+      }
+
+      #report-preview.print-mode .data-section {
+        height: 105px !important;
+        margin-bottom: 6px !important;
+        gap: 14px !important;
+      }
+
+      #report-preview.print-mode .comment-box {
+        margin-top: 8px !important;
+        min-height: 110px !important;
+        padding: 14px !important;
+      }
+
+      #report-preview.print-mode .comment-text {
+        font-size: 12px !important;
+        line-height: 1.6 !important;
+      }
+
+      #report-preview.print-mode .footer-text {
+        margin-top: 4px !important;
+        font-size: 9px !important;
       }
 
       /* Logo Fix: Clip ALL edges to remove mystery line */
@@ -145,6 +191,19 @@ const formatDateUK = (dateStr: string) => {
     return `${monthName} ${year}`;
 };
 
+const formatReportMonth = (dateStr: string, lang: 'ja' | 'en') => {
+    if (!dateStr) return '';
+    const parts = dateStr.replace(/-/g, '.').split('.');
+    if (parts.length < 2) return dateStr;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return dateStr;
+    if (lang === 'ja') return `${year}年${month}月`;
+    const date = new Date(year, month - 1, 1);
+    const monthName = date.toLocaleString('en-GB', { month: 'long' });
+    return `${monthName} ${year}`;
+};
+
 export type ReportData = {
     reportDate: string;
     horseNameEn: string;
@@ -155,6 +214,13 @@ export type ReportData = {
     dam: string;
     damEn?: string;
     damJp?: string;
+    ownerName?: string;
+    trainerNameJp?: string;
+    trainerNameEn?: string;
+    trainerLocation?: string;
+    birthDate?: string;
+    age?: number | null;
+    outputMode?: 'pdf' | 'print';
     mainPhoto: string;
     // statusEn/Jp deprecated but kept for compatibility if needed, prefer trainingStatus
     statusEn?: string;
@@ -225,6 +291,11 @@ interface ReportTemplateProps {
 export default function ReportTemplate({ initialData, onDataChange, readOnly = false }: ReportTemplateProps) {
     const { t, language } = useLanguage();
     const lang = language;
+    const formatOwnerName = (name?: string) => {
+        if (!name) return '-';
+        if (lang !== 'ja') return name;
+        return name.endsWith('様') ? name : `${name}様`;
+    };
     // Default Data
     const defaultData: ReportData = {
         reportDate: '', // Set in useEffect to avoid hydration mismatch
@@ -232,6 +303,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         horseNameJp: 'ハマギクベガ',
         sire: 'Lucky Vega',
         dam: 'Xmas',
+        ownerName: '',
+        trainerNameJp: '',
+        trainerNameEn: '',
+        trainerLocation: '',
+        birthDate: '',
+        age: null,
+        outputMode: 'pdf',
         mainPhoto: '',
         originalPhoto: '',
         trainingStatusEn: 'Training',
@@ -253,6 +331,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     };
 
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
+    const isPrintMode = data.outputMode === 'print';
 
     // --- Cropper State ---
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -815,7 +894,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                 {/* A4 Container - Uniqlo Style Reverted */}
                 <div
                     id="report-preview"
-                    className="bg-white shadow-2xl relative flex flex-col mx-auto transition-transform origin-top scale-[0.9] md:scale-100"
+                    className={`bg-white shadow-2xl relative flex flex-col mx-auto transition-transform origin-top scale-[0.9] md:scale-100${isPrintMode ? ' print-mode' : ''}`}
                     style={{
                         width: '210mm',
                         minHeight: '297mm',
@@ -824,7 +903,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     }}
                 >
                     {/* Header */}
-                    <header className="flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[140px] pt-4">
+                    <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[140px] pt-4">
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
@@ -832,19 +911,24 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Centered Watermark Logo - 150px (Reduced size as requested) */}
                         {/* Centered Watermark Logo - 150px (Reduced size as requested, Moved Up) */}
-                        <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-50 pointer-events-none logo-container">
-                            <Image
-                                src="/HamagikuLogoSVG.svg"
-                                alt="Logo"
-                                fill
-                                className="object-contain"
-                                unoptimized
-                            />
-                        </div>
+                        {!isPrintMode && (
+                            <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-75 pointer-events-none logo-container">
+                                <Image
+                                    src="/hamagiku-logo.png"
+                                    alt="Logo"
+                                    fill
+                                    className="object-contain"
+                                    unoptimized
+                                />
+                            </div>
+                        )}
 
                         <div className="flex flex-col justify-center items-end z-10">
                             <div className="font-serif-en font-bold text-2xl text-[#1a3c34] tracking-widest text-right whitespace-pre-line leading-tight">
                                 {t('monthlyReport').replace(' ', '\n')}
+                            </div>
+                            <div className="text-[11px] text-[#6b7280] font-serif-en tracking-wide mt-1">
+                                {formatReportMonth(data.reportDate, lang)}
                             </div>
                         </div>
                     </header>
@@ -876,8 +960,25 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
 
+                        <div className="owner-line text-[12px] text-[#666] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
+                            <span className="font-bold mr-1">{t('owner')}:</span>
+                            {formatOwnerName(data.ownerName)}
+                            <span className="mx-2 text-gray-300">/</span>
+                            <span className="font-bold mr-1">{t('trainer')}:</span>
+                            {lang === 'ja'
+                                ? (data.trainerNameJp || data.trainerNameEn || '-')
+                                : (data.trainerNameEn || data.trainerNameJp || '-')}
+                            {data.trainerLocation ? ` (${data.trainerLocation})` : ''}
+                            <span className="mx-2 text-gray-300">/</span>
+                            <span className="font-bold mr-1">{t('birthDate')}:</span>
+                            {data.birthDate || '-'}
+                            <span className="mx-2 text-gray-300">/</span>
+                            <span className="font-bold mr-1">{t('age')}:</span>
+                            {data.age !== null && data.age !== undefined ? data.age : '-'}
+                        </div>
+
                         {/* Main Photo - Reduced width to save vertical space */}
-                        <div className="w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
+                        <div className="main-photo w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
                             {data.mainPhoto ? (
                                 <Image
                                     src={data.mainPhoto}
@@ -894,7 +995,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Data Section - Compact Height (Reduced from 220px to 120px) */}
-                        <div className="flex gap-6 mb-4 h-[120px]">
+                        <div className="data-section flex gap-6 mb-4 h-[120px]">
                             {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
                                 <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
@@ -928,25 +1029,25 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Comment Section */}
-                        <div className="border border-[#ddd] p-5 relative bg-white min-h-[140px] mt-4">
-                            <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm">
+                        <div className="comment-box border-2 border-[#555] p-5 relative bg-white min-h-[140px] mt-4">
+                            <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide">
                                 {t('trainersComment')}
                             </span>
                             {lang === 'ja' ? (
-                                <div className="text-[13px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#333]">
+                                <div className="comment-text text-[13px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold">
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className="text-[13px] leading-[1.8] text-justify font-serif-en text-[#333] whitespace-pre-wrap break-words">
+                                <div className="comment-text text-[13px] leading-[1.8] text-justify font-serif-en text-[#111] whitespace-pre-wrap break-words font-semibold">
                                     {data.commentEn ? `"${data.commentEn}"` : ''}
                                 </div>
                             )}
                         </div>
 
                         {/* Footer */}
-                        <footer className="absolute bottom-8 left-0 right-0 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
+                        <div className="footer-text mt-2 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
                             HAMAGIKU FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
-                        </footer>
+                        </div>
 
                     </div>
                 </div>

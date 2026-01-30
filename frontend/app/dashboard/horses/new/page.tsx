@@ -4,16 +4,39 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function NewHorsePage() {
+    const { t } = useLanguage();
     interface Client {
         id: string;
         name: string;
+    }
+    interface Trainer {
+        id: string;
+        trainer_name: string;
+        trainer_name_en?: string | null;
+        trainer_location?: string | null;
     }
 
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [clients, setClients] = useState<Client[]>([]);
+    const [trainers, setTrainers] = useState<Trainer[]>([]);
+    const [trainerId, setTrainerId] = useState('');
+    const [isNewTrainer, setIsNewTrainer] = useState(false);
+    const [newTrainer, setNewTrainer] = useState({
+        trainer_name: '',
+        trainer_name_en: '',
+        trainer_location: ''
+    });
+
+    const calculateHorseAge = (birthDate?: string) => {
+        if (!birthDate) return '';
+        const year = new Date(birthDate).getFullYear();
+        if (Number.isNaN(year)) return '';
+        return `${new Date().getFullYear() - year}`;
+    };
 
     // Form State
     const [formData, setFormData] = useState({
@@ -21,7 +44,9 @@ export default function NewHorsePage() {
         name_en: '',
         owner_id: '',
         sire: '',
-        dam: ''
+        dam: '',
+        birth_date: '',
+        horse_status: 'Active'
     });
 
     const [ownerSearch, setOwnerSearch] = useState('');
@@ -37,7 +62,12 @@ export default function NewHorsePage() {
             const { data } = await supabase.from('clients').select('id, name').order('name');
             if (data) setClients(data);
         };
+        const fetchTrainers = async () => {
+            const { data } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location').order('trainer_name');
+            if (data) setTrainers(data);
+        };
         fetchClients();
+        fetchTrainers();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -66,12 +96,33 @@ export default function NewHorsePage() {
                 }
             }
 
+            let finalTrainerId: string | null = trainerId || null;
+            if (isNewTrainer) {
+                if (!newTrainer.trainer_name.trim()) {
+                    throw new Error('Trainer name (JP) is required');
+                }
+                const { data: createdTrainer, error: trainerError } = await supabase
+                    .from('trainers')
+                    .insert({
+                        trainer_name: newTrainer.trainer_name,
+                        trainer_name_en: newTrainer.trainer_name_en || null,
+                        trainer_location: newTrainer.trainer_location || null
+                    })
+                    .select()
+                    .single();
+                if (trainerError) throw trainerError;
+                finalTrainerId = createdTrainer.id;
+            }
+
             const { error } = await supabase.from('horses').insert({
                 name: formData.name,
                 name_en: formData.name_en,
                 owner_id: finalOwnerId || null,
+                trainer_id: finalTrainerId,
                 sire: formData.sire,
-                dam: formData.dam
+                dam: formData.dam,
+                birth_date: formData.birth_date || null,
+                horse_status: formData.horse_status || 'Active'
             });
 
             if (error) throw error;
@@ -185,6 +236,66 @@ export default function NewHorsePage() {
                         )}
                     </div>
 
+                    <div>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">Trainer</label>
+                        <select
+                            className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                            value={trainerId}
+                            onChange={(e) => setTrainerId(e.target.value)}
+                            disabled={isNewTrainer}
+                        >
+                            <option value="">-- None --</option>
+                            {trainers.map((trainer) => (
+                                <option key={trainer.id} value={trainer.id}>
+                                    {trainer.trainer_name}{trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}{trainer.trainer_location ? ` (${trainer.trainer_location})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="mt-2">
+                            <button
+                                type="button"
+                                className="text-xs text-[#1a3c34] hover:underline"
+                                onClick={() => {
+                                    setIsNewTrainer((prev) => !prev);
+                                    if (!isNewTrainer) setTrainerId('');
+                                }}
+                            >
+                                {isNewTrainer ? 'Use existing trainer' : 'Add new trainer'}
+                            </button>
+                        </div>
+                        {isNewTrainer && (
+                            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">Trainer Name (JP)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={newTrainer.trainer_name}
+                                        onChange={(e) => setNewTrainer({ ...newTrainer, trainer_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">Trainer Name (EN)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={newTrainer.trainer_name_en}
+                                        onChange={(e) => setNewTrainer({ ...newTrainer, trainer_name_en: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">Location</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={newTrainer.trainer_location}
+                                        onChange={(e) => setNewTrainer({ ...newTrainer, trainer_location: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-stone-700 mb-1">Sire</label>
@@ -203,6 +314,33 @@ export default function NewHorsePage() {
                                 value={formData.dam}
                                 onChange={e => setFormData({ ...formData, dam: e.target.value })}
                             />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">Birth Date</label>
+                            <input
+                                type="date"
+                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                value={formData.birth_date}
+                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                            />
+                            <p className="mt-1 text-xs text-stone-500">
+                                Age: {calculateHorseAge(formData.birth_date) || '-'}
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">{t('horseStatusLabel')}</label>
+                            <select
+                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                value={formData.horse_status}
+                                onChange={(e) => setFormData({ ...formData, horse_status: e.target.value })}
+                            >
+                                <option value="Active">{t('horseStatusActive')}</option>
+                                <option value="Resting">{t('horseStatusResting')}</option>
+                                <option value="Injured">{t('horseStatusInjured')}</option>
+                                <option value="Retired">{t('horseStatusRetired')}</option>
+                                <option value="Sold">{t('horseStatusSold')}</option>
+                                <option value="Other">{t('horseStatusOther')}</option>
+                            </select>
                         </div>
                     </div>
 

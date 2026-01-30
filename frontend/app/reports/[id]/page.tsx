@@ -32,6 +32,39 @@ export default function ReportEditor() {
 
     const { user, session } = useAuth(); // Add useAuth
 
+    const calculateHorseAge = (birthDate?: string | null) => {
+        if (!birthDate) return null;
+        const year = new Date(birthDate).getFullYear();
+        if (Number.isNaN(year)) return null;
+        return new Date().getFullYear() - year;
+    };
+
+    const resolveOutputMode = (clientMode?: string | null, trainerMode?: string | null): 'pdf' | 'print' => {
+        const normalize = (mode?: string | null) => (mode === 'print' ? 'print' : 'pdf');
+        if (clientMode) return normalize(clientMode);
+        if (trainerMode) return normalize(trainerMode);
+        return 'pdf';
+    };
+
+    const fetchLatestWeight = async (horseId: string, lastReportDate?: string | null) => {
+        try {
+            let query = supabase
+                .from('horse_weights')
+                .select('weight, measured_at')
+                .eq('horse_id', horseId)
+                .order('measured_at', { ascending: false })
+                .limit(1);
+            if (lastReportDate) {
+                query = query.gt('measured_at', lastReportDate);
+            }
+            const { data, error } = await query;
+            if (error) throw error;
+            return data?.[0]?.weight ?? null;
+        } catch {
+            return null;
+        }
+    };
+
     useEffect(() => {
         if (!id || !user) return; // Wait for user
 
@@ -43,11 +76,18 @@ export default function ReportEditor() {
                     const params = new URLSearchParams(window.location.search);
                     const paramHorseId = params.get('horseId');
                     const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
+                    const sixMonthsAgo = new Date();
+                    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                    const sixMonthsAgoIso = sixMonthsAgo.toISOString();
 
                     if (paramHorseId) {
                         if (isMounted) setHorseId(paramHorseId);
                         // Fetch horse details to prepopulate
-                        const { data: horse, error: hErr } = await supabase.from('horses').select('*').eq('id', paramHorseId).single();
+                        const { data: horse, error: hErr } = await supabase
+                            .from('horses')
+                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
+                            .eq('id', paramHorseId)
+                            .single();
                         if (hErr) throw hErr;
 
                         // Fetch past weight history
@@ -55,8 +95,20 @@ export default function ReportEditor() {
                             .from('reports')
                             .select('created_at, weight')
                             .eq('horse_id', paramHorseId)
+                            .gte('created_at', sixMonthsAgoIso)
                             .order('created_at', { ascending: true });
                         if (rErr) throw rErr;
+
+                        const { data: lastReport } = await supabase
+                            .from('reports')
+                            .select('created_at')
+                            .eq('horse_id', paramHorseId)
+                            .order('created_at', { ascending: false })
+                            .limit(1);
+                        const lastReportDate = lastReport?.[0]?.created_at
+                            ? new Date(lastReport[0].created_at).toISOString().slice(0, 10)
+                            : null;
+                        const latestWeight = await fetchLatestWeight(paramHorseId, lastReportDate);
 
                         const weightHistory = reports?.map(r => {
                             const d = new Date(r.created_at);
@@ -73,10 +125,17 @@ export default function ReportEditor() {
                                 horseNameEn: horse?.name_en || '',
                                 sire: horse?.sire || '',
                                 dam: horse?.dam || '',
+                                ownerName: horse?.clients?.name || '',
+                                trainerNameJp: horse?.trainers?.trainer_name || '',
+                                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                trainerLocation: horse?.trainers?.trainer_location || '',
+                                birthDate: horse?.birth_date || '',
+                                age: calculateHorseAge(horse?.birth_date),
+                                outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                 mainPhoto: horse?.photo_url || '',
                                 originalPhoto: horse?.photo_url || '',
                                 statusEn: 'Training', statusJp: '調整中',
-                                weight: '', targetEn: '', targetJp: '',
+                                weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
                                 commentEn: '', commentJp: '',
                                 weightHistory: weightHistory
                             });
@@ -101,7 +160,11 @@ export default function ReportEditor() {
                 if (!report) throw new Error("Report not found");
 
                 // Fetch Horse Data
-                const { data: horse, error: hErr2 } = await supabase.from('horses').select('*').eq('id', report.horse_id).single();
+                const { data: horse, error: hErr2 } = await supabase
+                    .from('horses')
+                    .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
+                    .eq('id', report.horse_id)
+                    .single();
                 if (hErr2) throw hErr2;
 
                 if (isMounted) {
@@ -121,6 +184,13 @@ export default function ReportEditor() {
                         dam: horse?.dam || '',
                         damEn: metrics.damEn || '',
                         damJp: metrics.damJp || '',
+                        ownerName: horse?.clients?.name || '',
+                        trainerNameJp: horse?.trainers?.trainer_name || '',
+                        trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                        trainerLocation: horse?.trainers?.trainer_location || '',
+                        birthDate: horse?.birth_date || '',
+                        age: calculateHorseAge(horse?.birth_date),
+                        outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
 
                         commentJp: report.body || '',
                         commentEn: metrics.commentEn || '',
@@ -168,18 +238,34 @@ export default function ReportEditor() {
                             const params = new URLSearchParams(window.location.search);
                             const paramHorseId = params.get('horseId');
                             const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
+                            const sixMonthsAgo = new Date();
+                            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                            const sixMonthsAgoIso = encodeURIComponent(sixMonthsAgo.toISOString());
 
                             if (paramHorseId) {
                                 if (isMounted) setHorseId(paramHorseId);
                                 const [horseRes, reportsRes] = await Promise.all([
-                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*`, { headers }),
-                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=created_at,weight&order=created_at.asc`, { headers })
+                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`, { headers }),
+                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&created_at=gte.${sixMonthsAgoIso}&select=created_at,weight&order=created_at.asc`, { headers })
                                 ]);
 
                                 if (horseRes.ok && reportsRes.ok) {
                                     const hData = await horseRes.json();
                                     const rData = await reportsRes.json();
                                     const horse = hData[0];
+
+                                    let lastReportDate: string | null = null;
+                                    const lastReportRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=created_at&order=created_at.desc&limit=1`, { headers });
+                                    if (lastReportRes.ok) {
+                                        const lastData = await lastReportRes.json();
+                                        const lastCreated = lastData?.[0]?.created_at;
+                                        lastReportDate = lastCreated ? new Date(lastCreated).toISOString().slice(0, 10) : null;
+                                    }
+
+                                    const weightUrl = `${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&select=weight,measured_at&order=measured_at.desc&limit=1` + (lastReportDate ? `&measured_at=gt.${lastReportDate}` : '');
+                                    const weightRes = await fetch(weightUrl, { headers });
+                                    const weightData = weightRes.ok ? await weightRes.json() : [];
+                                    const latestWeight = weightData?.[0]?.weight ?? null;
 
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const weightHistory = rData.map((r: any) => ({
@@ -195,10 +281,17 @@ export default function ReportEditor() {
                                             horseNameEn: horse?.name_en || '',
                                             sire: horse?.sire || '',
                                             dam: horse?.dam || '',
+                                            ownerName: horse?.clients?.name || '',
+                                            trainerNameJp: horse?.trainers?.trainer_name || '',
+                                            trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                            trainerLocation: horse?.trainers?.trainer_location || '',
+                                            birthDate: horse?.birth_date || '',
+                                            age: calculateHorseAge(horse?.birth_date),
+                                            outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                             mainPhoto: horse?.photo_url || '',
                                             originalPhoto: horse?.photo_url || '',
                                             statusEn: 'Training', statusJp: '調整中',
-                                            weight: '', targetEn: '', targetJp: '',
+                                            weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
                                             commentEn: '', commentJp: '',
                                             weightHistory: weightHistory
                                         });
@@ -225,7 +318,7 @@ export default function ReportEditor() {
                             const report = rData[0];
                             if (!report) throw new Error("Report not found");
 
-                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*`, { headers });
+                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`, { headers });
                             const hData = await horseRes.json();
                             const horse = hData[0];
 
@@ -242,6 +335,13 @@ export default function ReportEditor() {
                                     dam: horse?.dam || '',
                                     damEn: metrics.damEn || '',
                                     damJp: metrics.damJp || '',
+                                    ownerName: horse?.clients?.name || '',
+                                    trainerNameJp: horse?.trainers?.trainer_name || '',
+                                    trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                    trainerLocation: horse?.trainers?.trainer_location || '',
+                                    birthDate: horse?.birth_date || '',
+                                    age: calculateHorseAge(horse?.birth_date),
+                                    outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                     commentJp: report.body || '',
                                     commentEn: metrics.commentEn || '',
                                     weight: report.weight ? `${report.weight} kg` : '',
@@ -278,16 +378,35 @@ export default function ReportEditor() {
         setShowHorseSelector(false);
         setLoading(true);
         const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const sixMonthsAgoIso = sixMonthsAgo.toISOString();
 
         // Fetch horse details
-        const { data: horse } = await supabase.from('horses').select('*').eq('id', selectedHorseId).single();
+        const { data: horse } = await supabase
+            .from('horses')
+            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
+            .eq('id', selectedHorseId)
+            .single();
 
         // Fetch past weight history
         const { data: reports } = await supabase
             .from('reports')
             .select('created_at, weight')
             .eq('horse_id', selectedHorseId)
+            .gte('created_at', sixMonthsAgoIso)
             .order('created_at', { ascending: true });
+
+        const { data: lastReport } = await supabase
+            .from('reports')
+            .select('created_at')
+            .eq('horse_id', selectedHorseId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        const lastReportDate = lastReport?.[0]?.created_at
+            ? new Date(lastReport[0].created_at).toISOString().slice(0, 10)
+            : null;
+        const latestWeight = await fetchLatestWeight(selectedHorseId, lastReportDate);
 
         const weightHistory = reports?.map(r => {
             const d = new Date(r.created_at);
@@ -303,10 +422,17 @@ export default function ReportEditor() {
             horseNameEn: horse?.name_en || '',
             sire: horse?.sire || '',
             dam: horse?.dam || '',
+            ownerName: horse?.clients?.name || '',
+            trainerNameJp: horse?.trainers?.trainer_name || '',
+            trainerNameEn: horse?.trainers?.trainer_name_en || '',
+            trainerLocation: horse?.trainers?.trainer_location || '',
+            birthDate: horse?.birth_date || '',
+            age: calculateHorseAge(horse?.birth_date),
+            outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
             mainPhoto: horse?.photo_url || '',
             originalPhoto: horse?.photo_url || '',
             statusEn: 'Training', statusJp: '調整中',
-            weight: '', targetEn: '', targetJp: '',
+            weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
             commentEn: '', commentJp: '',
             weightHistory: weightHistory
         });
