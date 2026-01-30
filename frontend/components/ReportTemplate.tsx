@@ -396,29 +396,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         }
     };
 
-    const handleTranslateName = async (name: string, field: 'sire' | 'dam', targetLang: 'ja' | 'en') => {
-        if (!name) return;
-        try {
-            const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/translate-name`;
-            console.log('Translating:', name, 'to', targetLang, 'at', apiUrl);
-            const res = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, targetLang })
-            });
-            const json = await res.json();
-            if (json.translatedName) {
-                const targetKey = field === 'sire'
-                    ? (targetLang === 'ja' ? 'sireJp' : 'sireEn')
-                    : (targetLang === 'ja' ? 'damJp' : 'damEn');
-
-                setData(prev => ({ ...prev, [targetKey]: json.translatedName }));
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Name Translation Failed: " + e);
-        }
-    };
+    // Auto translation disabled to avoid API overuse. Use horse master data instead.
+    const handleTranslateName = () => {};
 
 
     const [zoom, setZoom] = useState(1);
@@ -595,9 +574,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                                 type="text"
                                                 value={data.sireEn || data.sire} // Fallback
                                                 onChange={e => setData({ ...data, sireEn: e.target.value })}
-                                                onBlur={(e) => handleTranslateName(e.target.value, 'sire', 'ja')}
                                                 className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900 pr-6"
-                                                placeholder="Auto-translates to JP"
+                                                placeholder="JP"
                                             />
                                         </div>
                                     </div>
@@ -607,9 +585,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             type="text"
                                             value={data.sireJp || ''}
                                             onChange={e => setData({ ...data, sireJp: e.target.value })}
-                                            onBlur={(e) => handleTranslateName(e.target.value, 'sire', 'en')}
                                             className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                                            placeholder="Auto-translates to EN"
+                                            placeholder="EN"
                                         />
                                     </div>
                                 </div>
@@ -622,9 +599,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             type="text"
                                             value={data.damEn || data.dam} // Fallback
                                             onChange={e => setData({ ...data, damEn: e.target.value })}
-                                            onBlur={(e) => handleTranslateName(e.target.value, 'dam', 'ja')}
                                             className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                                            placeholder="Auto-translates to JP"
+                                            placeholder="JP"
                                         />
                                     </div>
                                     <div>
@@ -633,9 +609,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             type="text"
                                             value={data.damJp || ''}
                                             onChange={e => setData({ ...data, damJp: e.target.value })}
-                                            onBlur={(e) => handleTranslateName(e.target.value, 'dam', 'en')}
                                             className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                                            placeholder="Auto-translates to EN"
+                                            placeholder="EN"
                                         />
                                     </div>
                                 </div>
