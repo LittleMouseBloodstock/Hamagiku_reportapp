@@ -546,6 +546,18 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                     />
                                 </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                    <input
+                                        id="show-logo-toggle"
+                                        type="checkbox"
+                                        checked={data.showLogo ?? true}
+                                        onChange={(e) => setData({ ...data, showLogo: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
+                                    />
+                                    <label htmlFor="show-logo-toggle" className="select-none">
+                                        Logo on PDF/Print
+                                    </label>
+                                </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">{t('horseName')} (EN)</label>
@@ -659,18 +671,6 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     </label>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
-                                    <input
-                                        id="show-logo-toggle"
-                                        type="checkbox"
-                                        checked={data.showLogo ?? true}
-                                        onChange={(e) => setData({ ...data, showLogo: e.target.checked })}
-                                        className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
-                                    />
-                                    <label htmlFor="show-logo-toggle" className="select-none">
-                                        Show logo on PDF/Print
-                                    </label>
-                                </div>
                             </div>
                         </section>
 
