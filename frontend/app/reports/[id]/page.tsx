@@ -89,19 +89,19 @@ export default function ReportEditor() {
                             .single();
                         if (hErr) throw hErr;
 
-                        // Fetch past weight history
-                        const { data: reports, error: rErr } = await supabase
-                            .from('reports')
-                            .select('created_at, weight')
+                        // Fetch past weight history (last 6 months)
+                        const { data: weights, error: rErr } = await supabase
+                            .from('horse_weights')
+                            .select('measured_at, weight')
                             .eq('horse_id', paramHorseId)
-                            .gte('created_at', sixMonthsAgoIso)
-                            .order('created_at', { ascending: true });
+                            .gte('measured_at', sixMonthsAgoIso)
+                            .order('measured_at', { ascending: true });
                         if (rErr) throw rErr;
 
                         const latestWeight = await fetchLatestWeight(paramHorseId);
 
-                        const weightHistory = reports?.map(r => {
-                            const d = new Date(r.created_at);
+                        const weightHistory = weights?.map(r => {
+                            const d = new Date(r.measured_at);
                             return {
                                 label: `${d.getMonth() + 1}月`,
                                 value: r.weight || 0
@@ -245,7 +245,7 @@ export default function ReportEditor() {
                                 if (isMounted) setHorseId(paramHorseId);
                                 const [horseRes, reportsRes] = await Promise.all([
                                     fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
-                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&created_at=gte.${sixMonthsAgoIso}&select=created_at,weight&order=created_at.asc`, { headers })
+                                    fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${sixMonthsAgoIso}&select=measured_at,weight&order=measured_at.asc`, { headers })
                                 ]);
 
                                 if (horseRes.ok && reportsRes.ok) {
@@ -260,7 +260,7 @@ export default function ReportEditor() {
 
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const weightHistory = rData.map((r: any) => ({
-                                        label: `${new Date(r.created_at).getMonth() + 1}月`,
+                                        label: `${new Date(r.measured_at).getMonth() + 1}月`,
                                         value: r.weight || 0
                                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     })).filter((item: any) => item.value > 0) || [];
@@ -389,18 +389,18 @@ export default function ReportEditor() {
             .eq('id', selectedHorseId)
             .single();
 
-        // Fetch past weight history
-        const { data: reports } = await supabase
-            .from('reports')
-            .select('created_at, weight')
+        // Fetch past weight history (last 6 months)
+        const { data: weights } = await supabase
+            .from('horse_weights')
+            .select('measured_at, weight')
             .eq('horse_id', selectedHorseId)
-            .gte('created_at', sixMonthsAgoIso)
-            .order('created_at', { ascending: true });
+            .gte('measured_at', sixMonthsAgoIso)
+            .order('measured_at', { ascending: true });
 
         const latestWeight = await fetchLatestWeight(selectedHorseId);
 
-        const weightHistory = reports?.map(r => {
-            const d = new Date(r.created_at);
+        const weightHistory = weights?.map(r => {
+            const d = new Date(r.measured_at);
             return {
                 label: `${d.getMonth() + 1}月`,
                 value: r.weight || 0
