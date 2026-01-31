@@ -29,7 +29,9 @@ export default function Dashboard() {
         totalReports: 0,
         activeHorses: 0,
         clients: 0,
-        pendingReview: 0
+        pendingReview: 0,
+        draftReports: 0,
+        approvedReports: 0
     });
 
     useEffect(() => {
@@ -41,7 +43,7 @@ export default function Dashboard() {
                 // 1. Fetch Reports
                 const { data, error } = await supabase
                     .from('reports')
-                    .select('*, horse_id, horses(name, name_en)')
+                    .select('*, review_status, horse_id, horses(name, name_en)')
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -56,18 +58,18 @@ export default function Dashboard() {
                 const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true });
                 if (err3) throw err3;
 
-                // Pending Review: Check 'status_training' or simply count recent ones if no explicit review status exists
-                // We'll trust the 'status_training' column or 'metrics_json' for now.
-                // Since 'review_status' might not exist, we'll avoid querying it directly for now or stick to a simpler check.
-                // Let's count reports that are "Training" as 'active'? Or just 0 for now to prevent error.
-                const pendingCount = 0;
+                const pendingCount = data?.filter((r: any) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
+                const draftCount = data?.filter((r: any) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
+                const approvedCount = data?.filter((r: any) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
 
                 if (isMounted) {
                     setStats({
                         totalReports: reportsCount || 0,
                         activeHorses: horsesCount || 0,
                         clients: clientsCount || 0,
-                        pendingReview: pendingCount || 0
+                        pendingReview: pendingCount || 0,
+                        draftReports: draftCount || 0,
+                        approvedReports: approvedCount || 0
                     });
 
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,7 +84,7 @@ export default function Dashboard() {
 
                         // Safe Status logic
                         // Fallback to 'status_training' or default 'draft'
-                        const statusRaw = r.status_training || 'draft';
+                        const statusRaw = r.review_status || r.status_training || 'draft';
 
                         return {
                             id: r.id,
@@ -114,7 +116,7 @@ export default function Dashboard() {
                             if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
                             // 1. Reports Fetch
-                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,horse_id,horses(name,name_en)&order=created_at.desc`, {
+                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc`, {
                                 headers: {
                                     'apikey': anonKey,
                                     'Authorization': `Bearer ${session.access_token}`
@@ -143,12 +145,18 @@ export default function Dashboard() {
                             const horsesCount = horsesHead.headers.get('content-range')?.split('/')[1] || 0;
                             const clientsCount = clientsHead.headers.get('content-range')?.split('/')[1] || 0;
 
+                            const pendingCount = rawData?.filter((r: any) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
+                            const draftCount = rawData?.filter((r: any) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
+                            const approvedCount = rawData?.filter((r: any) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
+
                             if (isMounted) {
                                 setStats({
                                     totalReports: Number(reportsCount),
                                     activeHorses: Number(horsesCount),
                                     clients: Number(clientsCount),
-                                    pendingReview: 0 // Keep 0 for now as it requires complex filtering
+                                    pendingReview: pendingCount,
+                                    draftReports: draftCount,
+                                    approvedReports: approvedCount
                                 });
                                 // Format data
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -158,7 +166,7 @@ export default function Dashboard() {
                                     if (r.body) langs.push('JP');
                                     if (r.metrics_json?.commentEn) langs.push('EN');
                                     if (langs.length === 0) langs.push('JP');
-                                    const statusRaw = r.status_training || 'draft';
+                                    const statusRaw = r.review_status || r.status_training || 'draft';
                                     return {
                                         id: r.id,
                                         title: title,
@@ -259,8 +267,26 @@ export default function Dashboard() {
                                 <span className="material-symbols-outlined text-[#1a3c34]">schedule</span>
                             </div>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Pending Review</h3>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('pendingReviewLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.pendingReview}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">edit_note</span>
+                            </div>
+                        </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('draftReportsLabel')}</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.draftReports}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">verified</span>
+                            </div>
+                        </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('approvedReportsLabel')}</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.approvedReports}</p>
                     </div>
                 </div>
 
