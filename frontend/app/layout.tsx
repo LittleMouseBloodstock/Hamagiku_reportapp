@@ -43,6 +43,7 @@ export const metadata: Metadata = {
 
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import BfcacheReload from "@/components/BfcacheReload";
 
 export default function RootLayout({
   children,
@@ -61,6 +62,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <LanguageProvider>
+            <BfcacheReload />
             {children}
           </LanguageProvider>
         </AuthProvider>
