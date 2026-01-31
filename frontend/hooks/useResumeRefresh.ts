@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-const useResumeRefresh = () => {
+const useResumeRefresh = (intervalMs: number = 60_000) => {
     const [refreshKey, setRefreshKey] = useState(0);
 
-    useEffect(() => {
-        const triggerRefresh = () => setRefreshKey((v) => v + 1);
+    const triggerRefresh = useCallback(() => {
+        setRefreshKey((v) => v + 1);
+    }, []);
 
-        const handleVisibility = () => {
+    useEffect(() => {
+        const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 triggerRefresh();
             }
@@ -17,6 +19,8 @@ const useResumeRefresh = () => {
         const handlePageShow = (event: PageTransitionEvent) => {
             if (event.persisted) {
                 triggerRefresh();
+            } else {
+                triggerRefresh();
             }
         };
 
@@ -24,19 +28,19 @@ const useResumeRefresh = () => {
             triggerRefresh();
         };
 
-        document.addEventListener('visibilitychange', handleVisibility);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('pageshow', handlePageShow);
         window.addEventListener('online', handleOnline);
 
-        const intervalId = setInterval(triggerRefresh, 60 * 1000);
+        const id = window.setInterval(triggerRefresh, intervalMs);
 
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibility);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('pageshow', handlePageShow);
             window.removeEventListener('online', handleOnline);
-            clearInterval(intervalId);
+            window.clearInterval(id);
         };
-    }, []);
+    }, [triggerRefresh, intervalMs]);
 
     return refreshKey;
 };
