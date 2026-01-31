@@ -27,10 +27,14 @@ const useResumeRefresh = (intervalMs: number = 60_000) => {
         const handleOnline = () => {
             triggerRefresh();
         };
+        const handleFocus = () => {
+            triggerRefresh();
+        };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('pageshow', handlePageShow);
         window.addEventListener('online', handleOnline);
+        window.addEventListener('focus', handleFocus);
 
         const id = window.setInterval(triggerRefresh, intervalMs);
 
@@ -38,6 +42,7 @@ const useResumeRefresh = (intervalMs: number = 60_000) => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('pageshow', handlePageShow);
             window.removeEventListener('online', handleOnline);
+            window.removeEventListener('focus', handleFocus);
             window.clearInterval(id);
         };
     }, [triggerRefresh, intervalMs]);
