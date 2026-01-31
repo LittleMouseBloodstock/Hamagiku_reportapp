@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -17,6 +18,7 @@ type Trainer = {
 export default function TrainersPage() {
     const { user, session } = useAuth();
     const { t } = useLanguage();
+    const refreshKey = useResumeRefresh();
     const [trainers, setTrainers] = useState<Trainer[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditingId, setIsEditingId] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function TrainersPage() {
         fetchTrainers();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, session?.access_token]);
+    }, [user?.id, session?.access_token, refreshKey]);
 
     const resetForm = () => {
         setFormData({ trainer_name: '', trainer_name_en: '', trainer_location: '', report_output_mode: 'pdf' });

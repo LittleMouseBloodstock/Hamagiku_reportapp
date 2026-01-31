@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function NewHorsePage() {
     const { t } = useLanguage();
+    const refreshKey = useResumeRefresh();
     interface Client {
         id: string;
         name: string;
@@ -68,7 +70,7 @@ export default function NewHorsePage() {
         };
         fetchClients();
         fetchTrainers();
-    }, []);
+    }, [refreshKey]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

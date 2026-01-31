@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Printer } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function ClientBatchReports() {
     const router = useRouter();
     const { t } = useLanguage(); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [loading, setLoading] = useState(true);
+    const refreshKey = useResumeRefresh();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [owner, setOwner] = useState<any>(null);
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
@@ -221,7 +223,7 @@ export default function ClientBatchReports() {
         fetchData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, selectedDate, user?.id, session?.access_token]);
+    }, [id, selectedDate, user?.id, session?.access_token, refreshKey]);
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 

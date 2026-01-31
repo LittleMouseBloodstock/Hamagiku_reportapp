@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AllowedUser {
@@ -13,6 +14,7 @@ interface AllowedUser {
 
 export default function SettingsPage() {
     const { t } = useLanguage();
+    const refreshKey = useResumeRefresh();
     const [users, setUsers] = useState<AllowedUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [newUserEmail, setNewUserEmail] = useState('');
@@ -22,7 +24,7 @@ export default function SettingsPage() {
     // Fetch users on mount
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [refreshKey]);
 
     const fetchUsers = async () => {
         setLoading(true);

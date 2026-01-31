@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ClientDetailClient({ id }: { id: string }) {
     const router = useRouter();
     const { t } = useLanguage();
+    const refreshKey = useResumeRefresh();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -106,7 +108,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
         fetchClient();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, user?.id, session?.access_token]);
+    }, [id, user?.id, session?.access_token, refreshKey]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

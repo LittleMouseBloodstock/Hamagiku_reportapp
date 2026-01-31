@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
@@ -13,6 +14,7 @@ export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
     const isNew = id === 'new';
+    const refreshKey = useResumeRefresh();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -371,7 +373,7 @@ export default function ReportEditor() {
         fetchReportData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, isNew, user?.id, session?.access_token]);
+    }, [id, isNew, user?.id, session?.access_token, refreshKey]);
 
     const handleSelectHorse = async (selectedHorseId: string) => {
         setHorseId(selectedHorseId);

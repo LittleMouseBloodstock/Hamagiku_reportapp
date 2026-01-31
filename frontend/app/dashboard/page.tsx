@@ -6,11 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
     const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
+    const refreshKey = useResumeRefresh();
 
     interface DashboardReport {
         id: string;
@@ -205,7 +207,7 @@ export default function Dashboard() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [language, user?.id, session?.access_token]);
+    }, [language, user?.id, session?.access_token, refreshKey]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;

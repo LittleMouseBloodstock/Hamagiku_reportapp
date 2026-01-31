@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
@@ -17,6 +18,7 @@ export default function ClientsPage() {
 
     const { t } = useLanguage();
     const { user, session } = useAuth();
+    const refreshKey = useResumeRefresh();
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -71,7 +73,7 @@ export default function ClientsPage() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, session?.access_token]);
+    }, [user?.id, session?.access_token, refreshKey]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;

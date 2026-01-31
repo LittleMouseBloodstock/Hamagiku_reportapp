@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -33,6 +34,7 @@ type Report = {
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
+    const refreshKey = useResumeRefresh();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
@@ -63,7 +65,7 @@ export default function HorseDetail() {
             if (r) setReports(r);
         };
         fetchData();
-    }, [id]);
+    }, [id, refreshKey]);
 
     const handleUpdateHorse = async () => {
         const { error } = await supabase

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -23,6 +24,7 @@ export default function HorsesPage() {
     const { user, session } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
+    const refreshKey = useResumeRefresh();
 
     const calculateHorseAge = (birthDate?: string | null) => {
         if (!birthDate) return '';
@@ -112,7 +114,7 @@ export default function HorsesPage() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, session?.access_token]);
+    }, [user?.id, session?.access_token, refreshKey]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;

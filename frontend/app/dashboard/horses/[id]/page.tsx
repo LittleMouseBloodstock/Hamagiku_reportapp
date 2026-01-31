@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity, User } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -55,6 +56,7 @@ export default function HorseDetail() {
     const router = useRouter();
     const { language, t } = useLanguage();
     const { user, session } = useAuth();
+    const refreshKey = useResumeRefresh();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
@@ -235,7 +237,7 @@ export default function HorseDetail() {
         fetchData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, user?.id, session?.access_token]);
+    }, [id, user?.id, session?.access_token, refreshKey]);
 
     const handleUpdateHorse = async () => {
         try {

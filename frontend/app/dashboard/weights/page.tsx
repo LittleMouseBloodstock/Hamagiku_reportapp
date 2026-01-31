@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -23,6 +24,7 @@ const getTodayIso = () => new Date().toISOString().slice(0, 10);
 export default function WeightsPage() {
     const { t, language } = useLanguage();
     const { user } = useAuth();
+    const refreshKey = useResumeRefresh();
 
     const [selectedDate, setSelectedDate] = useState(getTodayIso());
     const [horses, setHorses] = useState<Horse[]>([]);
@@ -104,7 +106,7 @@ export default function WeightsPage() {
 
         fetchData();
         return () => { isMounted = false; };
-    }, [user?.id, selectedDate]);
+    }, [user?.id, selectedDate, refreshKey]);
 
     const handleSave = async () => {
         if (!hasHorses) return;
