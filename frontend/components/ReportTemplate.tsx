@@ -397,9 +397,6 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     };
 
     // Auto translation disabled to avoid API overuse. Use horse master data instead.
-    const handleTranslateName = () => {};
-
-
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [isCropping, setIsCropping] = useState(false);

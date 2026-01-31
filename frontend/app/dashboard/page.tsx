@@ -23,6 +23,18 @@ export default function Dashboard() {
         horse_id?: string;
     }
 
+    type ReportRow = {
+        id: string;
+        title: string | null;
+        created_at: string | null;
+        review_status?: string | null;
+        status_training?: string | null;
+        body?: string | null;
+        metrics_json?: { commentEn?: string | null };
+        horses?: { name: string; name_en: string; };
+        horse_id?: string;
+    };
+
     const [reports, setReports] = useState<DashboardReport[]>([]);
     // Hardcoded stats for demo (replace with real data later)
     const [stats, setStats] = useState({
@@ -58,9 +70,10 @@ export default function Dashboard() {
                 const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true });
                 if (err3) throw err3;
 
-                const pendingCount = data?.filter((r: any) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
-                const draftCount = data?.filter((r: any) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
-                const approvedCount = data?.filter((r: any) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
+                const typedData = (data || []) as ReportRow[];
+                const pendingCount = typedData.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
+                const draftCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
+                const approvedCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
 
                 if (isMounted) {
                     setStats({
@@ -72,8 +85,7 @@ export default function Dashboard() {
                         approvedReports: approvedCount || 0
                     });
 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const formatted = data?.map((r: any) => {
+                    const formatted = typedData.map((r) => {
                         // Determine title
                         const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
                         // Determine languages
@@ -99,7 +111,7 @@ export default function Dashboard() {
                     }) || [];
                     setReports(formatted);
                 }
-            } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            } catch (err: unknown) {
                 console.error("Dashboard fetch error:", err);
                 // Retry specifically for AbortError or network glitches
                 if (isMounted && retryCount < 2) {
@@ -145,9 +157,10 @@ export default function Dashboard() {
                             const horsesCount = horsesHead.headers.get('content-range')?.split('/')[1] || 0;
                             const clientsCount = clientsHead.headers.get('content-range')?.split('/')[1] || 0;
 
-                            const pendingCount = rawData?.filter((r: any) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
-                            const draftCount = rawData?.filter((r: any) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
-                            const approvedCount = rawData?.filter((r: any) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
+                            const typedRaw = (rawData || []) as ReportRow[];
+                            const pendingCount = typedRaw.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
+                            const draftCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
+                            const approvedCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
 
                             if (isMounted) {
                                 setStats({
@@ -159,8 +172,7 @@ export default function Dashboard() {
                                     approvedReports: approvedCount
                                 });
                                 // Format data
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const formatted = rawData?.map((r: any) => {
+                                const formatted = typedRaw.map((r) => {
                                     const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
                                     const langs = [];
                                     if (r.body) langs.push('JP');

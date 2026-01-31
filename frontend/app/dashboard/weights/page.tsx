@@ -34,7 +34,7 @@ export default function WeightsPage() {
     const hasHorses = horses.length > 0;
 
     useEffect(() => {
-        if (!user) return;
+        if (!user?.id) return;
 
         let isMounted = true;
 
