@@ -48,9 +48,9 @@ export default function ReportEditor() {
         return 'pdf';
     };
 
-    const fetchLatestWeight = async (horseId: string, lastReportDate?: string | null) => {
+    const fetchLatestWeight = async (horseId: string) => {
         try {
-            let query = supabase
+            const query = supabase
                 .from('horse_weights')
                 .select('weight, measured_at')
                 .eq('horse_id', horseId)
@@ -104,10 +104,7 @@ export default function ReportEditor() {
                             .eq('horse_id', paramHorseId)
                             .order('created_at', { ascending: false })
                             .limit(1);
-                        const lastReportDate = lastReport?.[0]?.created_at
-                            ? new Date(lastReport[0].created_at).toISOString().slice(0, 10)
-                            : null;
-                        const latestWeight = await fetchLatestWeight(paramHorseId, lastReportDate);
+                        const latestWeight = await fetchLatestWeight(paramHorseId);
 
                         const weightHistory = reports?.map(r => {
                             const d = new Date(r.created_at);
@@ -417,10 +414,7 @@ export default function ReportEditor() {
             .eq('horse_id', selectedHorseId)
             .order('created_at', { ascending: false })
             .limit(1);
-        const lastReportDate = lastReport?.[0]?.created_at
-            ? new Date(lastReport[0].created_at).toISOString().slice(0, 10)
-            : null;
-        const latestWeight = await fetchLatestWeight(selectedHorseId, lastReportDate);
+        const latestWeight = await fetchLatestWeight(selectedHorseId);
 
         const weightHistory = reports?.map(r => {
             const d = new Date(r.created_at);

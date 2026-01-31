@@ -174,12 +174,9 @@ export default function ClientBatchReports() {
                             const reportsData = await reportsRes.json();
 
                             if (isMounted && reportsData) {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const formattedReports = reportsData.map((r: any) => {
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    const horse = horses.find((h: any) => h.id === r.horse_id);
-                                    if (!horse) return null;
+                            const formattedReports = reportsData.map((r: any) => {
+                                const horse = horses.find((h: any) => h.id === r.horse_id);
+                                if (!horse) return null;
 
                                     const metrics = r.metrics_json || {};
                                     const rData: ReportData = {
@@ -207,8 +204,7 @@ export default function ClientBatchReports() {
                                         logo: null
                                     };
                                     return { report: r, horse: horse, data: rData };
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                            }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
                                 setReports(formattedReports);
                             } else if (isMounted) setReports([]);
                         } else if (isMounted) setReports([]);
