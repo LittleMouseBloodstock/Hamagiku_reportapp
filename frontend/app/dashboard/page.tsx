@@ -76,6 +76,23 @@ export default function Dashboard() {
                 const pendingCount = typedData.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
                 const draftCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
                 const approvedCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
+                const isEmptySnapshot = (reportsCount || 0) === 0
+                    && (horsesCount || 0) === 0
+                    && (clientsCount || 0) === 0
+                    && typedData.length === 0;
+
+                if (isEmptySnapshot && retryCount < 2) {
+                    const { data: authData, error: authErr } = await supabase.auth.getUser();
+                    if (authErr || !authData?.user) {
+                        console.warn('Dashboard auth invalid, signing out');
+                        await supabase.auth.signOut();
+                        router.replace('/login');
+                        return;
+                    }
+                    console.warn('Dashboard empty snapshot detected, retrying fetch...');
+                    setTimeout(() => fetchReports(retryCount + 1), 500);
+                    return;
+                }
 
                 if (isMounted) {
                     setStats({
@@ -163,6 +180,23 @@ export default function Dashboard() {
                             const pendingCount = typedRaw.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
                             const draftCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
                             const approvedCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
+                            const isEmptySnapshot = Number(reportsCount) === 0
+                                && Number(horsesCount) === 0
+                                && Number(clientsCount) === 0
+                                && typedRaw.length === 0;
+
+                            if (isEmptySnapshot && retryCount < 2) {
+                                const { data: authData, error: authErr } = await supabase.auth.getUser();
+                                if (authErr || !authData?.user) {
+                                    console.warn('Dashboard auth invalid (fallback), signing out');
+                                    await supabase.auth.signOut();
+                                    router.replace('/login');
+                                    return;
+                                }
+                                console.warn('Dashboard empty snapshot detected (fallback), retrying fetch...');
+                                setTimeout(() => fetchReports(retryCount + 1), 500);
+                                return;
+                            }
 
                             if (isMounted) {
                                 setStats({
