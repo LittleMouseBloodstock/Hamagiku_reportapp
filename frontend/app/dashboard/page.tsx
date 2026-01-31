@@ -49,7 +49,7 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        if (!user) return; // Optional: Don't fetch if no user (though RLS handles it, this saves a call)
+        // Don't short-circuit on user; allow refreshKey/visibility to drive refetch
 
         let isMounted = true;
         const fetchReports = async (retryCount = 0) => {

@@ -33,7 +33,7 @@ export default function TrainersPage() {
     });
 
     useEffect(() => {
-        if (!user) return;
+        // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
         const fetchTrainers = async (retryCount = 0) => {

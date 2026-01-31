@@ -23,7 +23,7 @@ export default function ClientsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
         const fetchClients = async (retryCount = 0) => {

@@ -31,7 +31,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
     const { user, session } = useAuth(); // Add useAuth
 
     useEffect(() => {
-        if (!user) return;
+        // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
         const fetchClient = async (retryCount = 0) => {

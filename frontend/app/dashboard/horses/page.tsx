@@ -47,7 +47,7 @@ export default function HorsesPage() {
     };
 
     useEffect(() => {
-        if (!user) return; // Wait for user
+        // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
         const fetchHorses = async (retryCount = 0) => {
