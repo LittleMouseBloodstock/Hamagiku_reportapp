@@ -11,6 +11,7 @@ type Trainer = {
     trainer_name: string;
     trainer_name_en?: string | null;
     trainer_location?: string | null;
+    trainer_location_en?: string | null;
     report_output_mode?: string | null;
     created_at?: string;
 };
@@ -27,6 +28,7 @@ export default function TrainersPage() {
         trainer_name: '',
         trainer_name_en: '',
         trainer_location: '',
+        trainer_location_en: '',
         report_output_mode: 'pdf'
     });
 
@@ -78,7 +80,7 @@ export default function TrainersPage() {
     }, [user?.id, session?.access_token, refreshKey]);
 
     const resetForm = () => {
-        setFormData({ trainer_name: '', trainer_name_en: '', trainer_location: '', report_output_mode: 'pdf' });
+        setFormData({ trainer_name: '', trainer_name_en: '', trainer_location: '', trainer_location_en: '', report_output_mode: 'pdf' });
         setIsEditingId(null);
     };
 
@@ -88,6 +90,7 @@ export default function TrainersPage() {
             trainer_name: trainer.trainer_name || '',
             trainer_name_en: trainer.trainer_name_en || '',
             trainer_location: trainer.trainer_location || '',
+            trainer_location_en: trainer.trainer_location_en || '',
             report_output_mode: trainer.report_output_mode || 'pdf'
         });
     };
@@ -122,6 +125,7 @@ export default function TrainersPage() {
                         trainer_name: formData.trainer_name,
                         trainer_name_en: formData.trainer_name_en || null,
                         trainer_location: formData.trainer_location || null,
+                        trainer_location_en: formData.trainer_location_en || null,
                         report_output_mode: formData.report_output_mode
                     })
                     .eq('id', isEditingId);
@@ -134,6 +138,7 @@ export default function TrainersPage() {
                         trainer_name: formData.trainer_name,
                         trainer_name_en: formData.trainer_name_en || null,
                         trainer_location: formData.trainer_location || null,
+                        trainer_location_en: formData.trainer_location_en || null,
                         report_output_mode: formData.report_output_mode
                     });
 
@@ -158,7 +163,8 @@ export default function TrainersPage() {
         const jp = (trainer.trainer_name || '').toLowerCase();
         const en = (trainer.trainer_name_en || '').toLowerCase();
         const loc = (trainer.trainer_location || '').toLowerCase();
-        return jp.includes(q) || en.includes(q) || loc.includes(q);
+        const locEn = (trainer.trainer_location_en || '').toLowerCase();
+        return jp.includes(q) || en.includes(q) || loc.includes(q) || locEn.includes(q);
     });
 
     return (
@@ -213,12 +219,22 @@ export default function TrainersPage() {
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-stone-600 mb-1">{t('trainerLocation')}</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
-                                value={formData.trainer_location}
-                                onChange={(e) => setFormData({ ...formData, trainer_location: e.target.value })}
-                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="JP"
+                                    className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                    value={formData.trainer_location}
+                                    onChange={(e) => setFormData({ ...formData, trainer_location: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="EN"
+                                    className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                    value={formData.trainer_location_en}
+                                    onChange={(e) => setFormData({ ...formData, trainer_location_en: e.target.value })}
+                                />
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-stone-600 mb-1">{t('reportOutputMode')}</label>
@@ -269,7 +285,9 @@ export default function TrainersPage() {
                                     <tr key={trainer.id} className="hover:bg-stone-50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-stone-900">{trainer.trainer_name}</td>
                                         <td className="px-6 py-4 text-sm text-stone-600">{trainer.trainer_name_en || '-'}</td>
-                                        <td className="px-6 py-4 text-sm text-stone-600">{trainer.trainer_location || '-'}</td>
+                                        <td className="px-6 py-4 text-sm text-stone-600">
+                                            {trainer.trainer_location || trainer.trainer_location_en || '-'}
+                                        </td>
                                         <td className="px-6 py-4 text-sm text-stone-600">
                                             {trainer.report_output_mode === 'print' ? t('reportOutputPrint') : t('reportOutputPdf')}
                                         </td>

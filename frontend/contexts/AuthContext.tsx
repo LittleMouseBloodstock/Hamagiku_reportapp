@@ -115,6 +115,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [session, isLoading, pathname, router]);
 
+    // 4. Keep session fresh & verify session (focus + interval)
+    useEffect(() => {
+        if (isLoading) return;
+
+        const refreshSession = async () => {
+            try {
+                const { data, error } = await supabase.auth.refreshSession();
+                if (error) {
+                    console.warn('Session refresh failed:', error.message);
+                }
+                if (data?.session) {
+                    setSession(data.session);
+                    setUser(data.session.user ?? null);
+                }
+            } catch (err) {
+                console.warn('Session refresh exception:', err);
+            }
+        };
+
+        const verifySession = async () => {
+            try {
+                const { data, error } = await supabase.auth.getUser();
+                if (error || !data?.user) {
+                    console.warn('Session invalid or expired, signing out');
+                    await supabase.auth.signOut();
+                    router.replace('/login');
+                }
+            } catch (err) {
+                console.warn('Session verify exception:', err);
+                await supabase.auth.signOut();
+                router.replace('/login');
+            }
+        };
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                refreshSession();
+                verifySession();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibility);
+        const intervalId = setInterval(() => {
+            refreshSession();
+            verifySession();
+        }, 10 * 60 * 1000);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            clearInterval(intervalId);
+        };
+    }, [isLoading, router]);
+
     const signOut = async () => {
         await supabase.auth.signOut();
     };

@@ -17,7 +17,7 @@ export default function HorsesPage() {
         owner_id?: string;
         clients?: { name: string; };
         trainer_id?: string | null;
-        trainers?: { trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; };
+        trainers?: { trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; trainer_location_en?: string | null; };
     }
 
     const { t, language } = useLanguage();
@@ -55,7 +55,7 @@ export default function HorsesPage() {
                 // Try fetching with clients first
                 const { data, error } = await supabase
                     .from('horses')
-                    .select('*, clients(name), trainers(trainer_name, trainer_name_en, trainer_location)')
+                    .select('*, clients(name), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
                     .order('name');
 
                 if (error) {
@@ -86,7 +86,7 @@ export default function HorsesPage() {
                         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
                         if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
-                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location)&order=name`, {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name`, {
                             headers: {
                                 'apikey': anonKey,
                                 'Authorization': `Bearer ${session.access_token}`
@@ -219,9 +219,14 @@ export default function HorsesPage() {
                                                                 ? horse.trainers.trainer_name
                                                                 : (horse.trainers.trainer_name_en || horse.trainers.trainer_name)}
                                                         </span>
-                                                        {horse.trainers.trainer_location && (
-                                                            <span className="text-xs text-stone-400">{horse.trainers.trainer_location}</span>
-                                                        )}
+                                                        {(() => {
+                                                            const loc = language === 'ja'
+                                                                ? horse.trainers.trainer_location
+                                                                : (horse.trainers.trainer_location_en || horse.trainers.trainer_location);
+                                                            return loc ? (
+                                                                <span className="text-xs text-stone-400">{loc}</span>
+                                                            ) : null;
+                                                        })()}
                                                     </div>
                                                 )
                                                 : '-'}

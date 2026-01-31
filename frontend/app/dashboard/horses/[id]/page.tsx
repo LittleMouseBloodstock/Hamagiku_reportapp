@@ -26,7 +26,7 @@ type Horse = {
     owner_id: string | null;
     clients: { id: string, name: string } | null;
     trainer_id?: string | null;
-    trainers?: { id: string; trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; } | null;
+    trainers?: { id: string; trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; trainer_location_en?: string | null; } | null;
 };
 
 type Report = {
@@ -49,6 +49,7 @@ type Trainer = {
     trainer_name: string;
     trainer_name_en?: string | null;
     trainer_location?: string | null;
+    trainer_location_en?: string | null;
 };
 
 export default function HorseDetail() {
@@ -71,7 +72,8 @@ export default function HorseDetail() {
     const [newTrainer, setNewTrainer] = useState({
         trainer_name: '',
         trainer_name_en: '',
-        trainer_location: ''
+        trainer_location: '',
+        trainer_location_en: ''
     });
 
     const calculateHorseAge = (birthDate?: string | null) => {
@@ -111,7 +113,7 @@ export default function HorseDetail() {
                 // 2. Fetch all trainers
                 const { data: trainersData, error: errTr } = await supabase
                     .from('trainers')
-                    .select('id, trainer_name, trainer_name_en, trainer_location')
+                    .select('id, trainer_name, trainer_name_en, trainer_location, trainer_location_en')
                     .order('trainer_name');
                 if (errTr) throw errTr;
                 if (isMounted && trainersData) setTrainers(trainersData);
@@ -119,7 +121,7 @@ export default function HorseDetail() {
                 // 3. Fetch Horse with Owner Info
                 const { data: h, error: err2 } = await supabase
                     .from('horses')
-                    .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location)')
+                    .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
                     .eq('id', id)
                     .single();
 
@@ -182,8 +184,8 @@ export default function HorseDetail() {
 
                         const [clientsRes, trainersRes, horseRes, reportsRes] = await Promise.all([
                             fetch(`${supabaseUrl}/rest/v1/clients?select=id,name&order=name`, { headers }),
-                            fetch(`${supabaseUrl}/rest/v1/trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name`, { headers }),
-                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location)&id=eq.${id}`, { headers }), // Note: single logic simulation
+                            fetch(`${supabaseUrl}/rest/v1/trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name`, { headers }),
+                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`, { headers }), // Note: single logic simulation
                             fetch(`${supabaseUrl}/rest/v1/reports?select=*&horse_id=eq.${id}&order=created_at.desc`, { headers })
                         ]);
 
@@ -276,7 +278,8 @@ export default function HorseDetail() {
                     .insert({
                         trainer_name: newTrainer.trainer_name,
                         trainer_name_en: newTrainer.trainer_name_en || null,
-                        trainer_location: newTrainer.trainer_location || null
+                        trainer_location: newTrainer.trainer_location || null,
+                        trainer_location_en: newTrainer.trainer_location_en || null
                     })
                     .select()
                     .single();
@@ -307,7 +310,7 @@ export default function HorseDetail() {
             // Or just update local state if we trust it. Let's refetch for safety on owner change.
             const { data: h } = await supabase
                 .from('horses')
-                .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location)')
+                .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
                 .eq('id', id)
                 .single();
 
@@ -320,7 +323,7 @@ export default function HorseDetail() {
                 // Update client list if we added one (optional, but good practice)
                 const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
                 if (clientsData) setClients(clientsData);
-                const { data: trainersData } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location').order('trainer_name');
+                const { data: trainersData } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location, trainer_location_en').order('trainer_name');
                 if (trainersData) setTrainers(trainersData);
             }
 
@@ -457,7 +460,14 @@ export default function HorseDetail() {
                                             <option value="">{t('noTrainer')}</option>
                                             {trainers.map((trainer) => (
                                                 <option key={trainer.id} value={trainer.id}>
-                                                    {trainer.trainer_name}{trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}{trainer.trainer_location ? ` (${trainer.trainer_location})` : ''}
+                                                    {trainer.trainer_name}
+                                                    {trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}
+                                                    {(() => {
+                                                        const loc = language === 'ja'
+                                                            ? trainer.trainer_location
+                                                            : (trainer.trainer_location_en || trainer.trainer_location);
+                                                        return loc ? ` (${loc})` : '';
+                                                    })()}
                                                 </option>
                                             ))}
                                         </select>
@@ -485,7 +495,20 @@ export default function HorseDetail() {
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerLocation')}</label>
-                                                    <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_location} onChange={e => setNewTrainer({ ...newTrainer, trainer_location: e.target.value })} />
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <input
+                                                            className="w-full border border-gray-300 rounded p-2"
+                                                            placeholder="JP"
+                                                            value={newTrainer.trainer_location}
+                                                            onChange={e => setNewTrainer({ ...newTrainer, trainer_location: e.target.value })}
+                                                        />
+                                                        <input
+                                                            className="w-full border border-gray-300 rounded p-2"
+                                                            placeholder="EN"
+                                                            value={newTrainer.trainer_location_en}
+                                                            onChange={e => setNewTrainer({ ...newTrainer, trainer_location_en: e.target.value })}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -552,7 +575,12 @@ export default function HorseDetail() {
                                         {horse.trainers
                                             ? `${language === 'ja'
                                                 ? horse.trainers.trainer_name
-                                                : (horse.trainers.trainer_name_en || horse.trainers.trainer_name)}${horse.trainers.trainer_location ? ` (${horse.trainers.trainer_location})` : ''}`
+                                                : (horse.trainers.trainer_name_en || horse.trainers.trainer_name)}${(() => {
+                                                    const loc = language === 'ja'
+                                                        ? horse.trainers.trainer_location
+                                                        : (horse.trainers.trainer_location_en || horse.trainers.trainer_location);
+                                                    return loc ? ` (${loc})` : '';
+                                                })()}`
                                             : t('noTrainer')}
                                     </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">

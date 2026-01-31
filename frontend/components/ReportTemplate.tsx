@@ -218,9 +218,11 @@ export type ReportData = {
     trainerNameJp?: string;
     trainerNameEn?: string;
     trainerLocation?: string;
+    trainerLocationEn?: string;
     birthDate?: string;
     age?: number | null;
     outputMode?: 'pdf' | 'print';
+    showLogo?: boolean;
     mainPhoto: string;
     // statusEn/Jp deprecated but kept for compatibility if needed, prefer trainingStatus
     statusEn?: string;
@@ -307,9 +309,11 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         trainerNameJp: '',
         trainerNameEn: '',
         trainerLocation: '',
+        trainerLocationEn: '',
         birthDate: '',
         age: null,
         outputMode: 'pdf',
+        showLogo: true,
         mainPhoto: '',
         originalPhoto: '',
         trainingStatusEn: 'Training',
@@ -332,6 +336,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const isPrintMode = data.outputMode === 'print';
+    const showLogo = data.showLogo ?? !isPrintMode;
 
     // --- Cropper State ---
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -653,6 +658,19 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                                     </label>
                                 </div>
+
+                                <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                                    <input
+                                        id="show-logo-toggle"
+                                        type="checkbox"
+                                        checked={data.showLogo ?? true}
+                                        onChange={(e) => setData({ ...data, showLogo: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
+                                    />
+                                    <label htmlFor="show-logo-toggle" className="select-none">
+                                        Show logo on PDF/Print
+                                    </label>
+                                </div>
                             </div>
                         </section>
 
@@ -883,7 +901,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Centered Watermark Logo - 150px (Reduced size as requested) */}
                         {/* Centered Watermark Logo - 150px (Reduced size as requested, Moved Up) */}
-                        {!isPrintMode && (
+                        {showLogo && (
                             <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-75 pointer-events-none logo-container">
                                 <Image
                                     src="/hamagiku-logo.png"
@@ -932,7 +950,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
 
-                        <div className="owner-line text-[12px] text-[#666] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
+                        <div className="owner-line text-[12px] text-[#444] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
                             <span className="font-bold mr-1">{t('owner')}:</span>
                             {formatOwnerName(data.ownerName)}
                             <span className="mx-2 text-gray-300">/</span>
@@ -940,7 +958,12 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             {lang === 'ja'
                                 ? (data.trainerNameJp || data.trainerNameEn || '-')
                                 : (data.trainerNameEn || data.trainerNameJp || '-')}
-                            {data.trainerLocation ? ` (${data.trainerLocation})` : ''}
+                            {(() => {
+                                const loc = lang === 'ja'
+                                    ? data.trainerLocation
+                                    : (data.trainerLocationEn || data.trainerLocation);
+                                return loc ? ` (${loc})` : '';
+                            })()}
                             <span className="mx-2 text-gray-300">/</span>
                             <span className="font-bold mr-1">{t('birthDate')}:</span>
                             {data.birthDate || '-'}

@@ -84,7 +84,7 @@ export default function ReportEditor() {
                         // Fetch horse details to prepopulate
                         const { data: horse, error: hErr } = await supabase
                             .from('horses')
-                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
+                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en, report_output_mode)')
                             .eq('id', paramHorseId)
                             .single();
                         if (hErr) throw hErr;
@@ -135,6 +135,7 @@ export default function ReportEditor() {
                                 birthDate: horse?.birth_date || '',
                                 age: calculateHorseAge(horse?.birth_date),
                                 outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+                                showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
                                 mainPhoto: horse?.photo_url || '',
                                 originalPhoto: horse?.photo_url || '',
                                 statusEn: 'Training', statusJp: '調整中',
@@ -163,11 +164,11 @@ export default function ReportEditor() {
                 if (!report) throw new Error("Report not found");
 
                 // Fetch Horse Data
-                const { data: horse, error: hErr2 } = await supabase
-                    .from('horses')
-                    .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
-                    .eq('id', report.horse_id)
-                    .single();
+                        const { data: horse, error: hErr2 } = await supabase
+                            .from('horses')
+                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en, report_output_mode)')
+                            .eq('id', report.horse_id)
+                            .single();
                 if (hErr2) throw hErr2;
 
                 if (isMounted) {
@@ -177,6 +178,8 @@ export default function ReportEditor() {
                     const metrics = report.metrics_json || {};
 
                     // Map DB to ReportData
+                    const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                    const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                     setInitialData({
                         reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                         horseNameJp: horse?.name || '',
@@ -191,9 +194,11 @@ export default function ReportEditor() {
                         trainerNameJp: horse?.trainers?.trainer_name || '',
                         trainerNameEn: horse?.trainers?.trainer_name_en || '',
                         trainerLocation: horse?.trainers?.trainer_location || '',
+                        trainerLocationEn: horse?.trainers?.trainer_location_en || '',
                         birthDate: horse?.birth_date || '',
                         age: calculateHorseAge(horse?.birth_date),
-                        outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+                        outputMode: resolvedMode,
+                        showLogo: showLogo,
 
                         commentJp: report.body || '',
                         commentEn: metrics.commentEn || '',
@@ -248,7 +253,7 @@ export default function ReportEditor() {
                             if (paramHorseId) {
                                 if (isMounted) setHorseId(paramHorseId);
                                 const [horseRes, reportsRes] = await Promise.all([
-                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`, { headers }),
+                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
                                     fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&created_at=gte.${sixMonthsAgoIso}&select=created_at,weight&order=created_at.asc`, { headers })
                                 ]);
 
@@ -292,6 +297,7 @@ export default function ReportEditor() {
                                             birthDate: horse?.birth_date || '',
                                             age: calculateHorseAge(horse?.birth_date),
                                             outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+                                            showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
                                             mainPhoto: horse?.photo_url || '',
                                             originalPhoto: horse?.photo_url || '',
                                             statusEn: 'Training', statusJp: '調整中',
@@ -322,13 +328,15 @@ export default function ReportEditor() {
                             const report = rData[0];
                             if (!report) throw new Error("Report not found");
 
-                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`, { headers });
+                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers });
                             const hData = await horseRes.json();
                             const horse = hData[0];
 
                             if (isMounted) {
                                 setHorseId(report.horse_id);
                                 const metrics = report.metrics_json || {};
+                                const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                                const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                                 setInitialData({
                                     reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                                     horseNameJp: horse?.name || '',
@@ -343,9 +351,11 @@ export default function ReportEditor() {
                                     trainerNameJp: horse?.trainers?.trainer_name || '',
                                     trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                     trainerLocation: horse?.trainers?.trainer_location || '',
+                                    trainerLocationEn: horse?.trainers?.trainer_location_en || '',
                                     birthDate: horse?.birth_date || '',
                                     age: calculateHorseAge(horse?.birth_date),
-                                    outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+                                    outputMode: resolvedMode,
+                                    showLogo: showLogo,
                                     commentJp: report.body || '',
                                     commentEn: metrics.commentEn || '',
                                     weight: report.weight ? `${report.weight} kg` : '',
@@ -434,9 +444,11 @@ export default function ReportEditor() {
             trainerNameJp: horse?.trainers?.trainer_name || '',
             trainerNameEn: horse?.trainers?.trainer_name_en || '',
             trainerLocation: horse?.trainers?.trainer_location || '',
+            trainerLocationEn: horse?.trainers?.trainer_location_en || '',
             birthDate: horse?.birth_date || '',
             age: calculateHorseAge(horse?.birth_date),
             outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+            showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
             mainPhoto: horse?.photo_url || '',
             originalPhoto: horse?.photo_url || '',
             statusEn: 'Training', statusJp: '調整中',
@@ -518,7 +530,8 @@ export default function ReportEditor() {
             sireEn: d.sireEn,
             sireJp: d.sireJp,
             damEn: d.damEn,
-            damJp: d.damJp
+            damJp: d.damJp,
+            showLogo: d.showLogo ?? true
         };
 
         const payload = {
