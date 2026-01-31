@@ -84,7 +84,7 @@ const Fonts = () => (
       }
 
       #report-preview.print-mode .comment-text {
-        font-size: 12px !important;
+        font-size: 15px !important;
         line-height: 1.6 !important;
       }
 
@@ -1009,11 +1009,11 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 {t('trainersComment')}
                             </span>
                             {lang === 'ja' ? (
-                                <div className="comment-text text-[13px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold">
+                                <div className="comment-text text-[15px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold">
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className="comment-text text-[13px] leading-[1.8] text-justify font-serif-en text-[#111] whitespace-pre-wrap break-words font-semibold">
+                                <div className="comment-text text-[15px] leading-[1.8] text-justify font-serif-en text-[#111] whitespace-pre-wrap break-words font-semibold">
                                     {data.commentEn ? `"${data.commentEn}"` : ''}
                                 </div>
                             )}
