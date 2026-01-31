@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 const useResumeRefresh = (intervalMs: number = 60_000) => {
     const [refreshKey, setRefreshKey] = useState(0);
@@ -10,13 +11,23 @@ const useResumeRefresh = (intervalMs: number = 60_000) => {
     }, []);
 
     useEffect(() => {
+        const safeRefreshSession = async () => {
+            try {
+                await supabase.auth.refreshSession();
+            } catch (err) {
+                console.warn('Resume refresh: session refresh failed', err);
+            }
+        };
+
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
+                void safeRefreshSession();
                 triggerRefresh();
             }
         };
 
         const handlePageShow = (event: PageTransitionEvent) => {
+            void safeRefreshSession();
             if (event.persisted) {
                 triggerRefresh();
             } else {
@@ -25,9 +36,11 @@ const useResumeRefresh = (intervalMs: number = 60_000) => {
         };
 
         const handleOnline = () => {
+            void safeRefreshSession();
             triggerRefresh();
         };
         const handleFocus = () => {
+            void safeRefreshSession();
             triggerRefresh();
         };
 
@@ -36,7 +49,10 @@ const useResumeRefresh = (intervalMs: number = 60_000) => {
         window.addEventListener('online', handleOnline);
         window.addEventListener('focus', handleFocus);
 
-        const id = window.setInterval(triggerRefresh, intervalMs);
+        const id = window.setInterval(() => {
+            void safeRefreshSession();
+            triggerRefresh();
+        }, intervalMs);
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
