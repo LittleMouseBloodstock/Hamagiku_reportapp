@@ -32,8 +32,16 @@ type Report = {
     target: string | null;
     horse_id: string;
     main_photo_url: string | null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metrics_json?: any;
+    metrics_json?: {
+        commentEn?: string | null;
+        statusEn?: string | null;
+        targetEn?: string | null;
+        weightHistory?: { label: string; value: number }[];
+        sireEn?: string | null;
+        sireJp?: string | null;
+        damEn?: string | null;
+        damJp?: string | null;
+    };
 };
 
 export default function ClientBatchReports() {
@@ -42,8 +50,7 @@ export default function ClientBatchReports() {
     const { t } = useLanguage(); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [loading, setLoading] = useState(true);
     const refreshKey = useResumeRefresh();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [owner, setOwner] = useState<any>(null);
+    const [owner, setOwner] = useState<{ id: string; name: string; report_output_mode?: string | null } | null>(null);
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
     // Month Selection (Default: Current Month)
@@ -127,7 +134,7 @@ export default function ClientBatchReports() {
                 } else if (isMounted) {
                     setReports([]);
                 }
-            } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            } catch (error: unknown) {
                 console.error("Error loading batch reports:", error);
 
                 if (isMounted && retryCount < 2) {
@@ -150,17 +157,16 @@ export default function ClientBatchReports() {
                         const clientRes = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, { headers });
                         if (!clientRes.ok) throw new Error("Raw fetch client failed");
                         const clientData = await clientRes.json();
-                        const client = clientData[0];
+                        const client = clientData[0] as { id: string; name: string; report_output_mode?: string | null } | undefined;
                         if (isMounted && client) setOwner(client);
 
                         // 2. Fetch Horses
                         const horsesRes = await fetch(`${supabaseUrl}/rest/v1/horses?owner_id=eq.${id}&select=*`, { headers });
                         if (!horsesRes.ok) throw new Error("Raw fetch horses failed");
-                        const horses = await horsesRes.json();
+                        const horses = (await horsesRes.json()) as Horse[];
 
                         if (horses && horses.length > 0) {
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const horseIds = horses.map((h: any) => h.id).join(',');
+                            const horseIds = horses.map((h: Horse) => h.id).join(',');
 
                             const startOfMonth = `${selectedDate}-01`;
                             const nextMonthDate = new Date(selectedDate + "-01");
@@ -171,12 +177,12 @@ export default function ClientBatchReports() {
                             // REST syntax for IN: column=in.(val1,val2)
                             const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=in.(${horseIds})&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`, { headers });
                             if (!reportsRes.ok) throw new Error("Raw fetch reports failed");
-                            const reportsData = await reportsRes.json();
+                            const reportsData = (await reportsRes.json()) as Report[];
 
                             if (isMounted && reportsData) {
-                            const formattedReports = reportsData.map((r: any) => {
-                                const horse = horses.find((h: any) => h.id === r.horse_id);
-                                if (!horse) return null;
+                                const formattedReports = reportsData.map((r: Report) => {
+                                    const horse = horses.find((h: Horse) => h.id === r.horse_id);
+                                    if (!horse) return null;
 
                                     const metrics = r.metrics_json || {};
                                     const rData: ReportData = {
@@ -204,7 +210,7 @@ export default function ClientBatchReports() {
                                         logo: null
                                     };
                                     return { report: r, horse: horse, data: rData };
-                            }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                                }).filter((item): item is { report: Report, horse: Horse, data: ReportData } => item !== null);
                                 setReports(formattedReports);
                             } else if (isMounted) setReports([]);
                         } else if (isMounted) setReports([]);

@@ -98,12 +98,6 @@ export default function ReportEditor() {
                             .order('created_at', { ascending: true });
                         if (rErr) throw rErr;
 
-                        const { data: lastReport } = await supabase
-                            .from('reports')
-                            .select('created_at')
-                            .eq('horse_id', paramHorseId)
-                            .order('created_at', { ascending: false })
-                            .limit(1);
                         const latestWeight = await fetchLatestWeight(paramHorseId);
 
                         const weightHistory = reports?.map(r => {
@@ -259,11 +253,6 @@ export default function ReportEditor() {
                                     const rData = await reportsRes.json();
                                     const horse = hData[0];
 
-                                    const lastReportRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=created_at&order=created_at.desc&limit=1`, { headers });
-                                    if (lastReportRes.ok) {
-                                        await lastReportRes.json();
-                                    }
-
                                     const weightUrl = `${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&select=weight,measured_at&order=measured_at.desc&limit=1`;
                                     const weightRes = await fetch(weightUrl, { headers });
                                     const weightData = weightRes.ok ? await weightRes.json() : [];
@@ -408,12 +397,6 @@ export default function ReportEditor() {
             .gte('created_at', sixMonthsAgoIso)
             .order('created_at', { ascending: true });
 
-        const { data: lastReport } = await supabase
-            .from('reports')
-            .select('created_at')
-            .eq('horse_id', selectedHorseId)
-            .order('created_at', { ascending: false })
-            .limit(1);
         const latestWeight = await fetchLatestWeight(selectedHorseId);
 
         const weightHistory = reports?.map(r => {
