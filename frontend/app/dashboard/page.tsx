@@ -54,6 +54,11 @@ export default function Dashboard() {
         let isMounted = true;
         const fetchReports = async (retryCount = 0) => {
             try {
+                const { data: authData } = await supabase.auth.getUser();
+                if (!authData?.user && retryCount < 2) {
+                    await supabase.auth.refreshSession();
+                }
+
                 // 1. Fetch Reports
                 const { data, error } = await supabase
                     .from('reports')
@@ -82,8 +87,12 @@ export default function Dashboard() {
                     && typedData.length === 0;
 
                 if (isEmptySnapshot && retryCount < 2) {
-                    const { data: authData, error: authErr } = await supabase.auth.getUser();
-                    if (authErr || !authData?.user) {
+                    const { data: freshAuth } = await supabase.auth.getUser();
+                    if (!freshAuth?.user) {
+                        await supabase.auth.refreshSession();
+                    }
+                    const { data: verifiedAuth } = await supabase.auth.getUser();
+                    if (!verifiedAuth?.user) {
                         console.warn('Dashboard auth invalid, signing out');
                         await supabase.auth.signOut();
                         router.replace('/login');
@@ -186,8 +195,12 @@ export default function Dashboard() {
                                 && typedRaw.length === 0;
 
                             if (isEmptySnapshot && retryCount < 2) {
-                                const { data: authData, error: authErr } = await supabase.auth.getUser();
-                                if (authErr || !authData?.user) {
+                                const { data: freshAuth } = await supabase.auth.getUser();
+                                if (!freshAuth?.user) {
+                                    await supabase.auth.refreshSession();
+                                }
+                                const { data: verifiedAuth } = await supabase.auth.getUser();
+                                if (!verifiedAuth?.user) {
                                     console.warn('Dashboard auth invalid (fallback), signing out');
                                     await supabase.auth.signOut();
                                     router.replace('/login');
