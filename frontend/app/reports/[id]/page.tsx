@@ -547,15 +547,23 @@ export default function ReportEditor() {
         }
 
         // Update Horse (Name/Sire/Dam/Photo if changed)
+        // Do not block report save if horse update fails.
         if (horseId) {
-            await supabase.from('horses').update({
-                name: d.horseNameJp,
-                name_en: d.horseNameEn,
-                sire: d.sire,
-                dam: d.dam,
-                photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
-                updated_at: new Date().toISOString()
-            }).eq('id', horseId);
+            try {
+                const { error: horseUpdateError } = await supabase.from('horses').update({
+                    name: d.horseNameJp,
+                    name_en: d.horseNameEn,
+                    sire: d.sire,
+                    dam: d.dam,
+                    photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
+                    updated_at: new Date().toISOString()
+                }).eq('id', horseId);
+                if (horseUpdateError) {
+                    console.warn('Horse update failed:', horseUpdateError);
+                }
+            } catch (horseUpdateError) {
+                console.warn('Horse update failed:', horseUpdateError);
+            }
         }
 
         setSaving(false);
