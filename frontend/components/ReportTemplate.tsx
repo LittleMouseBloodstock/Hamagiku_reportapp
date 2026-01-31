@@ -335,8 +335,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     };
 
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
-    const isPrintMode = data.outputMode === 'print';
-    const showLogo = data.showLogo ?? !isPrintMode;
+    const showLogo = data.showLogo ?? (data.outputMode !== 'print');
+    const isPrintMode = data.outputMode === 'print' || !showLogo;
 
     // --- Cropper State ---
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
