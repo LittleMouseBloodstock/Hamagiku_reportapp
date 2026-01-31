@@ -56,9 +56,6 @@ export default function ReportEditor() {
                 .eq('horse_id', horseId)
                 .order('measured_at', { ascending: false })
                 .limit(1);
-            if (lastReportDate) {
-                query = query.gt('measured_at', lastReportDate);
-            }
             const { data, error } = await query;
             if (error) throw error;
             return data?.[0]?.weight ?? null;
@@ -126,7 +123,11 @@ export default function ReportEditor() {
                                 horseNameJp: horse?.name || '',
                                 horseNameEn: horse?.name_en || '',
                                 sire: horse?.sire || '',
+                                sireEn: horse?.sire_en || '',
+                                sireJp: horse?.sire || '',
                                 dam: horse?.dam || '',
+                                damEn: horse?.dam_en || '',
+                                damJp: horse?.dam || '',
                                 ownerName: horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -181,11 +182,11 @@ export default function ReportEditor() {
                         horseNameJp: horse?.name || '',
                         horseNameEn: horse?.name_en || '',
                         sire: horse?.sire || '',
-                        sireEn: metrics.sireEn || '',
-                        sireJp: metrics.sireJp || '',
+                        sireEn: horse?.sire_en || metrics.sireEn || '',
+                        sireJp: horse?.sire || metrics.sireJp || '',
                         dam: horse?.dam || '',
-                        damEn: metrics.damEn || '',
-                        damJp: metrics.damJp || '',
+                        damEn: horse?.dam_en || metrics.damEn || '',
+                        damJp: horse?.dam || metrics.damJp || '',
                         ownerName: horse?.clients?.name || '',
                         trainerNameJp: horse?.trainers?.trainer_name || '',
                         trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -256,15 +257,12 @@ export default function ReportEditor() {
                                     const rData = await reportsRes.json();
                                     const horse = hData[0];
 
-                                    let lastReportDate: string | null = null;
                                     const lastReportRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=created_at&order=created_at.desc&limit=1`, { headers });
                                     if (lastReportRes.ok) {
-                                        const lastData = await lastReportRes.json();
-                                        const lastCreated = lastData?.[0]?.created_at;
-                                        lastReportDate = lastCreated ? new Date(lastCreated).toISOString().slice(0, 10) : null;
+                                        await lastReportRes.json();
                                     }
 
-                                    const weightUrl = `${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&select=weight,measured_at&order=measured_at.desc&limit=1` + (lastReportDate ? `&measured_at=gt.${lastReportDate}` : '');
+                                    const weightUrl = `${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&select=weight,measured_at&order=measured_at.desc&limit=1`;
                                     const weightRes = await fetch(weightUrl, { headers });
                                     const weightData = weightRes.ok ? await weightRes.json() : [];
                                     const latestWeight = weightData?.[0]?.weight ?? null;
@@ -282,7 +280,11 @@ export default function ReportEditor() {
                                             horseNameJp: horse?.name || '',
                                             horseNameEn: horse?.name_en || '',
                                             sire: horse?.sire || '',
+                                            sireEn: horse?.sire_en || '',
+                                            sireJp: horse?.sire || '',
                                             dam: horse?.dam || '',
+                                            damEn: horse?.dam_en || '',
+                                            damJp: horse?.dam || '',
                                             ownerName: horse?.clients?.name || '',
                                             trainerNameJp: horse?.trainers?.trainer_name || '',
                                             trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -332,11 +334,11 @@ export default function ReportEditor() {
                                     horseNameJp: horse?.name || '',
                                     horseNameEn: horse?.name_en || '',
                                     sire: horse?.sire || '',
-                                    sireEn: metrics.sireEn || '',
-                                    sireJp: metrics.sireJp || '',
+                                    sireEn: horse?.sire_en || metrics.sireEn || '',
+                                    sireJp: horse?.sire || metrics.sireJp || '',
                                     dam: horse?.dam || '',
-                                    damEn: metrics.damEn || '',
-                                    damJp: metrics.damJp || '',
+                                    damEn: horse?.dam_en || metrics.damEn || '',
+                                    damJp: horse?.dam || metrics.damJp || '',
                                     ownerName: horse?.clients?.name || '',
                                     trainerNameJp: horse?.trainers?.trainer_name || '',
                                     trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -423,7 +425,11 @@ export default function ReportEditor() {
             horseNameJp: horse?.name || '',
             horseNameEn: horse?.name_en || '',
             sire: horse?.sire || '',
+            sireEn: horse?.sire_en || '',
+            sireJp: horse?.sire || '',
             dam: horse?.dam || '',
+            damEn: horse?.dam_en || '',
+            damJp: horse?.dam || '',
             ownerName: horse?.clients?.name || '',
             trainerNameJp: horse?.trainers?.trainer_name || '',
             trainerNameEn: horse?.trainers?.trainer_name_en || '',

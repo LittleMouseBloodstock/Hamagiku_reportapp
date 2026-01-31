@@ -17,7 +17,9 @@ type Horse = {
     owner_id: string;
     photo_url: string | null;
     sire: string;
+    sire_en?: string | null;
     dam: string;
+    dam_en?: string | null;
 };
 
 type Report = {
@@ -96,11 +98,11 @@ export default function ClientBatchReports() {
                                 horseNameJp: horse.name,
                                 horseNameEn: horse.name_en,
                                 sire: horse.sire,
-                                sireEn: metrics.sireEn || '',
-                                sireJp: metrics.sireJp || '',
+                                sireEn: horse.sire_en || metrics.sireEn || '',
+                                sireJp: horse.sire || metrics.sireJp || '',
                                 dam: horse.dam,
-                                damEn: metrics.damEn || '',
-                                damJp: metrics.damJp || '',
+                                damEn: horse.dam_en || metrics.damEn || '',
+                                damJp: horse.dam || metrics.damJp || '',
                                 commentJp: r.body || '',
                                 commentEn: metrics.commentEn || '',
                                 weight: r.weight ? `${r.weight}kg` : '',
@@ -185,11 +187,11 @@ export default function ClientBatchReports() {
                                         horseNameJp: horse.name,
                                         horseNameEn: horse.name_en,
                                         sire: horse.sire,
-                                        sireEn: metrics.sireEn || '',
-                                        sireJp: metrics.sireJp || '',
+                                        sireEn: horse.sire_en || metrics.sireEn || '',
+                                        sireJp: horse.sire || metrics.sireJp || '',
                                         dam: horse.dam,
-                                        damEn: metrics.damEn || '',
-                                        damJp: metrics.damJp || '',
+                                        damEn: horse.dam_en || metrics.damEn || '',
+                                        damJp: horse.dam || metrics.damJp || '',
                                         commentJp: r.body || '',
                                         commentEn: metrics.commentEn || '',
                                         weight: r.weight ? `${r.weight}kg` : '',
