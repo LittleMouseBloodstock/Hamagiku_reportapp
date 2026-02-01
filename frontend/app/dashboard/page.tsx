@@ -12,6 +12,8 @@ export default function Dashboard() {
     const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
     const refreshKey = useResumeRefresh();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     interface DashboardReport {
         id: string;
@@ -49,9 +51,6 @@ export default function Dashboard() {
 
     useEffect(() => {
         let isMounted = true;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
         const getRestHeaders = () => {
             if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
                 throw new Error('Missing env vars or access token for REST');
