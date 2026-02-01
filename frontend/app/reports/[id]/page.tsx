@@ -178,8 +178,8 @@ export default function ReportEditor() {
                     const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                     setInitialData({
                         reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
-                        horseNameJp: horse?.name || '',
-                        horseNameEn: horse?.name_en || '',
+                        horseNameJp: metrics.horseNameJp || horse?.name || '',
+                        horseNameEn: metrics.horseNameEn || horse?.name_en || '',
                         sire: horse?.sire || '',
                         sireEn: horse?.sire_en || metrics.sireEn || '',
                         sireJp: horse?.sire || metrics.sireJp || '',
@@ -533,7 +533,9 @@ export default function ReportEditor() {
             sireJp: d.sireJp,
             damEn: d.damEn,
             damJp: d.damJp,
-            showLogo: d.showLogo ?? true
+            showLogo: d.showLogo ?? true,
+            horseNameJp: d.horseNameJp,
+            horseNameEn: d.horseNameEn
         };
 
         const payload = {
