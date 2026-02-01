@@ -101,7 +101,7 @@ export default function ClientBatchReports() {
                 const nextMonthKey = nextMonthDate.toISOString().slice(0, 7).replace('-', '.');
 
                 const reportsData = await restGet(
-                    `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
+                    `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
                     `&title=gte.${monthKey}` +
                     `&title=lt.${nextMonthKey}` +
