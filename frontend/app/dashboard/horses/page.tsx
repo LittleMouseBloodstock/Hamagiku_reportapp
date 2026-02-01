@@ -24,6 +24,8 @@ export default function HorsesPage() {
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
     const refreshKey = useResumeRefresh();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     const calculateHorseAge = (birthDate?: string | null) => {
         if (!birthDate) return '';
@@ -49,9 +51,6 @@ export default function HorsesPage() {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
         const getRestHeaders = () => {
             if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
                 throw new Error('Missing env vars or access token for REST');
