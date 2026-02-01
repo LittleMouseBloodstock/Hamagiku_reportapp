@@ -20,6 +20,7 @@ export default function ReportEditor() {
     const [saving, setSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [reviewStatus, setReviewStatus] = useState<string>('draft');
+    const [isDirty, setIsDirty] = useState(false);
 
     // Initial Data for Template
     const [initialData, setInitialData] = useState<Partial<ReportData>>({});
@@ -84,6 +85,7 @@ export default function ReportEditor() {
 
     useEffect(() => {
         if (!id || !user) return; // Wait for user
+        if (!isNew && isDirty) return; // Don't overwrite while editing
 
         let isMounted = true;
         const fetchReportData = async (retryCount = 0) => {
@@ -116,8 +118,8 @@ export default function ReportEditor() {
                             };
                         }).filter((item: { value: number }) => item.value > 0) || [];
 
-                        if (isMounted) {
-                            setInitialData({
+                    if (isMounted) {
+                        setInitialData({
                                 reportDate: defaultDate,
                                 horseNameJp: horse?.name || '',
                                 horseNameEn: horse?.name_en || '',
@@ -212,9 +214,10 @@ export default function ReportEditor() {
                         logo: null
                     });
 
-                    setReviewStatus(report.review_status || 'draft');
-                    setLoading(false);
-                }
+                        setReviewStatus(report.review_status || 'draft');
+                        setIsDirty(false);
+                        setLoading(false);
+                    }
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const msg = String(error?.message || '');
                 const isAbort = msg.includes('AbortError');
@@ -386,6 +389,7 @@ export default function ReportEditor() {
         setHorseId(selectedHorseId);
         setShowHorseSelector(false);
         setLoading(true);
+        setIsDirty(false);
         const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -439,6 +443,7 @@ export default function ReportEditor() {
 
     const handleDataChange = useCallback((data: ReportData) => {
         reportDataRef.current = data;
+        setIsDirty(true);
     }, []);
 
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
@@ -597,8 +602,9 @@ export default function ReportEditor() {
             }
         }
 
-            setSaving(false);
-            setLastSaved(new Date());
+        setSaving(false);
+        setLastSaved(new Date());
+        setIsDirty(false);
 
             if (isNew && newReportId) {
                 router.replace(`/reports/${newReportId}`);
@@ -624,15 +630,21 @@ export default function ReportEditor() {
         if (!confirm(`Change status to "${newStatus}"?`)) return;
 
         setSaving(true);
-        const { error } = await supabase
-            .from('reports')
-            .update({ review_status: newStatus })
-            .eq('id', id);
-
-        if (error) {
-            alert("Error updating status: " + error.message);
-        } else {
+        try {
+            const headers = getRestHeaders();
+            const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ review_status: newStatus })
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Status update failed: ${res.status} ${text}`);
+            }
             setReviewStatus(newStatus);
+        } catch (error) {
+            const msg = (error as { message?: string })?.message || JSON.stringify(error);
+            alert("Error updating status: " + msg);
         }
         setSaving(false);
     };
