@@ -108,7 +108,7 @@ export default function ReportEditor() {
 
                         const latestWeight = await fetchLatestWeight(paramHorseId);
 
-                        const weightHistory = weights?.map(r => {
+                        const weightHistory = weights?.map((r: { measured_at: string; weight: number | null }) => {
                             const d = new Date(r.measured_at);
                             return {
                                 label: `${d.getMonth() + 1}月`,
@@ -400,7 +400,7 @@ export default function ReportEditor() {
 
         const latestWeight = await fetchLatestWeight(selectedHorseId);
 
-        const weightHistory = weights?.map(r => {
+        const weightHistory = weights?.map((r: { measured_at: string; weight: number | null }) => {
             const d = new Date(r.measured_at);
             return {
                 label: `${d.getMonth() + 1}月`,
