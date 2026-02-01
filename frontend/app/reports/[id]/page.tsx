@@ -214,17 +214,15 @@ export default function ReportEditor() {
                 }
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const msg = String(error?.message || '');
-                if (msg.includes('AbortError') && isMounted) {
-                    if (retryCount < 3) {
-                        console.warn('Report load aborted, retrying...', { retryCount });
-                        setTimeout(() => fetchReportData(retryCount + 1), 800);
-                        return;
-                    }
+                const isAbort = msg.includes('AbortError');
+                if (isAbort && isMounted) {
+                    console.warn('Report load aborted; switching to raw fetch fallback');
+                } else {
+                    console.error("Error loading report data:", error);
                 }
-                console.error("Error loading report data:", error);
 
-                // Retry logic
-                if (isMounted && retryCount < 2) {
+                // Retry logic (skip supabase retry if AbortError)
+                if (!isAbort && isMounted && retryCount < 2) {
                     console.log(`Retrying report load... (${retryCount + 1})`);
                     setTimeout(() => fetchReportData(retryCount + 1), 500);
                 } else if (isMounted && session?.access_token) {
