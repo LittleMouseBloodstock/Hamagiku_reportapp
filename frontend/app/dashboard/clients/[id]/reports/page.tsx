@@ -42,6 +42,7 @@ type Report = {
         damJp?: string | null;
     };
 };
+type ReportRow = Report & { horses?: Horse | null };
 
 export default function ClientBatchReports() {
     const { id } = useParams(); // Client ID
@@ -93,24 +94,23 @@ export default function ClientBatchReports() {
                 const client = clientRaw && clientRaw.length > 0 ? clientRaw[0] : null;
                 if (isMounted && client) setOwner(client);
 
-                // 2. Fetch Horses owned by client
-                const horses = await restGet(`horses?select=*&owner_id=eq.${id}`);
+                // 2. Fetch Reports for horses owned by client in the selected month
+                const startOfMonth = `${selectedDate}-01`;
+                const nextMonthDate = new Date(selectedDate + "-01");
+                nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+                const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
 
-                if (horses && horses.length > 0) {
-                    const horseIds = horses.map((h: Horse) => h.id);
+                const reportsData = await restGet(
+                    `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
+                    `&horses.owner_id=eq.${id}` +
+                    `&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}` +
+                    `&order=horse_id`
+                ) as ReportRow[];
 
-                    // 3. Fetch Reports for these horses in the selected month
-                    const startOfMonth = `${selectedDate}-01`;
-                    const nextMonthDate = new Date(selectedDate + "-01");
-                    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-                    const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
-
-                    const idsFilter = encodeURIComponent(`(${horseIds.join(',')})`);
-                    const reportsData = await restGet(`reports?select=*&horse_id=in.${idsFilter}&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`) as Report[];
-
-                    if (isMounted && reportsData) {
-                        const formattedReports = reportsData.map((r: Report) => {
-                            const horse = horses.find((h: Horse) => h.id === r.horse_id);
+                if (isMounted) {
+                    if (Array.isArray(reportsData) && reportsData.length > 0) {
+                        const formattedReports = reportsData.map((r: ReportRow) => {
+                            const horse = r.horses;
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
@@ -142,11 +142,9 @@ export default function ClientBatchReports() {
                         }).filter((item): item is { report: Report; horse: Horse; data: ReportData } => item !== null);
 
                         setReports(formattedReports);
-                    } else if (isMounted) {
+                    } else {
                         setReports([]);
                     }
-                } else if (isMounted) {
-                    setReports([]);
                 }
             } catch (error: unknown) {
                 console.error("Error loading batch reports:", error);
