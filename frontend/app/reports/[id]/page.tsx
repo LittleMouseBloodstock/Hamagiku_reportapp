@@ -481,6 +481,7 @@ export default function ReportEditor() {
             return;
         }
 
+        console.log('[save] start', { id, horseId, isNew });
         setSaving(true);
         const d = reportDataRef.current;
         const saveTimeout = window.setTimeout(() => {
@@ -495,14 +496,17 @@ export default function ReportEditor() {
         // const logoUrl = d.logo; // Unused
 
         try {
+            console.log('[save] before refreshSession');
             // Try to refresh session, but don't block save if it hangs
             await Promise.race([
                 supabase.auth.refreshSession(),
                 new Promise<void>((resolve) => setTimeout(resolve, 3000))
             ]);
+            console.log('[save] after refreshSession');
 
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
             if (isNewPhoto && !isSameAsOriginal) {
+                console.log('[save] uploading photo');
                 const fileName = `main_${Date.now()}.jpg`;
                 const reportPathId = isNew ? `temp_${Date.now()}` : id;
                 const path = `${horseId}/${reportPathId}/${fileName}`;
@@ -522,6 +526,7 @@ export default function ReportEditor() {
                     window.clearTimeout(saveTimeout);
                     return;
                 }
+                console.log('[save] upload done');
             } else if (isSameAsOriginal) {
                 mainPhotoUrl = d.originalPhoto || d.mainPhoto;
             }
@@ -554,6 +559,7 @@ export default function ReportEditor() {
             let resultError = null;
             let newReportId = null;
 
+            console.log('[save] before reports write');
             if (isNew) {
                 // INSERT
                 const { data, error } = await supabase.from('reports').insert(payload).select().single();
@@ -564,6 +570,7 @@ export default function ReportEditor() {
                 const { error } = await supabase.from('reports').update(payload).eq('id', id);
                 resultError = error;
             }
+            console.log('[save] after reports write', { ok: !resultError });
 
             if (resultError) {
                 console.error("Save Error:", resultError);
