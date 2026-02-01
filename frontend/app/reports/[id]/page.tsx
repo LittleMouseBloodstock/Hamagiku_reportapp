@@ -488,7 +488,7 @@ export default function ReportEditor() {
             console.warn('Save timed out, resetting UI');
             setSaving(false);
             alert('Save is taking too long. Please try again.');
-        }, 15000);
+        }, 25000);
 
         let mainPhotoUrl = d.mainPhoto;
         const isNewPhoto = !!d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'));
@@ -587,6 +587,12 @@ export default function ReportEditor() {
 
             if (resultError) {
                 console.warn('Primary write failed, attempting REST fallback...', resultError);
+                window.clearTimeout(saveTimeout);
+                const fallbackTimeout = window.setTimeout(() => {
+                    console.warn('Save fallback timed out, resetting UI');
+                    setSaving(false);
+                    alert('Save is taking too long. Please try again.');
+                }, 15000);
                 try {
                     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
                     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -626,11 +632,13 @@ export default function ReportEditor() {
                         }
                     }
                     resultError = null;
+                    window.clearTimeout(fallbackTimeout);
                 } catch (fallbackErr) {
                     console.error('Fallback save failed:', fallbackErr);
                     const msg = (fallbackErr as { message?: string })?.message || JSON.stringify(fallbackErr);
                     alert('Error saving report: ' + msg);
                     setSaving(false);
+                    window.clearTimeout(fallbackTimeout);
                     window.clearTimeout(saveTimeout);
                     return;
                 }
