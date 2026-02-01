@@ -49,33 +49,56 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        // Don't short-circuit on user; allow refreshKey/visibility to drive refetch
-
         let isMounted = true;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        const getRestHeaders = () => {
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            return {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            };
+        };
+
+        const restGet = async (path: string) => {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+                headers: getRestHeaders()
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`REST GET failed: ${res.status} ${text}`);
+            }
+            return res.json();
+        };
+
+        const restCount = async (path: string) => {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+                method: 'HEAD',
+                headers: {
+                    ...getRestHeaders(),
+                    'Prefer': 'count=exact'
+                }
+            });
+            if (!res.ok) return 0;
+            const range = res.headers.get('content-range') || '';
+            const total = range.split('/')[1];
+            return Number(total || 0);
+        };
+
         const fetchReports = async (retryCount = 0) => {
             try {
-                const { data: authData } = await supabase.auth.getUser();
-                if (!authData?.user && retryCount < 2) {
-                    await supabase.auth.refreshSession();
-                }
+                if (!session?.access_token) return;
 
-                // 1. Fetch Reports
-                const { data, error } = await supabase
-                    .from('reports')
-                    .select('*, review_status, horse_id, horses(name, name_en)')
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                // 2. Fetch Stats Counts
-                const { count: reportsCount, error: err1 } = await supabase.from('reports').select('*', { count: 'exact', head: true });
-                if (err1) throw err1;
-
-                const { count: horsesCount, error: err2 } = await supabase.from('horses').select('*', { count: 'exact', head: true });
-                if (err2) throw err2;
-
-                const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true });
-                if (err3) throw err3;
+                const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc');
+                const [reportsCount, horsesCount, clientsCount] = await Promise.all([
+                    restCount('reports?select=*'),
+                    restCount('horses?select=*'),
+                    restCount('clients?select=*')
+                ]);
 
                 const typedData = (data || []) as ReportRow[];
                 const pendingCount = typedData.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
@@ -87,19 +110,8 @@ export default function Dashboard() {
                     && typedData.length === 0;
 
                 if (isEmptySnapshot && retryCount < 2) {
-                    const { data: freshAuth } = await supabase.auth.getUser();
-                    if (!freshAuth?.user) {
-                        await supabase.auth.refreshSession();
-                    }
-                    const { data: verifiedAuth } = await supabase.auth.getUser();
-                    if (!verifiedAuth?.user) {
-                        console.warn('Dashboard auth invalid, signing out');
-                        await supabase.auth.signOut();
-                        router.replace('/login');
-                        return;
-                    }
                     console.warn('Dashboard empty snapshot detected, retrying fetch...');
-                    setTimeout(() => fetchReports(retryCount + 1), 500);
+                    setTimeout(() => fetchReports(retryCount + 1), 800);
                     return;
                 }
 
@@ -114,16 +126,11 @@ export default function Dashboard() {
                     });
 
                     const formatted = typedData.map((r) => {
-                        // Determine title
                         const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
-                        // Determine languages
                         const langs = [];
                         if (r.body) langs.push('JP');
                         if (r.metrics_json?.commentEn) langs.push('EN');
                         if (langs.length === 0) langs.push('JP');
-
-                        // Safe Status logic
-                        // Fallback to 'status_training' or default 'draft'
                         const statusRaw = r.review_status || r.status_training || 'draft';
 
                         return {
@@ -140,112 +147,16 @@ export default function Dashboard() {
                     setReports(formatted);
                 }
             } catch (err: unknown) {
+                const msg = String((err as Error)?.message || '');
+                if (msg.includes('AbortError') && isMounted && retryCount < 3) {
+                    console.warn('Dashboard fetch aborted; retrying...', { retryCount });
+                    setTimeout(() => fetchReports(retryCount + 1), 800);
+                    return;
+                }
                 console.error("Dashboard fetch error:", err);
-                // Retry specifically for AbortError or network glitches
                 if (isMounted && retryCount < 2) {
-                    console.log(`Retrying fetch... (${retryCount + 1})`);
-                    setTimeout(() => fetchReports(retryCount + 1), 500);
+                    setTimeout(() => fetchReports(retryCount + 1), 800);
                 } else if (isMounted) {
-                    // FALLBACK: Try raw fetch if Supabase client fails (e.g. AbortError due to locks)
-                    if (session?.access_token) {
-                        try {
-                            console.warn('Attempting raw fetch fallback...');
-                            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                            const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-                            if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                            // 1. Reports Fetch
-                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc`, {
-                                headers: {
-                                    'apikey': anonKey,
-                                    'Authorization': `Bearer ${session.access_token}`
-                                }
-                            });
-                            if (!reportsRes.ok) throw new Error('Raw fetch failed');
-                            const rawData = await reportsRes.json();
-
-                            // 2. Stats Fetch (Raw HEAD requests)
-                            const [reportsHead, horsesHead, clientsHead] = await Promise.all([
-                                fetch(`${supabaseUrl}/rest/v1/reports?select=*`, {
-                                    method: 'HEAD',
-                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
-                                }),
-                                fetch(`${supabaseUrl}/rest/v1/horses?select=*`, {
-                                    method: 'HEAD',
-                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
-                                }),
-                                fetch(`${supabaseUrl}/rest/v1/clients?select=*`, {
-                                    method: 'HEAD',
-                                    headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
-                                })
-                            ]);
-
-                            const reportsCount = reportsHead.headers.get('content-range')?.split('/')[1] || 0;
-                            const horsesCount = horsesHead.headers.get('content-range')?.split('/')[1] || 0;
-                            const clientsCount = clientsHead.headers.get('content-range')?.split('/')[1] || 0;
-
-                            const typedRaw = (rawData || []) as ReportRow[];
-                            const pendingCount = typedRaw.filter((r) => r.review_status === 'pending_jp_check' || r.review_status === 'pending_en_check').length || 0;
-                            const draftCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
-                            const approvedCount = typedRaw.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
-                            const isEmptySnapshot = Number(reportsCount) === 0
-                                && Number(horsesCount) === 0
-                                && Number(clientsCount) === 0
-                                && typedRaw.length === 0;
-
-                            if (isEmptySnapshot && retryCount < 2) {
-                                const { data: freshAuth } = await supabase.auth.getUser();
-                                if (!freshAuth?.user) {
-                                    await supabase.auth.refreshSession();
-                                }
-                                const { data: verifiedAuth } = await supabase.auth.getUser();
-                                if (!verifiedAuth?.user) {
-                                    console.warn('Dashboard auth invalid (fallback), signing out');
-                                    await supabase.auth.signOut();
-                                    router.replace('/login');
-                                    return;
-                                }
-                                console.warn('Dashboard empty snapshot detected (fallback), retrying fetch...');
-                                setTimeout(() => fetchReports(retryCount + 1), 500);
-                                return;
-                            }
-
-                            if (isMounted) {
-                                setStats({
-                                    totalReports: Number(reportsCount),
-                                    activeHorses: Number(horsesCount),
-                                    clients: Number(clientsCount),
-                                    pendingReview: pendingCount,
-                                    draftReports: draftCount,
-                                    approvedReports: approvedCount
-                                });
-                                // Format data
-                                const formatted = typedRaw.map((r) => {
-                                    const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
-                                    const langs = [];
-                                    if (r.body) langs.push('JP');
-                                    if (r.metrics_json?.commentEn) langs.push('EN');
-                                    if (langs.length === 0) langs.push('JP');
-                                    const statusRaw = r.review_status || r.status_training || 'draft';
-                                    return {
-                                        id: r.id,
-                                        title: title,
-                                        created: r.created_at ? new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
-                                        author: 'You',
-                                        status: statusRaw,
-                                        languages: langs,
-                                        horses: r.horses,
-                                        horse_id: r.horse_id
-                                    };
-                                }) || [];
-                                setReports(formatted);
-                                return; // Success!
-                            }
-                        } catch (fallbackErr) {
-                            console.error('Fallback fetch also failed:', fallbackErr);
-                        }
-                    }
                     setReports([]);
                 }
             }
