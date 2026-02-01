@@ -33,6 +33,31 @@ export default function ReportEditor() {
     const reportDataRef = useRef<ReportData | null>(null);
 
     const { user, session } = useAuth(); // Add useAuth
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+    };
+
+    const restGet = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            headers: getRestHeaders()
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST GET failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
 
     const calculateHorseAge = (birthDate?: string | null) => {
         if (!birthDate) return null;
@@ -50,14 +75,7 @@ export default function ReportEditor() {
 
     const fetchLatestWeight = async (horseId: string) => {
         try {
-            const query = supabase
-                .from('horse_weights')
-                .select('weight, measured_at')
-                .eq('horse_id', horseId)
-                .order('measured_at', { ascending: false })
-                .limit(1);
-            const { data, error } = await query;
-            if (error) throw error;
+            const data = await restGet(`horse_weights?horse_id=eq.${horseId}&select=weight,measured_at&order=measured_at.desc&limit=1`);
             return data?.[0]?.weight ?? null;
         } catch {
             return null;
@@ -82,21 +100,11 @@ export default function ReportEditor() {
                     if (paramHorseId) {
                         if (isMounted) setHorseId(paramHorseId);
                         // Fetch horse details to prepopulate
-                        const { data: horse, error: hErr } = await supabase
-                            .from('horses')
-                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en, report_output_mode)')
-                            .eq('id', paramHorseId)
-                            .single();
-                        if (hErr) throw hErr;
+                        const horseArr = await restGet(`horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
+                        const horse = horseArr?.[0];
 
                         // Fetch past weight history (last 6 months)
-                        const { data: weights, error: rErr } = await supabase
-                            .from('horse_weights')
-                            .select('measured_at, weight')
-                            .eq('horse_id', paramHorseId)
-                            .gte('measured_at', sixMonthsAgoIso)
-                            .order('measured_at', { ascending: true });
-                        if (rErr) throw rErr;
+                        const weights = await restGet(`horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
                         const latestWeight = await fetchLatestWeight(paramHorseId);
 
@@ -138,8 +146,7 @@ export default function ReportEditor() {
                         }
                     } else {
                         // No horse selected, fetch list and show selector
-                        const { data: allHorses, error: ahErr } = await supabase.from('horses').select('id, name, name_en').order('name');
-                        if (ahErr) throw ahErr;
+                        const allHorses = await restGet('horses?select=id,name,name_en&order=name');
                         if (isMounted) {
                             if (allHorses) setHorses(allHorses);
                             setShowHorseSelector(true);
@@ -150,17 +157,13 @@ export default function ReportEditor() {
                 }
 
                 // Existing Report Logic
-                const { data: report, error } = await supabase.from('reports').select('*').eq('id', id).single();
-                if (error) throw error;
+                const reportArr = await restGet(`reports?id=eq.${id}&select=*`);
+                const report = reportArr?.[0];
                 if (!report) throw new Error("Report not found");
 
                 // Fetch Horse Data
-                        const { data: horse, error: hErr2 } = await supabase
-                            .from('horses')
-                            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en, report_output_mode)')
-                            .eq('id', report.horse_id)
-                            .single();
-                if (hErr2) throw hErr2;
+                const horseArr = await restGet(`horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
+                const horse = horseArr?.[0];
 
                 if (isMounted) {
                     setHorseId(report.horse_id);
@@ -389,19 +392,11 @@ export default function ReportEditor() {
         const sixMonthsAgoIso = sixMonthsAgo.toISOString();
 
         // Fetch horse details
-        const { data: horse } = await supabase
-            .from('horses')
-            .select('*, clients(name, report_output_mode), trainers(trainer_name, trainer_name_en, trainer_location, report_output_mode)')
-            .eq('id', selectedHorseId)
-            .single();
+        const horseArr = await restGet(`horses?id=eq.${selectedHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`);
+        const horse = horseArr?.[0];
 
         // Fetch past weight history (last 6 months)
-        const { data: weights } = await supabase
-            .from('horse_weights')
-            .select('measured_at, weight')
-            .eq('horse_id', selectedHorseId)
-            .gte('measured_at', sixMonthsAgoIso)
-            .order('measured_at', { ascending: true });
+        const weights = await restGet(`horse_weights?horse_id=eq.${selectedHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
         const latestWeight = await fetchLatestWeight(selectedHorseId);
 
@@ -496,13 +491,7 @@ export default function ReportEditor() {
         // const logoUrl = d.logo; // Unused
 
         try {
-            console.log('[save] before refreshSession');
-            // Try to refresh session, but don't block save if it hangs
-            await Promise.race([
-                supabase.auth.refreshSession(),
-                new Promise<void>((resolve) => setTimeout(resolve, 3000))
-            ]);
-            console.log('[save] after refreshSession');
+            console.log('[save] using REST for save');
 
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
             if (isNewPhoto && !isSameAsOriginal) {
@@ -556,121 +545,60 @@ export default function ReportEditor() {
             updated_at: new Date().toISOString()
         };
 
-            let resultError: unknown = null;
             let newReportId: string | null = null;
-            const writeTimeout = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Write timeout')), 8000)
-            );
-
-            console.log('[save] before reports write');
-            try {
-                if (isNew) {
-                    // INSERT
-                    const { data, error } = await Promise.race([
-                        supabase.from('reports').insert(payload).select().single(),
-                        writeTimeout
-                    ]);
-                    resultError = error;
-                    if (data) newReportId = data.id;
-                } else {
-                    // UPDATE
-                    const { error } = await Promise.race([
-                        supabase.from('reports').update(payload).eq('id', id),
-                        writeTimeout
-                    ]);
-                    resultError = error;
+            console.log('[save] before reports write (REST)');
+            const controller = new AbortController();
+            const abortId = window.setTimeout(() => controller.abort(), 8000);
+            const headers = getRestHeaders();
+            if (isNew) {
+                const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                window.clearTimeout(abortId);
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`REST insert failed: ${res.status} ${text}`);
                 }
-            } catch (err) {
-                resultError = err;
-            }
-            console.log('[save] after reports write', { ok: !resultError });
-
-            if (resultError) {
-                console.warn('Primary write failed, attempting REST fallback...', resultError);
-                window.clearTimeout(saveTimeout);
-                const fallbackTimeout = window.setTimeout(() => {
-                    console.warn('Save fallback timed out, resetting UI');
-                    setSaving(false);
-                    alert('Save is taking too long. Please try again.');
-                }, 15000);
-                try {
-                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                    const accessToken = session?.access_token;
-                    if (!supabaseUrl || !anonKey || !accessToken) {
-                        throw new Error('Missing env vars or access token for fallback');
-                    }
-
-                    const headers = {
-                        'apikey': anonKey,
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    };
-                    const controller = new AbortController();
-                    const abortId = window.setTimeout(() => controller.abort(), 8000);
-
-                    if (isNew) {
-                        console.log('[save] REST insert start');
-                        const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
-                            method: 'POST',
-                            headers,
-                            body: JSON.stringify(payload),
-                            signal: controller.signal
-                        });
-                        window.clearTimeout(abortId);
-                        if (!res.ok) {
-                            const text = await res.text();
-                            throw new Error(`REST insert failed: ${res.status} ${text}`);
-                        }
-                        const data = await res.json();
-                        newReportId = data?.[0]?.id ?? null;
-                    } else {
-                        console.log('[save] REST update start');
-                        const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
-                            method: 'PATCH',
-                            headers,
-                            body: JSON.stringify(payload),
-                            signal: controller.signal
-                        });
-                        window.clearTimeout(abortId);
-                        if (!res.ok) {
-                            const text = await res.text();
-                            throw new Error(`REST update failed: ${res.status} ${text}`);
-                        }
-                    }
-                    resultError = null;
-                    window.clearTimeout(fallbackTimeout);
-                } catch (fallbackErr) {
-                    console.error('Fallback save failed:', fallbackErr);
-                    const msg = (fallbackErr as { message?: string })?.message || JSON.stringify(fallbackErr);
-                    alert('Error saving report: ' + msg);
-                    setSaving(false);
-                    window.clearTimeout(fallbackTimeout);
-                    window.clearTimeout(saveTimeout);
-                    return;
+                const data = await res.json();
+                newReportId = data?.[0]?.id ?? null;
+            } else {
+                const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                window.clearTimeout(abortId);
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`REST update failed: ${res.status} ${text}`);
                 }
             }
 
             // Update Horse (Name/Sire/Dam/Photo if changed)
             // Do not block report save if horse update fails.
-            if (horseId) {
-                try {
-                    const { error: horseUpdateError } = await supabase.from('horses').update({
+        if (horseId) {
+            try {
+                const headers = getRestHeaders();
+                await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({
                         name: d.horseNameJp,
                         name_en: d.horseNameEn,
                         sire: d.sire,
                         dam: d.dam,
                         photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
                         updated_at: new Date().toISOString()
-                    }).eq('id', horseId);
-                    if (horseUpdateError) {
-                        console.warn('Horse update failed:', horseUpdateError);
-                    }
-                } catch (horseUpdateError) {
-                    console.warn('Horse update failed:', horseUpdateError);
-                }
+                    })
+                });
+            } catch (horseUpdateError) {
+                console.warn('Horse update failed:', horseUpdateError);
             }
+        }
 
             setSaving(false);
             setLastSaved(new Date());
