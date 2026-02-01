@@ -490,6 +490,8 @@ export default function ReportEditor() {
         }, 15000);
 
         let mainPhotoUrl = d.mainPhoto;
+        const isNewPhoto = !!d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'));
+        const isSameAsOriginal = !!d.originalPhoto && d.mainPhoto === d.originalPhoto;
         // const logoUrl = d.logo; // Unused
 
         try {
@@ -497,12 +499,17 @@ export default function ReportEditor() {
             await supabase.auth.refreshSession();
 
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
-            if (d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'))) {
+            if (isNewPhoto && !isSameAsOriginal) {
                 const fileName = `main_${Date.now()}.jpg`;
                 const reportPathId = isNew ? `temp_${Date.now()}` : id;
                 const path = `${horseId}/${reportPathId}/${fileName}`;
-
-                const { url: uploadedUrl, error: uploadError } = await uploadImage(d.mainPhoto, path);
+                const uploadResult = await Promise.race([
+                    uploadImage(d.mainPhoto, path),
+                    new Promise<{ url: string | null, error: unknown }>((_, reject) =>
+                        setTimeout(() => reject(new Error('Upload timeout')), 12000)
+                    )
+                ]);
+                const { url: uploadedUrl, error: uploadError } = uploadResult as { url: string | null, error: unknown };
                 if (uploadedUrl) {
                     mainPhotoUrl = uploadedUrl;
                 } else {
@@ -512,6 +519,8 @@ export default function ReportEditor() {
                     window.clearTimeout(saveTimeout);
                     return;
                 }
+            } else if (isSameAsOriginal) {
+                mainPhotoUrl = d.originalPhoto || d.mainPhoto;
             }
 
         // Pack extra fields into metrics_json
