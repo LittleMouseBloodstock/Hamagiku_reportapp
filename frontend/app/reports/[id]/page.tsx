@@ -476,7 +476,6 @@ export default function ReportEditor() {
             return;
         }
 
-        console.log('[save] start', { id, horseId, isNew });
         setSaving(true);
         const d = reportDataRef.current;
         const saveTimeout = window.setTimeout(() => {
@@ -491,7 +490,6 @@ export default function ReportEditor() {
         // const logoUrl = d.logo; // Unused
 
         try {
-            console.log('[save] using REST for save');
 
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
             if (isNewPhoto && !isSameAsOriginal) {
@@ -546,7 +544,6 @@ export default function ReportEditor() {
         };
 
             let newReportId: string | null = null;
-            console.log('[save] before reports write (REST)');
             const controller = new AbortController();
             const abortId = window.setTimeout(() => controller.abort(), 8000);
             const headers = getRestHeaders();
