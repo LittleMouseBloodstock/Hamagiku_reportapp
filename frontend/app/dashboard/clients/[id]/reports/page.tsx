@@ -95,15 +95,12 @@ export default function ClientBatchReports() {
                 if (isMounted && client) setOwner(client);
 
                 // 2. Fetch Reports for horses owned by client in the selected month
-                const startOfMonth = `${selectedDate}-01`;
-                const nextMonthDate = new Date(selectedDate + "-01");
-                nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-                const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
+                const monthKey = selectedDate.replace('-', '.'); // yyyy.MM
 
                 const reportsData = await restGet(
                     `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
-                    `&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}` +
+                    `&title=like.${monthKey}%` +
                     `&review_status=eq.approved` +
                     `&order=horse_id`
                 ) as ReportRow[];
