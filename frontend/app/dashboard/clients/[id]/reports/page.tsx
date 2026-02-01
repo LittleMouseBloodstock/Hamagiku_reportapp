@@ -96,12 +96,15 @@ export default function ClientBatchReports() {
 
                 // 2. Fetch Reports for horses owned by client in the selected month
                 const monthKey = selectedDate.replace('-', '.'); // yyyy.MM
-                const monthFilter = encodeURIComponent(`${monthKey}%`);
+                const nextMonthDate = new Date(`${selectedDate}-01`);
+                nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+                const nextMonthKey = nextMonthDate.toISOString().slice(0, 7).replace('-', '.');
 
                 const reportsData = await restGet(
                     `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
-                    `&title=ilike.${monthFilter}` +
+                    `&title=gte.${monthKey}` +
+                    `&title=lt.${nextMonthKey}` +
                     `&review_status=eq.approved` +
                     `&order=horse_id`
                 ) as ReportRow[];
