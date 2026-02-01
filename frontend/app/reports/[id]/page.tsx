@@ -114,7 +114,7 @@ export default function ReportEditor() {
                                 label: `${d.getMonth() + 1}月`,
                                 value: r.weight || 0
                             };
-                        }).filter(item => item.value > 0) || [];
+                        }).filter((item: { value: number }) => item.value > 0) || [];
 
                         if (isMounted) {
                             setInitialData({
@@ -406,7 +406,7 @@ export default function ReportEditor() {
                 label: `${d.getMonth() + 1}月`,
                 value: r.weight || 0
             };
-        }).filter(item => item.value > 0) || [];
+        }).filter((item: { value: number }) => item.value > 0) || [];
 
         setInitialData({
             reportDate: defaultDate,
