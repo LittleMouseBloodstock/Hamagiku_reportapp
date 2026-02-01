@@ -950,13 +950,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
 
-                        <div className="owner-line text-[12px] text-[#444] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
+                        <div className="owner-line text-[14px] text-[#444] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
                             <span className="font-bold mr-1">{t('owner')}:</span>
                             {formatOwnerName(data.ownerName)}
                             <span className="mx-2 text-gray-300">/</span>
                             <span className="font-bold mr-1">{t('trainer')}:</span>
                             {lang === 'ja'
-                                ? (data.trainerNameJp || data.trainerNameEn || '-')
+                                ? ((data.trainerNameJp || data.trainerNameEn || '-') + ' 様')
                                 : (data.trainerNameEn || data.trainerNameJp || '-')}
                             {(() => {
                                 const loc = lang === 'ja'
@@ -969,7 +969,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             {data.birthDate || '-'}
                             <span className="mx-2 text-gray-300">/</span>
                             <span className="font-bold mr-1">{t('age')}:</span>
-                            {data.age !== null && data.age !== undefined ? data.age : '-'}
+                            {data.age !== null && data.age !== undefined
+                                ? (lang === 'ja' ? `${data.age}歳` : data.age)
+                                : '-'}
                         </div>
 
                         {/* Main Photo - Reduced width to save vertical space */}

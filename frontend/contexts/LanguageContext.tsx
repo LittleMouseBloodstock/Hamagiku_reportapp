@@ -43,7 +43,7 @@ const translations: Translations = {
     action: { ja: "操作", en: "Action" },
 
     // Table Statuses
-    published: { ja: "公開済み", en: "Published" },
+    published: { ja: "承認済み", en: "Published" },
     draft: { ja: "下書き", en: "Draft" },
     review: { ja: "レビュー中", en: "Review" },
 
@@ -195,7 +195,7 @@ const translations: Translations = {
     status_Training: { ja: "調教中", en: "Training" },
     status_Resting: { ja: "休養中", en: "Resting" },
     status_Spelling: { ja: "放牧中", en: "Spelling" },
-    status_Approved: { ja: "公開済み", en: "Published" },
+    status_Approved: { ja: "承認済み", en: "Published" },
     status_InReview: { ja: "レビュー中", en: "In Review" },
     status_Unknown: { ja: "不明", en: "Unknown" },
 };
