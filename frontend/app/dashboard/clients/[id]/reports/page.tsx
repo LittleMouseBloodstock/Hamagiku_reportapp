@@ -104,6 +104,7 @@ export default function ClientBatchReports() {
                     `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
                     `&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}` +
+                    `&review_status=eq.approved` +
                     `&order=horse_id`
                 ) as ReportRow[];
 
@@ -181,7 +182,7 @@ export default function ClientBatchReports() {
                         type="month"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="text-black px-3 py-1 rounded text-sm font-bold"
+                        className="bg-white text-stone-900 px-3 py-1 rounded text-sm font-bold"
                     />
                     <button
                         onClick={() => window.print()}
