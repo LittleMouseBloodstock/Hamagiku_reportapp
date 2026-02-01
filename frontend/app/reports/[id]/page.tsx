@@ -593,8 +593,10 @@ export default function ReportEditor() {
                     body: JSON.stringify({
                         name: d.horseNameJp,
                         name_en: d.horseNameEn,
-                        sire: d.sire,
-                        dam: d.dam,
+                        sire: d.sireJp || d.sire,
+                        dam: d.damJp || d.dam,
+                        sire_en: d.sireEn || null,
+                        dam_en: d.damEn || null,
                         photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
                         updated_at: new Date().toISOString()
                     })
