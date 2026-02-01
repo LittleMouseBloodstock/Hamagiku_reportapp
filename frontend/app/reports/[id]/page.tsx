@@ -213,6 +213,14 @@ export default function ReportEditor() {
                     setLoading(false);
                 }
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                const msg = String(error?.message || '');
+                if (msg.includes('AbortError') && isMounted) {
+                    if (retryCount < 3) {
+                        console.warn('Report load aborted, retrying...', { retryCount });
+                        setTimeout(() => fetchReportData(retryCount + 1), 800);
+                        return;
+                    }
+                }
                 console.error("Error loading report data:", error);
 
                 // Retry logic
@@ -477,26 +485,36 @@ export default function ReportEditor() {
 
         setSaving(true);
         const d = reportDataRef.current;
+        const saveTimeout = window.setTimeout(() => {
+            console.warn('Save timed out, resetting UI');
+            setSaving(false);
+            alert('Save is taking too long. Please try again.');
+        }, 15000);
 
         let mainPhotoUrl = d.mainPhoto;
         // const logoUrl = d.logo; // Unused
 
-        // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
-        if (d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'))) {
-            const fileName = `main_${Date.now()}.jpg`;
-            const reportPathId = isNew ? `temp_${Date.now()}` : id;
-            const path = `${horseId}/${reportPathId}/${fileName}`;
+        try {
+            // Ensure session is fresh before save
+            await supabase.auth.refreshSession();
 
-            const { url: uploadedUrl, error: uploadError } = await uploadImage(d.mainPhoto, path);
-            if (uploadedUrl) {
-                mainPhotoUrl = uploadedUrl;
-            } else {
-                const errorMsg = (uploadError as { message?: string })?.message || JSON.stringify(uploadError) || "Unknown Error";
-                alert(`Failed to upload image.\nError: ${errorMsg}\n\nPlease check Supabase Storage policies.`);
-                setSaving(false);
-                return;
+            // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
+            if (d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'))) {
+                const fileName = `main_${Date.now()}.jpg`;
+                const reportPathId = isNew ? `temp_${Date.now()}` : id;
+                const path = `${horseId}/${reportPathId}/${fileName}`;
+
+                const { url: uploadedUrl, error: uploadError } = await uploadImage(d.mainPhoto, path);
+                if (uploadedUrl) {
+                    mainPhotoUrl = uploadedUrl;
+                } else {
+                    const errorMsg = (uploadError as { message?: string })?.message || JSON.stringify(uploadError) || "Unknown Error";
+                    alert(`Failed to upload image.\nError: ${errorMsg}\n\nPlease check Supabase Storage policies.`);
+                    setSaving(false);
+                    window.clearTimeout(saveTimeout);
+                    return;
+                }
             }
-        }
 
         // Pack extra fields into metrics_json
         const metricsJson = {
@@ -523,58 +541,65 @@ export default function ReportEditor() {
             updated_at: new Date().toISOString()
         };
 
-        let resultError = null;
-        let newReportId = null;
+            let resultError = null;
+            let newReportId = null;
 
-        if (isNew) {
-            // INSERT
-            const { data, error } = await supabase.from('reports').insert(payload).select().single();
-            resultError = error;
-            if (data) newReportId = data.id;
-        } else {
-            // UPDATE
-            const { error } = await supabase.from('reports').update(payload).eq('id', id);
-            resultError = error;
-        }
+            if (isNew) {
+                // INSERT
+                const { data, error } = await supabase.from('reports').insert(payload).select().single();
+                resultError = error;
+                if (data) newReportId = data.id;
+            } else {
+                // UPDATE
+                const { error } = await supabase.from('reports').update(payload).eq('id', id);
+                resultError = error;
+            }
 
-        if (resultError) {
-            console.error("Save Error:", resultError);
-            alert("Error saving report: " + resultError.message);
-            setSaving(false);
-            return;
-        }
+            if (resultError) {
+                console.error("Save Error:", resultError);
+                alert("Error saving report: " + resultError.message);
+                setSaving(false);
+                window.clearTimeout(saveTimeout);
+                return;
+            }
 
-        // Update Horse (Name/Sire/Dam/Photo if changed)
-        // Do not block report save if horse update fails.
-        if (horseId) {
-            try {
-                const { error: horseUpdateError } = await supabase.from('horses').update({
-                    name: d.horseNameJp,
-                    name_en: d.horseNameEn,
-                    sire: d.sire,
-                    dam: d.dam,
-                    photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
-                    updated_at: new Date().toISOString()
-                }).eq('id', horseId);
-                if (horseUpdateError) {
+            // Update Horse (Name/Sire/Dam/Photo if changed)
+            // Do not block report save if horse update fails.
+            if (horseId) {
+                try {
+                    const { error: horseUpdateError } = await supabase.from('horses').update({
+                        name: d.horseNameJp,
+                        name_en: d.horseNameEn,
+                        sire: d.sire,
+                        dam: d.dam,
+                        photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
+                        updated_at: new Date().toISOString()
+                    }).eq('id', horseId);
+                    if (horseUpdateError) {
+                        console.warn('Horse update failed:', horseUpdateError);
+                    }
+                } catch (horseUpdateError) {
                     console.warn('Horse update failed:', horseUpdateError);
                 }
-            } catch (horseUpdateError) {
-                console.warn('Horse update failed:', horseUpdateError);
             }
-        }
 
-        setSaving(false);
-        setLastSaved(new Date());
+            setSaving(false);
+            setLastSaved(new Date());
 
-        if (isNew && newReportId) {
-            router.replace(`/reports/${newReportId}`);
-        } else {
-            if (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:')) {
-                if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+            if (isNew && newReportId) {
+                router.replace(`/reports/${newReportId}`);
+            } else {
+                if (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:')) {
+                    if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+                }
             }
+        } catch (err) {
+            console.error('Save failed:', err);
+            alert('Save failed. Please try again.');
+            setSaving(false);
+        } finally {
+            window.clearTimeout(saveTimeout);
         }
-
     }
 
     const handleUpdateStatus = async (newStatus: string) => {
