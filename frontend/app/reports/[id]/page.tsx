@@ -495,8 +495,11 @@ export default function ReportEditor() {
         // const logoUrl = d.logo; // Unused
 
         try {
-            // Ensure session is fresh before save
-            await supabase.auth.refreshSession();
+            // Try to refresh session, but don't block save if it hangs
+            await Promise.race([
+                supabase.auth.refreshSession(),
+                new Promise<void>((resolve) => setTimeout(resolve, 3000))
+            ]);
 
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
             if (isNewPhoto && !isSameAsOriginal) {
