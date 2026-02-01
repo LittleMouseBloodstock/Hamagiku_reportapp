@@ -607,13 +607,18 @@ export default function ReportEditor() {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     };
+                    const controller = new AbortController();
+                    const abortId = window.setTimeout(() => controller.abort(), 8000);
 
                     if (isNew) {
+                        console.log('[save] REST insert start');
                         const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
                             method: 'POST',
                             headers,
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify(payload),
+                            signal: controller.signal
                         });
+                        window.clearTimeout(abortId);
                         if (!res.ok) {
                             const text = await res.text();
                             throw new Error(`REST insert failed: ${res.status} ${text}`);
@@ -621,11 +626,14 @@ export default function ReportEditor() {
                         const data = await res.json();
                         newReportId = data?.[0]?.id ?? null;
                     } else {
+                        console.log('[save] REST update start');
                         const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                             method: 'PATCH',
                             headers,
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify(payload),
+                            signal: controller.signal
                         });
+                        window.clearTimeout(abortId);
                         if (!res.ok) {
                             const text = await res.text();
                             throw new Error(`REST update failed: ${res.status} ${text}`);
