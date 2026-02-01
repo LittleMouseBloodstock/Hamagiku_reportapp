@@ -50,62 +50,45 @@ export default function HorsesPage() {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        const getRestHeaders = () => {
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            return {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            };
+        };
+
+        const restGet = async (path: string) => {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+                headers: getRestHeaders()
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`REST GET failed: ${res.status} ${text}`);
+            }
+            return res.json();
+        };
+
         const fetchHorses = async (retryCount = 0) => {
             try {
-                // Try fetching with clients first
-                const { data, error } = await supabase
-                    .from('horses')
-                    .select('*, clients(name), trainers(trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
-                    .order('name');
-
-                if (error) {
-                    // Warning: Relationship might not exist yet if SQL wasn't run
-                    console.warn('Fetch with clients failed, try simple fetch:', error.message);
-                    const { data: simpleData, error: simpleError } = await supabase
-                        .from('horses')
-                        .select('*')
-                        .order('name');
-
-                    if (simpleError) throw simpleError;
-                    if (isMounted) setHorses(simpleData as Horse[] || []);
-                } else {
-                    if (isMounted) setHorses(data as Horse[] || []);
-                }
+                if (!session?.access_token) return;
+                const data = await restGet('horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name');
+                if (isMounted) setHorses(data as Horse[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                const msg = String(error?.message || '');
+                if (msg.includes('AbortError') && isMounted && retryCount < 3) {
+                    setTimeout(() => fetchHorses(retryCount + 1), 800);
+                    return;
+                }
                 console.error('Error fetching horses:', error);
-
-                // Retry logic
                 if (isMounted && retryCount < 2) {
-                    console.log(`Retrying fetch... (${retryCount + 1})`);
-                    setTimeout(() => fetchHorses(retryCount + 1), 500);
-                } else if (isMounted && session?.access_token) {
-                    // FALLBACK: Raw Fetch
-                    try {
-                        console.warn('Attempting raw fetch fallback for horses...');
-                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name`, {
-                            headers: {
-                                'apikey': anonKey,
-                                'Authorization': `Bearer ${session.access_token}`
-                            }
-                        });
-
-                        if (!res.ok) throw new Error('Raw fetch failed');
-                        const rawData = await res.json();
-
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const formatted = rawData.map((h: any) => ({
-                            ...h,
-                            clients: h.clients // Ensure structure matches
-                        }));
-
-                        if (isMounted) setHorses(formatted);
-                    } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
-                    }
+                    setTimeout(() => fetchHorses(retryCount + 1), 800);
                 }
             }
         };
