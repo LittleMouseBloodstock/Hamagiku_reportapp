@@ -106,11 +106,11 @@ export default function ClientBatchReports() {
                     const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
 
                     const idsFilter = encodeURIComponent(`(${horseIds.join(',')})`);
-                    const reportsData = await restGet(`reports?select=*&horse_id=in.${idsFilter}&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`);
+                    const reportsData = await restGet(`reports?select=*&horse_id=in.${idsFilter}&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`) as Report[];
 
                     if (isMounted && reportsData) {
-                        const formattedReports = reportsData.map(r => {
-                            const horse = horses.find(h => h.id === r.horse_id);
+                        const formattedReports = reportsData.map((r: Report) => {
+                            const horse = horses.find((h: Horse) => h.id === r.horse_id);
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
@@ -139,7 +139,7 @@ export default function ClientBatchReports() {
                                 logo: null
                             };
                             return { report: r, horse: horse, data: rData };
-                        }).filter(item => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                        }).filter((item): item is { report: Report; horse: Horse; data: ReportData } => item !== null);
 
                         setReports(formattedReports);
                     } else if (isMounted) {
