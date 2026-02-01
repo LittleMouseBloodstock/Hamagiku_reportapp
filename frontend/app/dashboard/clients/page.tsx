@@ -26,43 +26,45 @@ export default function ClientsPage() {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        const getRestHeaders = () => {
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            return {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            };
+        };
+
+        const restGet = async (path: string) => {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+                headers: getRestHeaders()
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`REST GET failed: ${res.status} ${text}`);
+            }
+            return res.json();
+        };
+
         const fetchClients = async (retryCount = 0) => {
             try {
-                const { data, error } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .order('name');
-
-                if (error) throw error;
+                if (!session?.access_token) return;
+                const data = await restGet('clients?select=*&order=name');
                 if (isMounted) setClients(data as Client[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                const msg = String(error?.message || '');
+                if (msg.includes('AbortError') && isMounted && retryCount < 3) {
+                    setTimeout(() => fetchClients(retryCount + 1), 800);
+                    return;
+                }
                 console.error('Error fetching clients:', error);
-
                 if (isMounted && retryCount < 2) {
-                    console.log(`Retrying fetch... (${retryCount + 1})`);
-                    setTimeout(() => fetchClients(retryCount + 1), 500);
-                } else if (isMounted && session?.access_token) {
-                    // FALLBACK: Raw Fetch
-                    try {
-                        console.warn('Attempting raw fetch fallback for clients...');
-                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?select=*&order=name`, {
-                            headers: {
-                                'apikey': anonKey,
-                                'Authorization': `Bearer ${session.access_token}`
-                            }
-                        });
-
-                        if (!res.ok) throw new Error('Raw fetch failed');
-                        const rawData = await res.json();
-
-                        if (isMounted) setClients(rawData);
-                    } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
-                    }
+                    setTimeout(() => fetchClients(retryCount + 1), 800);
                 }
             } finally {
                 if (isMounted) setLoading(false);
@@ -79,11 +81,21 @@ export default function ClientsPage() {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
 
         try {
-            const { data, error } = await supabase.from('clients').delete().eq('id', id).select();
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                // If RLS denies delete, it often returns no error but deletes 0 rows.
-                throw new Error('Delete operation affected 0 rows. Check RLS policies.');
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            const res = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Delete failed: ${res.status} ${text}`);
             }
             setClients(prev => prev.filter(c => c.id !== id));
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any

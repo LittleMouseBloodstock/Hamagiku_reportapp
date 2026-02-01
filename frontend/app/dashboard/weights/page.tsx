@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +22,7 @@ const getTodayIso = () => new Date().toISOString().slice(0, 10);
 
 export default function WeightsPage() {
     const { t, language } = useLanguage();
-    const { user } = useAuth();
+    const { user, session } = useAuth();
     const refreshKey = useResumeRefresh();
 
     const [selectedDate, setSelectedDate] = useState(getTodayIso());
@@ -36,19 +35,39 @@ export default function WeightsPage() {
     const hasHorses = horses.length > 0;
 
     useEffect(() => {
-        if (!user?.id) return;
+        if (!session?.access_token) return;
 
         let isMounted = true;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-        const fetchData = async () => {
+        const getRestHeaders = () => {
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            return {
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            };
+        };
+
+        const restGet = async (path: string) => {
+            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+                headers: getRestHeaders()
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`REST GET failed: ${res.status} ${text}`);
+            }
+            return res.json();
+        };
+
+        const fetchData = async (retryCount = 0) => {
             setLoading(true);
             try {
-                const { data: horseData, error: hErr } = await supabase
-                    .from('horses')
-                    .select('id, name, name_en, horse_status')
-                    .or('horse_status.is.null,horse_status.eq.Active')
-                    .order('name');
-                if (hErr) throw hErr;
+                const orFilter = encodeURIComponent('(horse_status.is.null,horse_status.eq.Active)');
+                const horseData = await restGet(`horses?select=id,name,name_en,horse_status&or=${orFilter}&order=name`);
 
                 if (!horseData || horseData.length === 0) {
                     if (isMounted) {
@@ -60,35 +79,22 @@ export default function WeightsPage() {
                     return;
                 }
 
-                const ids = horseData.map(h => h.id);
-                const [dayWeightsRes, latestWeightsRes] = await Promise.all([
-                    supabase
-                        .from('horse_weights')
-                        .select('horse_id, weight, measured_at')
-                        .eq('measured_at', selectedDate)
-                        .in('horse_id', ids),
-                    supabase
-                        .from('horse_weights')
-                        .select('horse_id, weight, measured_at')
-                        .in('horse_id', ids)
-                        .order('measured_at', { ascending: false })
+                const ids = horseData.map((h: Horse) => h.id);
+                const idsFilter = encodeURIComponent(`(${ids.join(',')})`);
+                const [dayWeights, latestWeights] = await Promise.all([
+                    restGet(`horse_weights?select=horse_id,weight,measured_at&measured_at=eq.${selectedDate}&horse_id=in.${idsFilter}`),
+                    restGet(`horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`)
                 ]);
 
-                if (dayWeightsRes.error) throw dayWeightsRes.error;
-                if (latestWeightsRes.error) throw latestWeightsRes.error;
-
-                const dayWeights = dayWeightsRes.data || [];
-                const latestWeights = latestWeightsRes.data || [];
-
                 const latestByHorse: Record<string, HorseWeight | null> = {};
-                latestWeights.forEach((row) => {
+                latestWeights.forEach((row: HorseWeight) => {
                     if (!latestByHorse[row.horse_id]) {
                         latestByHorse[row.horse_id] = row;
                     }
                 });
 
                 const weightsMap: Record<string, string> = {};
-                dayWeights.forEach((row) => {
+                dayWeights.forEach((row: HorseWeight) => {
                     weightsMap[row.horse_id] = row.weight !== null && row.weight !== undefined ? String(row.weight) : '';
                 });
 
@@ -100,13 +106,22 @@ export default function WeightsPage() {
                 }
             } catch (error) {
                 console.error('Failed to load weights:', error);
+                const msg = String((error as Error)?.message || '');
+                if (msg.includes('AbortError') && isMounted && retryCount < 2) {
+                    setTimeout(() => fetchData(retryCount + 1), 800);
+                    return;
+                }
+                if (isMounted && retryCount < 1) {
+                    setTimeout(() => fetchData(retryCount + 1), 800);
+                    return;
+                }
                 if (isMounted) setLoading(false);
             }
         };
 
         fetchData();
         return () => { isMounted = false; };
-    }, [user?.id, selectedDate, refreshKey]);
+    }, [user?.id, session?.access_token, selectedDate, refreshKey]);
 
     const handleSave = async () => {
         if (!hasHorses) return;
@@ -131,21 +146,42 @@ export default function WeightsPage() {
                 return;
             }
 
-            const { error } = await supabase
-                .from('horse_weights')
-                .upsert(payload, { onConflict: 'horse_id,measured_at' });
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
 
-            if (error) throw error;
+            const upsertRes = await fetch(`${supabaseUrl}/rest/v1/horse_weights?on_conflict=horse_id,measured_at`, {
+                method: 'POST',
+                headers: {
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates,return=representation'
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!upsertRes.ok) {
+                const text = await upsertRes.text();
+                throw new Error(`Upsert failed: ${upsertRes.status} ${text}`);
+            }
 
-            const { data: latestWeightsRes, error: latestErr } = await supabase
-                .from('horse_weights')
-                .select('horse_id, weight, measured_at')
-                .in('horse_id', horses.map(h => h.id))
-                .order('measured_at', { ascending: false });
-            if (latestErr) throw latestErr;
+            const idsFilter = encodeURIComponent(`(${horses.map(h => h.id).join(',')})`);
+            const latestRes = await fetch(`${supabaseUrl}/rest/v1/horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`, {
+                headers: {
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+            if (!latestRes.ok) {
+                const text = await latestRes.text();
+                throw new Error(`Latest fetch failed: ${latestRes.status} ${text}`);
+            }
+            const latestWeightsRes = await latestRes.json();
 
             const latestByHorse: Record<string, HorseWeight | null> = {};
-            (latestWeightsRes || []).forEach((row) => {
+            (latestWeightsRes || []).forEach((row: HorseWeight) => {
                 if (!latestByHorse[row.horse_id]) {
                     latestByHorse[row.horse_id] = row;
                 }
