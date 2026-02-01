@@ -97,7 +97,7 @@ export default function ClientBatchReports() {
                 const horses = await restGet(`horses?select=*&owner_id=eq.${id}`);
 
                 if (horses && horses.length > 0) {
-                    const horseIds = horses.map(h => h.id);
+                    const horseIds = horses.map((h: Horse) => h.id);
 
                     // 3. Fetch Reports for these horses in the selected month
                     const startOfMonth = `${selectedDate}-01`;
