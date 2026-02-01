@@ -556,28 +556,84 @@ export default function ReportEditor() {
             updated_at: new Date().toISOString()
         };
 
-            let resultError = null;
-            let newReportId = null;
+            let resultError: unknown = null;
+            let newReportId: string | null = null;
+            const writeTimeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Write timeout')), 8000)
+            );
 
             console.log('[save] before reports write');
-            if (isNew) {
-                // INSERT
-                const { data, error } = await supabase.from('reports').insert(payload).select().single();
-                resultError = error;
-                if (data) newReportId = data.id;
-            } else {
-                // UPDATE
-                const { error } = await supabase.from('reports').update(payload).eq('id', id);
-                resultError = error;
+            try {
+                if (isNew) {
+                    // INSERT
+                    const { data, error } = await Promise.race([
+                        supabase.from('reports').insert(payload).select().single(),
+                        writeTimeout
+                    ]);
+                    resultError = error;
+                    if (data) newReportId = data.id;
+                } else {
+                    // UPDATE
+                    const { error } = await Promise.race([
+                        supabase.from('reports').update(payload).eq('id', id),
+                        writeTimeout
+                    ]);
+                    resultError = error;
+                }
+            } catch (err) {
+                resultError = err;
             }
             console.log('[save] after reports write', { ok: !resultError });
 
             if (resultError) {
-                console.error("Save Error:", resultError);
-                alert("Error saving report: " + resultError.message);
-                setSaving(false);
-                window.clearTimeout(saveTimeout);
-                return;
+                console.warn('Primary write failed, attempting REST fallback...', resultError);
+                try {
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+                    const accessToken = session?.access_token;
+                    if (!supabaseUrl || !anonKey || !accessToken) {
+                        throw new Error('Missing env vars or access token for fallback');
+                    }
+
+                    const headers = {
+                        'apikey': anonKey,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    };
+
+                    if (isNew) {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            const text = await res.text();
+                            throw new Error(`REST insert failed: ${res.status} ${text}`);
+                        }
+                        const data = await res.json();
+                        newReportId = data?.[0]?.id ?? null;
+                    } else {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                            method: 'PATCH',
+                            headers,
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            const text = await res.text();
+                            throw new Error(`REST update failed: ${res.status} ${text}`);
+                        }
+                    }
+                    resultError = null;
+                } catch (fallbackErr) {
+                    console.error('Fallback save failed:', fallbackErr);
+                    const msg = (fallbackErr as { message?: string })?.message || JSON.stringify(fallbackErr);
+                    alert('Error saving report: ' + msg);
+                    setSaving(false);
+                    window.clearTimeout(saveTimeout);
+                    return;
+                }
             }
 
             // Update Horse (Name/Sire/Dam/Photo if changed)
