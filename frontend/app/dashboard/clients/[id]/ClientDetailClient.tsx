@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -30,19 +29,50 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
     const { user, session } = useAuth(); // Add useAuth
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        };
+    };
+
+    const restGet = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST GET failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
+    const restPatch = async (path: string, body: unknown) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'PATCH',
+            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST PATCH failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
     useEffect(() => {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
         const fetchClient = async (retryCount = 0) => {
             try {
-                const { data, error } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
-
-                if (error) throw error;
+                const raw = await restGet(`clients?select=*&id=eq.${id}`);
+                const data = raw && raw.length > 0 ? raw[0] : null;
                 if (data && isMounted) {
                     setFormData({
                         name: data.name || '',
@@ -63,42 +93,6 @@ export default function ClientDetailClient({ id }: { id: string }) {
                 if (isMounted && retryCount < 2) {
                     console.log(`Retrying client load... (${retryCount + 1})`);
                     setTimeout(() => fetchClient(retryCount + 1), 500);
-                } else if (isMounted && session?.access_token) {
-                    // FALLBACK: Raw Fetch
-                    try {
-                        console.warn('Attempting raw fetch fallback for client details...');
-                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, {
-                            headers: {
-                                'apikey': anonKey,
-                                'Authorization': `Bearer ${session.access_token}`
-                            }
-                        });
-
-                        if (!res.ok) throw new Error("Raw fetch failed");
-                        const rawData = await res.json();
-                        const data = rawData[0];
-
-                        if (data && isMounted) {
-                            setFormData({
-                                name: data.name || '',
-                                contact_email: data.contact_email || '',
-                                contact_phone: data.contact_phone || '',
-                                zip_code: data.zip_code || '',
-                                address_prefecture: data.address_prefecture || '',
-                                address_city: data.address_city || '',
-                                address_street: data.address_street || '',
-                                representative_name: data.representative_name || '',
-                                notes: data.notes || '',
-                                report_output_mode: data.report_output_mode || 'pdf'
-                            });
-                        }
-                    } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
-                    }
                 }
             } finally {
                 if (isMounted) setLoading(false);
@@ -115,23 +109,18 @@ export default function ClientDetailClient({ id }: { id: string }) {
         setSaving(true);
 
         try {
-            const { error } = await supabase
-                .from('clients')
-                .update({
-                    name: formData.name,
-                    contact_email: formData.contact_email,
-                    contact_phone: formData.contact_phone,
-                    zip_code: formData.zip_code,
-                    address_prefecture: formData.address_prefecture,
-                    address_city: formData.address_city,
-                    address_street: formData.address_street,
-                    representative_name: formData.representative_name,
-                    notes: formData.notes,
-                    report_output_mode: formData.report_output_mode
-                })
-                .eq('id', id);
-
-            if (error) throw error;
+            await restPatch(`clients?id=eq.${id}`, {
+                name: formData.name,
+                contact_email: formData.contact_email,
+                contact_phone: formData.contact_phone,
+                zip_code: formData.zip_code,
+                address_prefecture: formData.address_prefecture,
+                address_city: formData.address_city,
+                address_street: formData.address_street,
+                representative_name: formData.representative_name,
+                notes: formData.notes,
+                report_output_mode: formData.report_output_mode
+            });
             router.push('/dashboard/clients');
             router.refresh();
         } catch (error: unknown) {

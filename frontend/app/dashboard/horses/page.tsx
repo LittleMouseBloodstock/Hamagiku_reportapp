@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -103,10 +102,19 @@ export default function HorsesPage() {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
 
         try {
-            const { data, error } = await supabase.from('horses').delete().eq('id', id).select();
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                throw new Error('Delete operation affected 0 rows. Check RLS policies.');
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            const res = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Delete failed: ${res.status} ${text}`);
             }
             setHorses(prev => prev.filter(h => h.id !== id));
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any

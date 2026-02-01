@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewHorsePage() {
     const { t } = useLanguage();
+    const { session } = useAuth();
     const refreshKey = useResumeRefresh();
     interface Client {
         id: string;
@@ -54,23 +55,60 @@ export default function NewHorsePage() {
     const [ownerSearch, setOwnerSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        };
+    };
+
+    const restGet = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST GET failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
+    const restPost = async (path: string, body: unknown) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'POST',
+            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST POST failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
     // Filter clients based on search
     const filteredClients = clients.filter(c =>
         c.name.toLowerCase().includes(ownerSearch.toLowerCase())
     );
 
     useEffect(() => {
+        if (!session?.access_token) return;
         const fetchClients = async () => {
-            const { data } = await supabase.from('clients').select('id, name').order('name');
+            const data = await restGet('clients?select=id,name&order=name');
             if (data) setClients(data);
         };
         const fetchTrainers = async () => {
-            const { data } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location').order('trainer_name');
+            const data = await restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name');
             if (data) setTrainers(data);
         };
         fetchClients();
         fetchTrainers();
-    }, [refreshKey]);
+    }, [session?.access_token, refreshKey]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,14 +125,9 @@ export default function NewHorsePage() {
                     finalOwnerId = existing.id;
                 } else {
                     // Create new client
-                    const { data: newClient, error: clientError } = await supabase
-                        .from('clients')
-                        .insert({ name: ownerSearch })
-                        .select()
-                        .single();
-
-                    if (clientError) throw clientError;
-                    finalOwnerId = newClient.id;
+                    const created = await restPost('clients', { name: ownerSearch });
+                    if (!created || created.length === 0) throw new Error('Failed to create client');
+                    finalOwnerId = created[0].id;
                 }
             }
 
@@ -103,20 +136,16 @@ export default function NewHorsePage() {
                 if (!newTrainer.trainer_name.trim()) {
                     throw new Error('Trainer name (JP) is required');
                 }
-                const { data: createdTrainer, error: trainerError } = await supabase
-                    .from('trainers')
-                    .insert({
-                        trainer_name: newTrainer.trainer_name,
-                        trainer_name_en: newTrainer.trainer_name_en || null,
-                        trainer_location: newTrainer.trainer_location || null
-                    })
-                    .select()
-                    .single();
-                if (trainerError) throw trainerError;
-                finalTrainerId = createdTrainer.id;
+                const createdTrainer = await restPost('trainers', {
+                    trainer_name: newTrainer.trainer_name,
+                    trainer_name_en: newTrainer.trainer_name_en || null,
+                    trainer_location: newTrainer.trainer_location || null
+                });
+                if (!createdTrainer || createdTrainer.length === 0) throw new Error('Failed to create trainer');
+                finalTrainerId = createdTrainer[0].id;
             }
 
-            const { error } = await supabase.from('horses').insert({
+            await restPost('horses', {
                 name: formData.name,
                 name_en: formData.name_en,
                 owner_id: finalOwnerId || null,
@@ -126,8 +155,6 @@ export default function NewHorsePage() {
                 birth_date: formData.birth_date || null,
                 horse_status: formData.horse_status || 'Active'
             });
-
-            if (error) throw error;
             router.push('/dashboard/horses');
             router.refresh();
         } catch (error: unknown) {

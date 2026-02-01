@@ -5,7 +5,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 
 export default function Dashboard() {
@@ -171,9 +170,20 @@ export default function Dashboard() {
         if (!window.confirm(t('confirmDeleteReport'))) return;
 
         try {
-            const { error } = await supabase.from('reports').delete().eq('id', reportId);
-
-            if (error) throw error;
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing env vars or access token for REST');
+            }
+            const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${reportId}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Delete failed: ${res.status} ${text}`);
+            }
 
             alert(t('deleteSuccess'));
             setReports(prev => prev.filter(r => r.id !== reportId));

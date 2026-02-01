@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
@@ -58,8 +57,31 @@ export default function ClientBatchReports() {
 
     const { user, session } = useAuth(); // Add useAuth
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        };
+    };
+
+    const restGet = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST GET failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
     useEffect(() => {
-        if (!id || !user) return; // Wait for user
+        if (!id || !session?.access_token) return; // Wait for auth
 
         let isMounted = true;
         const fetchData = async (retryCount = 0) => {
@@ -67,13 +89,12 @@ export default function ClientBatchReports() {
 
             try {
                 // 1. Fetch Client
-                const { data: client, error: cError } = await supabase.from('clients').select('*').eq('id', id).single();
-                if (cError) throw cError;
+                const clientRaw = await restGet(`clients?select=*&id=eq.${id}`);
+                const client = clientRaw && clientRaw.length > 0 ? clientRaw[0] : null;
                 if (isMounted && client) setOwner(client);
 
                 // 2. Fetch Horses owned by client
-                const { data: horses, error: hError } = await supabase.from('horses').select('*').eq('owner_id', id);
-                if (hError) throw hError;
+                const horses = await restGet(`horses?select=*&owner_id=eq.${id}`);
 
                 if (horses && horses.length > 0) {
                     const horseIds = horses.map(h => h.id);
@@ -84,15 +105,8 @@ export default function ClientBatchReports() {
                     nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
                     const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
 
-                    const { data: reportsData, error: rError } = await supabase
-                        .from('reports')
-                        .select('*')
-                        .in('horse_id', horseIds)
-                        .gte('created_at', startOfMonth)
-                        .lt('created_at', endOfMonth)
-                        .order('horse_id');
-
-                    if (rError) throw rError;
+                    const idsFilter = encodeURIComponent(`(${horseIds.join(',')})`);
+                    const reportsData = await restGet(`reports?select=*&horse_id=in.${idsFilter}&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`);
 
                     if (isMounted && reportsData) {
                         const formattedReports = reportsData.map(r => {
@@ -140,84 +154,6 @@ export default function ClientBatchReports() {
                 if (isMounted && retryCount < 2) {
                     console.log(`Retrying batch load... (${retryCount + 1})`);
                     setTimeout(() => fetchData(retryCount + 1), 500);
-                } else if (isMounted && session?.access_token) {
-                    // FALLBACK: Raw Fetch
-                    try {
-                        console.warn('Attempting raw fetch fallback for batch reports...');
-                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                        const headers = {
-                            'apikey': anonKey,
-                            'Authorization': `Bearer ${session.access_token}`
-                        };
-
-                        // 1. Fetch Client
-                        const clientRes = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, { headers });
-                        if (!clientRes.ok) throw new Error("Raw fetch client failed");
-                        const clientData = await clientRes.json();
-                        const client = clientData[0] as { id: string; name: string; report_output_mode?: string | null } | undefined;
-                        if (isMounted && client) setOwner(client);
-
-                        // 2. Fetch Horses
-                        const horsesRes = await fetch(`${supabaseUrl}/rest/v1/horses?owner_id=eq.${id}&select=*`, { headers });
-                        if (!horsesRes.ok) throw new Error("Raw fetch horses failed");
-                        const horses = (await horsesRes.json()) as Horse[];
-
-                        if (horses && horses.length > 0) {
-                            const horseIds = horses.map((h: Horse) => h.id).join(',');
-
-                            const startOfMonth = `${selectedDate}-01`;
-                            const nextMonthDate = new Date(selectedDate + "-01");
-                            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-                            const endOfMonth = nextMonthDate.toISOString().slice(0, 10);
-
-                            // 3. Fetch Reports (using 'in' operator format for REST is tricky, let's try standard)
-                            // REST syntax for IN: column=in.(val1,val2)
-                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=in.(${horseIds})&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`, { headers });
-                            if (!reportsRes.ok) throw new Error("Raw fetch reports failed");
-                            const reportsData = (await reportsRes.json()) as Report[];
-
-                            if (isMounted && reportsData) {
-                                const formattedReports = reportsData.map((r: Report) => {
-                                    const horse = horses.find((h: Horse) => h.id === r.horse_id);
-                                    if (!horse) return null;
-
-                                    const metrics = r.metrics_json || {};
-                                    const rData: ReportData = {
-                                        reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
-                                        horseNameJp: horse.name,
-                                        horseNameEn: horse.name_en,
-                                        sire: horse.sire,
-                                        sireEn: horse.sire_en || metrics.sireEn || '',
-                                        sireJp: horse.sire || metrics.sireJp || '',
-                                        dam: horse.dam,
-                                        damEn: horse.dam_en || metrics.damEn || '',
-                                        damJp: horse.dam || metrics.damJp || '',
-                                        commentJp: r.body || '',
-                                        commentEn: metrics.commentEn || '',
-                                        weight: r.weight ? `${r.weight}kg` : '',
-                                        statusJp: r.status_training || '',
-                                        statusEn: metrics.statusEn || '',
-                                        trainingStatusJp: r.status_training || '',
-                                        trainingStatusEn: metrics.statusEn || '',
-                                        targetJp: r.target || '',
-                                        targetEn: metrics.targetEn || '',
-                                        conditionJp: '', conditionEn: '',
-                                        weightHistory: metrics.weightHistory || [],
-                                        mainPhoto: r.main_photo_url || horse.photo_url || '',
-                                        logo: null
-                                    };
-                                    return { report: r, horse: horse, data: rData };
-                                }).filter((item): item is { report: Report, horse: Horse, data: ReportData } => item !== null);
-                                setReports(formattedReports);
-                            } else if (isMounted) setReports([]);
-                        } else if (isMounted) setReports([]);
-
-                    } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
-                    }
                 }
             } finally {
                 if (isMounted) setLoading(false);

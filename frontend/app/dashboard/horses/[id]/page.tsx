@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 export const runtime = 'edge';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity, User } from 'lucide-react';
@@ -95,72 +94,110 @@ export default function HorseDetail() {
         horse_status: 'Active'
     });
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        };
+    };
+
+    const restGet = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST GET failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
+    const restPost = async (path: string, body: unknown) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'POST',
+            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST POST failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
+    const restPatch = async (path: string, body: unknown) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'PATCH',
+            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST PATCH failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
+
+    const restDelete = async (path: string) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'DELETE',
+            headers: getRestHeaders()
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST DELETE failed: ${res.status} ${text}`);
+        }
+    };
+
     const filteredClients = clients.filter(c =>
         c.name.toLowerCase().includes(ownerSearch.toLowerCase())
     );
 
     useEffect(() => {
-        if (!user || !id) return; // Wait for user and id
+        if (!session?.access_token || !id) return; // Wait for auth + id
 
         let isMounted = true;
         const fetchData = async (retryCount = 0) => {
             try {
-                // 1. Fetch all clients for autocomplete
-                const { data: clientsData, error: err1 } = await supabase.from('clients').select('id, name').order('name');
-                if (err1) throw err1;
-                if (isMounted && clientsData) setClients(clientsData);
+                const [clientsData, trainersData, horseData, reportsData] = await Promise.all([
+                    restGet('clients?select=id,name&order=name'),
+                    restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name'),
+                    restGet(`horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`),
+                    restGet(`reports?select=*&horse_id=eq.${id}&order=created_at.desc`)
+                ]);
 
-                // 2. Fetch all trainers
-                const { data: trainersData, error: errTr } = await supabase
-                    .from('trainers')
-                    .select('id, trainer_name, trainer_name_en, trainer_location, trainer_location_en')
-                    .order('trainer_name');
-                if (errTr) throw errTr;
-                if (isMounted && trainersData) setTrainers(trainersData);
-
-                // 3. Fetch Horse with Owner Info
-                const { data: h, error: err2 } = await supabase
-                    .from('horses')
-                    .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
-                    .eq('id', id)
-                    .single();
-
-                if (err2) throw err2;
-
-                if (h && isMounted) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const horseData = h as any;
-                    setHorse(horseData);
-
-                    setFormData({
-                        name: horseData.name || '',
-                        name_en: horseData.name_en || '',
-                        sire: horseData.sire || '',
-                        sire_en: horseData.sire_en || '',
-                        dam: horseData.dam || '',
-                        dam_en: horseData.dam_en || '',
-                        owner_id: horseData.owner_id || '',
-                        birth_date: horseData.birth_date || '',
-                        horse_status: horseData.horse_status || 'Active'
-                    });
-                    setTrainerId(horseData.trainer_id || '');
-
-                    if (horseData.clients) {
-                        setOwnerSearch(horseData.clients.name);
-                    } else {
-                        setOwnerSearch('');
-                    }
+                if (isMounted) {
+                    setClients(clientsData || []);
+                    setTrainers(trainersData || []);
                 }
 
-                // 4. Fetch Reports
-                const { data: r, error: err3 } = await supabase
-                    .from('reports')
-                    .select('*')
-                    .eq('horse_id', id)
-                    .order('created_at', { ascending: false });
+                const h = horseData && horseData.length > 0 ? horseData[0] : null;
+                if (h && isMounted) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const horseDataItem = h as any;
+                    setHorse(horseDataItem);
+                    setFormData({
+                        name: horseDataItem.name || '',
+                        name_en: horseDataItem.name_en || '',
+                        sire: horseDataItem.sire || '',
+                        sire_en: horseDataItem.sire_en || '',
+                        dam: horseDataItem.dam || '',
+                        dam_en: horseDataItem.dam_en || '',
+                        owner_id: horseDataItem.owner_id || '',
+                        birth_date: horseDataItem.birth_date || '',
+                        horse_status: horseDataItem.horse_status || 'Active'
+                    });
+                    setTrainerId(horseDataItem.trainer_id || '');
+                    if (horseDataItem.clients) setOwnerSearch(horseDataItem.clients.name);
+                    else setOwnerSearch('');
+                }
 
-                if (err3) throw err3;
-                if (r && isMounted) setReports(r);
+                if (reportsData && isMounted) setReports(reportsData);
 
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error('Error fetching horse details:', error);
@@ -169,69 +206,6 @@ export default function HorseDetail() {
                 if (isMounted && retryCount < 2) {
                     console.log(`Retrying detail fetch... (${retryCount + 1})`);
                     setTimeout(() => fetchData(retryCount + 1), 500);
-                } else if (isMounted && session?.access_token) {
-                    // FALLBACK: Raw Fetch for all 3
-                    try {
-                        console.warn('Attempting raw fetch fallback for details...');
-                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-                        if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
-
-                        const headers = {
-                            'apikey': anonKey,
-                            'Authorization': `Bearer ${session.access_token}`
-                        };
-
-                        const [clientsRes, trainersRes, horseRes, reportsRes] = await Promise.all([
-                            fetch(`${supabaseUrl}/rest/v1/clients?select=id,name&order=name`, { headers }),
-                            fetch(`${supabaseUrl}/rest/v1/trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name`, { headers }),
-                            fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`, { headers }), // Note: single logic simulation
-                            fetch(`${supabaseUrl}/rest/v1/reports?select=*&horse_id=eq.${id}&order=created_at.desc`, { headers })
-                        ]);
-
-                        if (clientsRes.ok) {
-                            const cData = await clientsRes.json();
-                            if (isMounted) setClients(cData);
-                        }
-
-                        if (trainersRes.ok) {
-                            const tData = await trainersRes.json();
-                            if (isMounted) setTrainers(tData);
-                        }
-
-                        if (horseRes.ok) {
-                            const hData = await horseRes.json();
-                            if (hData && hData.length > 0) {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const horseData = hData[0] as any;
-                                if (isMounted) {
-                                    setHorse(horseData);
-                                    setFormData({
-                                        name: horseData.name || '',
-                                        name_en: horseData.name_en || '',
-                                        sire: horseData.sire || '',
-                                        sire_en: horseData.sire_en || '',
-                                        dam: horseData.dam || '',
-                                        dam_en: horseData.dam_en || '',
-                                        owner_id: horseData.owner_id || '',
-                                        birth_date: horseData.birth_date || '',
-                                        horse_status: horseData.horse_status || 'Active'
-                                    });
-                                    setTrainerId(horseData.trainer_id || '');
-                                    if (horseData.clients) setOwnerSearch(horseData.clients.name);
-                                    else setOwnerSearch('');
-                                }
-                            }
-                        }
-
-                        if (reportsRes.ok) {
-                            const rData = await reportsRes.json();
-                            if (isMounted) setReports(rData);
-                        }
-
-                    } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
-                    }
                 }
             }
         };
@@ -254,14 +228,9 @@ export default function HorseDetail() {
                     finalOwnerId = existing.id;
                 } else {
                     // Create new client
-                    const { data: newClient, error: clientError } = await supabase
-                        .from('clients')
-                        .insert({ name: ownerSearch })
-                        .select()
-                        .single();
-
-                    if (clientError) throw clientError;
-                    finalOwnerId = newClient.id;
+                    const created = await restPost('clients', { name: ownerSearch });
+                    if (!created || created.length === 0) throw new Error('Failed to create client');
+                    finalOwnerId = created[0].id;
                 }
             } else if (!ownerSearch) {
                 // If search cleared, remove owner
@@ -273,46 +242,34 @@ export default function HorseDetail() {
                 if (!newTrainer.trainer_name.trim()) {
                     throw new Error('Trainer name (JP) is required');
                 }
-                const { data: createdTrainer, error: trainerError } = await supabase
-                    .from('trainers')
-                    .insert({
-                        trainer_name: newTrainer.trainer_name,
-                        trainer_name_en: newTrainer.trainer_name_en || null,
-                        trainer_location: newTrainer.trainer_location || null,
-                        trainer_location_en: newTrainer.trainer_location_en || null
-                    })
-                    .select()
-                    .single();
-                if (trainerError) throw trainerError;
-                finalTrainerId = createdTrainer.id;
+                const createdTrainer = await restPost('trainers', {
+                    trainer_name: newTrainer.trainer_name,
+                    trainer_name_en: newTrainer.trainer_name_en || null,
+                    trainer_location: newTrainer.trainer_location || null,
+                    trainer_location_en: newTrainer.trainer_location_en || null
+                });
+                if (!createdTrainer || createdTrainer.length === 0) throw new Error('Failed to create trainer');
+                finalTrainerId = createdTrainer[0].id;
             }
 
-            const { error } = await supabase
-                .from('horses')
-                .update({
-                    name: formData.name,
-                    name_en: formData.name_en,
-                    sire: formData.sire,
-                    sire_en: formData.sire_en,
-                    dam: formData.dam,
-                    dam_en: formData.dam_en,
-                    owner_id: finalOwnerId,
-                    trainer_id: finalTrainerId,
-                    birth_date: formData.birth_date || null,
-                    horse_status: formData.horse_status || 'Active',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', id);
-
-            if (error) throw error;
+            await restPatch(`horses?id=eq.${id}`, {
+                name: formData.name,
+                name_en: formData.name_en,
+                sire: formData.sire,
+                sire_en: formData.sire_en,
+                dam: formData.dam,
+                dam_en: formData.dam_en,
+                owner_id: finalOwnerId,
+                trainer_id: finalTrainerId,
+                birth_date: formData.birth_date || null,
+                horse_status: formData.horse_status || 'Active',
+                updated_at: new Date().toISOString()
+            });
 
             // Refetch to get updated relation data
             // Or just update local state if we trust it. Let's refetch for safety on owner change.
-            const { data: h } = await supabase
-                .from('horses')
-                .select('*, clients(id, name), trainers(id, trainer_name, trainer_name_en, trainer_location, trainer_location_en)')
-                .eq('id', id)
-                .single();
+            const hRes = await restGet(`horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`);
+            const h = hRes && hRes.length > 0 ? hRes[0] : null;
 
             if (h) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -321,9 +278,11 @@ export default function HorseDetail() {
                 setTrainerId(horseData.trainer_id || '');
                 setEditMode(false);
                 // Update client list if we added one (optional, but good practice)
-                const { data: clientsData } = await supabase.from('clients').select('id, name').order('name');
+                const [clientsData, trainersData] = await Promise.all([
+                    restGet('clients?select=id,name&order=name'),
+                    restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name')
+                ]);
                 if (clientsData) setClients(clientsData);
-                const { data: trainersData } = await supabase.from('trainers').select('id, trainer_name, trainer_name_en, trainer_location, trainer_location_en').order('trainer_name');
                 if (trainersData) setTrainers(trainersData);
             }
 
@@ -333,14 +292,9 @@ export default function HorseDetail() {
     };
 
     const createReport = async () => {
-        const { data } = await supabase
-            .from('reports')
-            .insert([{ horse_id: id, status_training: 'Training' }])
-            .select()
-            .single();
-
-        if (data) {
-            router.push(`/reports/${data.id}`);
+        const created = await restPost('reports', [{ horse_id: id, status_training: 'Training' }]);
+        if (created && created.length > 0) {
+            router.push(`/reports/${created[0].id}`);
         }
     };
 
@@ -348,9 +302,7 @@ export default function HorseDetail() {
         if (!window.confirm(t('confirmDeleteReport'))) return;
 
         try {
-            const { error } = await supabase.from('reports').delete().eq('id', reportId);
-
-            if (error) throw error;
+            await restDelete(`reports?id=eq.${reportId}`);
 
             alert(t('deleteSuccess'));
             setReports(prev => prev.filter(r => r.id !== reportId));

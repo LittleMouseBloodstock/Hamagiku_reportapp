@@ -1,15 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewClientPage() {
     const router = useRouter();
     const { t } = useLanguage();
+    const { session } = useAuth();
     const [saving, setSaving] = useState(false);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const getRestHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        };
+    };
+
+    const restPost = async (path: string, body: unknown) => {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+            method: 'POST',
+            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`REST POST failed: ${res.status} ${text}`);
+        }
+        return res.json();
+    };
 
     const [formData, setFormData] = useState({
         name: '',
@@ -29,22 +57,18 @@ export default function NewClientPage() {
         setSaving(true);
 
         try {
-            const { error } = await supabase
-                .from('clients')
-                .insert({
-                    name: formData.name,
-                    contact_email: formData.contact_email,
-                    contact_phone: formData.contact_phone,
-                    zip_code: formData.zip_code,
-                    address_prefecture: formData.address_prefecture,
-                    address_city: formData.address_city,
-                    address_street: formData.address_street,
-                    representative_name: formData.representative_name,
-                    notes: formData.notes,
-                    report_output_mode: formData.report_output_mode
-                });
-
-            if (error) throw error;
+            await restPost('clients', {
+                name: formData.name,
+                contact_email: formData.contact_email,
+                contact_phone: formData.contact_phone,
+                zip_code: formData.zip_code,
+                address_prefecture: formData.address_prefecture,
+                address_city: formData.address_city,
+                address_street: formData.address_street,
+                representative_name: formData.representative_name,
+                notes: formData.notes,
+                report_output_mode: formData.report_output_mode
+            });
             router.push('/dashboard/clients');
             router.refresh();
         } catch (error: unknown) {
