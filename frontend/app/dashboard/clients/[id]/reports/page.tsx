@@ -53,8 +53,7 @@ export default function ClientBatchReports() {
     const [owner, setOwner] = useState<{ id: string; name: string; report_output_mode?: string | null } | null>(null);
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
-    // Month Selection (Default: Current Month)
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [showLogoInPrint, setShowLogoInPrint] = useState(true);
 
     const { user, session } = useAuth(); // Add useAuth
 
@@ -95,16 +94,9 @@ export default function ClientBatchReports() {
                 if (isMounted && client) setOwner(client);
 
                 // 2. Fetch Reports for horses owned by client in the selected month
-                const monthKey = selectedDate.replace('-', '.'); // yyyy.MM
-                const nextMonthDate = new Date(`${selectedDate}-01`);
-                nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-                const nextMonthKey = nextMonthDate.toISOString().slice(0, 7).replace('-', '.');
-
                 const reportsData = await restGet(
                     `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
-                    `&title=gte.${monthKey}` +
-                    `&title=lt.${nextMonthKey}` +
                     `&review_status=eq.approved` +
                     `&order=horse_id`
                 ) as ReportRow[];
@@ -138,6 +130,7 @@ export default function ClientBatchReports() {
                                 conditionJp: '', conditionEn: '',
                                 weightHistory: metrics.weightHistory || [],
                                 mainPhoto: r.main_photo_url || horse.photo_url || '',
+                                showLogo: metrics.showLogo ?? true,
                                 logo: null
                             };
                             return { report: r, horse: horse, data: rData };
@@ -163,7 +156,7 @@ export default function ClientBatchReports() {
         fetchData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, selectedDate, user?.id, session?.access_token, refreshKey]);
+    }, [id, user?.id, session?.access_token, refreshKey]);
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
@@ -179,12 +172,15 @@ export default function ClientBatchReports() {
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <input
-                        type="month"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="bg-white text-stone-900 px-3 py-1 rounded text-sm font-bold"
-                    />
+                    <label className="flex items-center gap-2 text-xs text-gray-200">
+                        <input
+                            type="checkbox"
+                            checked={showLogoInPrint}
+                            onChange={(e) => setShowLogoInPrint(e.target.checked)}
+                            className="h-4 w-4"
+                        />
+                        ロゴを表示
+                    </label>
                     <button
                         onClick={() => window.print()}
                         className="bg-white text-black px-4 py-2 rounded font-bold flex items-center gap-2 hover:bg-gray-200"
@@ -203,7 +199,10 @@ export default function ClientBatchReports() {
                         <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
                             <div className="print:h-screen print:flex print:flex-col print:justify-start">
-                                <ReportTemplate initialData={item.data} readOnly={true} />
+                                <ReportTemplate
+                                    initialData={{ ...item.data, showLogo: showLogoInPrint }}
+                                    readOnly={true}
+                                />
                             </div>
                         </div>
                     ))
@@ -243,12 +242,13 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 100% !important; 
-                        height: 100% !important; 
+                        width: 210mm !important; 
+                        height: 285mm !important; 
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
-                        transform: scale(0.92); /* Shrink slightly more to be safe */
+                        transform: none !important;
                         transform-origin: top center;
+                        overflow: hidden !important;
                     }
                 }
             `}</style>
