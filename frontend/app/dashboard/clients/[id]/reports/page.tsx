@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
@@ -65,7 +65,14 @@ export default function ClientBatchReports() {
     const [owner, setOwner] = useState<{ id: string; name: string; report_output_mode?: string | null } | null>(null);
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
-    const [showLogoInPrint, setShowLogoInPrint] = useState(true);
+    const searchParams = useSearchParams();
+    const isPrintView = searchParams?.get('print') === '1';
+    const initialLogoParam = searchParams?.get('logo');
+    const [showLogoInPrint, setShowLogoInPrint] = useState(() => {
+        if (initialLogoParam === '0') return false;
+        if (initialLogoParam === '1') return true;
+        return true;
+    });
     const [isPrinting, setIsPrinting] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
@@ -108,21 +115,66 @@ export default function ClientBatchReports() {
     useEffect(() => {
         document.body.classList.add('batch-print');
         document.body.classList.add('batch-preview');
+        if (isPrintView) {
+            document.body.classList.add('batch-print-view');
+        }
         return () => {
             document.body.classList.remove('batch-print');
             document.body.classList.remove('batch-preview');
+            document.body.classList.remove('batch-print-view');
         };
-    }, []);
+    }, [isPrintView]);
+
+    const applyPrintInlineStyles = () => {
+        const mark = (el: Element | null) => {
+            if (!el || (el as HTMLElement).dataset.prevStyle) return;
+            (el as HTMLElement).dataset.prevStyle = (el as HTMLElement).getAttribute('style') || '';
+        };
+        const setStyle = (el: Element | null, styles: Record<string, string>) => {
+            if (!el) return;
+            mark(el);
+            Object.entries(styles).forEach(([k, v]) => {
+                (el as HTMLElement).style.setProperty(k, v, 'important');
+            });
+        };
+        document.body.classList.add('printing');
+        setIsPrinting(true);
+
+        setStyle(document.documentElement, { height: 'auto', overflow: 'visible' });
+        setStyle(document.body, { height: 'auto', overflow: 'visible', background: 'white' });
+        setStyle(document.getElementById('__next'), { height: 'auto', overflow: 'visible' });
+        setStyle(document.querySelector('.batch-report-page'), { height: 'auto', overflow: 'visible', display: 'block' });
+        setStyle(document.querySelector('.reports-list'), { display: 'block', width: '100%' });
+        document.querySelectorAll('.no-print').forEach((el) => setStyle(el, { display: 'none' }));
+    };
+
+    const cleanupPrintInlineStyles = () => {
+        const reset = (el: Element | null) => {
+            if (!el) return;
+            const prev = (el as HTMLElement).dataset.prevStyle;
+            if (prev !== undefined) {
+                if (prev) {
+                    (el as HTMLElement).setAttribute('style', prev);
+                } else {
+                    (el as HTMLElement).removeAttribute('style');
+                }
+                delete (el as HTMLElement).dataset.prevStyle;
+            }
+        };
+        document.body.classList.remove('printing');
+        setIsPrinting(false);
+
+        reset(document.documentElement);
+        reset(document.body);
+        reset(document.getElementById('__next'));
+        reset(document.querySelector('.batch-report-page'));
+        reset(document.querySelector('.reports-list'));
+        document.querySelectorAll('.no-print').forEach((el) => reset(el));
+    };
 
     useEffect(() => {
-        const handleBeforePrint = () => {
-            document.body.classList.add('printing');
-            setIsPrinting(true);
-        };
-        const handleAfterPrint = () => {
-            document.body.classList.remove('printing');
-            setIsPrinting(false);
-        };
+        const handleBeforePrint = () => applyPrintInlineStyles();
+        const handleAfterPrint = () => cleanupPrintInlineStyles();
         window.addEventListener('beforeprint', handleBeforePrint);
         window.addEventListener('afterprint', handleAfterPrint);
         return () => {
@@ -132,12 +184,20 @@ export default function ClientBatchReports() {
     }, []);
 
     const handlePrint = () => {
-        document.body.classList.add('printing');
-        setIsPrinting(true);
-        window.setTimeout(() => {
-            window.print();
-        }, 50);
+        const url = new URL(window.location.href);
+        url.searchParams.set('print', '1');
+        url.searchParams.set('logo', showLogoInPrint ? '1' : '0');
+        window.open(url.toString(), '_blank', 'noopener,noreferrer');
     };
+
+    useEffect(() => {
+        if (!isPrintView) return;
+        const timer = window.setTimeout(() => {
+            applyPrintInlineStyles();
+            window.print();
+        }, 300);
+        return () => window.clearTimeout(timer);
+    }, [isPrintView]);
 
     useEffect(() => {
         if (!id || !session?.access_token) return; // Wait for auth
@@ -256,43 +316,44 @@ export default function ClientBatchReports() {
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans print:bg-white batch-report-page overflow-y-auto">
-            {/* Header (No Print) */}
-            <div className="bg-[#222] text-white p-4 no-print flex justify-between items-center sticky top-0 z-50 shadow-md">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => router.back()} className="hover:text-gray-300"><ArrowLeft /></button>
-                    <div>
-                        <h1 className="font-bold text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
-                        <p className="text-xs text-gray-400">Total: {reports.length} reports / Rendered: {reports.length}</p>
+        <div className={`min-h-screen bg-gray-100 font-sans print:bg-white batch-report-page ${isPrintView ? 'overflow-visible' : 'overflow-y-auto'}`}>
+            {!isPrintView && (
+                <div className="bg-[#222] text-white p-4 no-print flex justify-between items-center sticky top-0 z-50 shadow-md">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => router.back()} className="hover:text-gray-300"><ArrowLeft /></button>
+                        <div>
+                            <h1 className="font-bold text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
+                            <p className="text-xs text-gray-400">Total: {reports.length} reports / Rendered: {reports.length}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-xs text-gray-200">
+                            <span className="font-bold text-gray-100">月</span>
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="bg-white text-black rounded px-2 py-1 text-xs border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3c34]"
+                            />
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-gray-200">
+                            <input
+                                type="checkbox"
+                                checked={showLogoInPrint}
+                                onChange={(e) => setShowLogoInPrint(e.target.checked)}
+                                className="h-4 w-4"
+                            />
+                            ロゴを表示
+                        </label>
+                        <button
+                            onClick={handlePrint}
+                            className="bg-white text-black px-4 py-2 rounded font-bold flex items-center gap-2 hover:bg-gray-200"
+                        >
+                            <Printer size={18} /> Print / PDF
+                        </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-xs text-gray-200">
-                        <span className="font-bold text-gray-100">月</span>
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-white text-black rounded px-2 py-1 text-xs border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3c34]"
-                        />
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-gray-200">
-                        <input
-                            type="checkbox"
-                            checked={showLogoInPrint}
-                            onChange={(e) => setShowLogoInPrint(e.target.checked)}
-                            className="h-4 w-4"
-                        />
-                        ロゴを表示
-                    </label>
-                    <button
-                        onClick={handlePrint}
-                        className="bg-white text-black px-4 py-2 rounded font-bold flex items-center gap-2 hover:bg-gray-200"
-                    >
-                        <Printer size={18} /> Print / PDF
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Reports List */}
             <div className="reports-list flex flex-col items-center py-10 print:py-0 print:block">
@@ -326,10 +387,17 @@ export default function ClientBatchReports() {
                     height: auto !important;
                     overflow: auto !important;
                 }
+                body.batch-print-view,
+                body.batch-print-view #__next,
+                body.batch-print-view .batch-report-page {
+                    overflow: visible !important;
+                    height: auto !important;
+                    background: white !important;
+                }
                 @media print {
                     @page {
-                        size: A4;
-                        margin: 0;
+                        size: A4 portrait;
+                        margin: 10mm;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -355,7 +423,7 @@ export default function ClientBatchReports() {
                         page-break-inside: auto !important;
                         position: static !important;
                         display: block;
-                        width: 210mm;
+                        width: 190mm;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -376,10 +444,10 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 210mm !important;
-                        min-height: 297mm !important;
+                        width: 190mm !important;
+                        min-height: 277mm !important;
                         height: auto !important;
-                        padding: 10mm 10mm 8mm 10mm !important;
+                        padding: 8mm 8mm 6mm 8mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
