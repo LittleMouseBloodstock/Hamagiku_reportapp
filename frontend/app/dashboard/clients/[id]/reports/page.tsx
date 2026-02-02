@@ -66,6 +66,7 @@ export default function ClientBatchReports() {
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
     const [showLogoInPrint, setShowLogoInPrint] = useState(true);
+    const [isPrinting, setIsPrinting] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const now = new Date();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -112,6 +113,31 @@ export default function ClientBatchReports() {
             document.body.classList.remove('batch-preview');
         };
     }, []);
+
+    useEffect(() => {
+        const handleBeforePrint = () => {
+            document.body.classList.add('printing');
+            setIsPrinting(true);
+        };
+        const handleAfterPrint = () => {
+            document.body.classList.remove('printing');
+            setIsPrinting(false);
+        };
+        window.addEventListener('beforeprint', handleBeforePrint);
+        window.addEventListener('afterprint', handleAfterPrint);
+        return () => {
+            window.removeEventListener('beforeprint', handleBeforePrint);
+            window.removeEventListener('afterprint', handleAfterPrint);
+        };
+    }, []);
+
+    const handlePrint = () => {
+        document.body.classList.add('printing');
+        setIsPrinting(true);
+        window.setTimeout(() => {
+            window.print();
+        }, 50);
+    };
 
     useEffect(() => {
         if (!id || !session?.access_token) return; // Wait for auth
@@ -183,8 +209,8 @@ export default function ClientBatchReports() {
                                 trainerLocationEn: horse.trainers?.trainer_location_en || '',
                                 birthDate: horse.birth_date || '',
                                 age: calculateHorseAge(horse.birth_date),
-                                conditionJp: metrics.conditionJp || r.condition || '',
-                                conditionEn: metrics.conditionEn || '',
+                                conditionJp: metrics.conditionJp || r.condition || '-',
+                                conditionEn: metrics.conditionEn || '-',
                                 commentJp: r.body || '',
                                 commentEn: metrics.commentEn || '',
                                 weight: r.weight ? `${r.weight}kg` : '',
@@ -260,7 +286,7 @@ export default function ClientBatchReports() {
                         ロゴを表示
                     </label>
                     <button
-                        onClick={() => window.print()}
+                        onClick={handlePrint}
                         className="bg-white text-black px-4 py-2 rounded font-bold flex items-center gap-2 hover:bg-gray-200"
                     >
                         <Printer size={18} /> Print / PDF
@@ -313,8 +339,9 @@ export default function ClientBatchReports() {
                         margin: 0 !important;
                         padding: 0 !important;
                     }
-                    body * { visibility: hidden !important; }
-                    .batch-report-page, .batch-report-page * { visibility: visible !important; }
+                    body.printing * { visibility: hidden !important; }
+                    body.printing .batch-report-page,
+                    body.printing .batch-report-page * { visibility: visible !important; }
                     aside, nav, .sidebar, .side-nav { display: none !important; }
                     .batch-report-page { overflow: visible !important; height: auto !important; display: block !important; }
                     .batch-report-page > div { overflow: visible !important; height: auto !important; display: block !important; }
