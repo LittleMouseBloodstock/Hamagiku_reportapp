@@ -249,7 +249,6 @@ export default function ClientBatchReports() {
                     body { background: white; margin: 0; padding: 0; }
                     body * { visibility: hidden !important; }
                     .batch-report-page, .batch-report-page * { visibility: visible !important; }
-                    .batch-report-page { position: absolute; left: 0; top: 0; width: 210mm; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
