@@ -83,8 +83,10 @@ export default function ClientBatchReports() {
 
     useEffect(() => {
         document.body.classList.add('batch-print');
+        document.body.classList.add('batch-preview');
         return () => {
             document.body.classList.remove('batch-print');
+            document.body.classList.remove('batch-preview');
         };
     }, []);
 
@@ -190,7 +192,7 @@ export default function ClientBatchReports() {
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans print:bg-white batch-report-page">
+        <div className="min-h-screen bg-gray-100 font-sans print:bg-white batch-report-page overflow-y-auto">
             {/* Header (No Print) */}
             <div className="bg-[#222] text-white p-4 no-print flex justify-between items-center sticky top-0 z-50 shadow-md">
                 <div className="flex items-center gap-4">
@@ -240,6 +242,17 @@ export default function ClientBatchReports() {
             </div>
 
             <style jsx global>{`
+                body.batch-preview {
+                    overflow: auto !important;
+                }
+                body.batch-preview #__next {
+                    height: auto !important;
+                    overflow: visible !important;
+                }
+                body.batch-preview .batch-report-page {
+                    height: auto !important;
+                    overflow: auto !important;
+                }
                 @media print {
                     @page {
                         size: A4;
