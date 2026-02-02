@@ -218,7 +218,8 @@ export default function ClientBatchReports() {
                     }
                     .no-print { display: none !important; }
                     body { background: white; margin: 0; padding: 0; }
-                    body * { visibility: visible !important; }
+                    body * { visibility: hidden !important; }
+                    .batch-report-page, .batch-report-page * { visibility: visible !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
