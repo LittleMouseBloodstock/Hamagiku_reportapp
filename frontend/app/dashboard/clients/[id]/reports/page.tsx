@@ -214,11 +214,11 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4;
-                        margin: 0;
+                        margin: 5mm;
                     }
                     .no-print { display: none !important; }
                     body { background: white; margin: 0; padding: 0; }
-                    body .batch-report-page * { visibility: visible !important; }
+                    body * { visibility: visible !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
@@ -227,7 +227,7 @@ export default function ClientBatchReports() {
                         position: relative;
                         display: block;
                         width: 210mm;
-                        height: 270mm; /* SAFE HEIGHT: Less than 297mm to prevent spill */
+                        height: auto;
                         overflow: hidden;
                         margin: 0 auto;
                         padding: 0;
@@ -238,18 +238,21 @@ export default function ClientBatchReports() {
                     /* 
                        Override internal report styles.
                     */
-                    #report-preview {
+                    .batch-report-page #report-preview {
                         position: relative !important;
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 210mm !important; 
-                        height: 285mm !important; 
+                        width: 200mm !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        padding: 12mm 10mm 8mm 10mm !important;
+                        box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
                         transform: none !important;
                         transform-origin: top center;
-                        overflow: hidden !important;
+                        overflow: visible !important;
                     }
                 }
             `}</style>
