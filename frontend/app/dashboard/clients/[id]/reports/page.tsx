@@ -111,8 +111,26 @@ export default function ClientBatchReports() {
 
                 if (isMounted) {
                     if (Array.isArray(reportsData) && reportsData.length > 0) {
+                        const missingHorseIds = Array.from(
+                            new Set(
+                                reportsData
+                                    .filter((r) => !r.horses && r.horse_id)
+                                    .map((r) => r.horse_id)
+                            )
+                        );
+
+                        let horsesById = new Map<string, Horse>();
+                        if (missingHorseIds.length > 0) {
+                            const idList = missingHorseIds.join(',');
+                            const missingHorses = await restGet(
+                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url&` +
+                                `id=in.(${idList})`
+                            ) as Horse[];
+                            horsesById = new Map(missingHorses.map((h) => [h.id, h]));
+                        }
+
                         const formattedReports = reportsData.map((r: ReportRow) => {
-                            const horse = r.horses;
+                            const horse = r.horses || horsesById.get(r.horse_id) || null;
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
