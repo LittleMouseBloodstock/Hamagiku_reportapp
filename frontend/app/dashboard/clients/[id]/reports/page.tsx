@@ -192,12 +192,14 @@ export default function ClientBatchReports() {
 
     useEffect(() => {
         if (!isPrintView) return;
+        if (loading) return;
+        if (reports.length === 0) return;
         const timer = window.setTimeout(() => {
             applyPrintInlineStyles();
             window.print();
         }, 300);
         return () => window.clearTimeout(timer);
-    }, [isPrintView]);
+    }, [isPrintView, loading, reports.length]);
 
     useEffect(() => {
         if (!id || !session?.access_token) return; // Wait for auth
@@ -393,6 +395,17 @@ export default function ClientBatchReports() {
                     overflow: visible !important;
                     height: auto !important;
                     background: white !important;
+                }
+                body.batch-print-view .no-print,
+                body.batch-print-view aside,
+                body.batch-print-view nav,
+                body.batch-print-view .sidebar,
+                body.batch-print-view .side-nav {
+                    display: none !important;
+                }
+                body.batch-print-view .batch-report-page {
+                    margin: 0 !important;
+                    padding: 0 !important;
                 }
                 @media print {
                     @page {
