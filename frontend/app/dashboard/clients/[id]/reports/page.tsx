@@ -206,7 +206,7 @@ export default function ClientBatchReports() {
                     reports.map((item) => (
                         <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
-                            <div className="print:flex print:flex-col print:justify-start">
+                            <div className="print:block">
                                 <ReportTemplate
                                     initialData={{ ...item.data, showLogo: showLogoInPrint }}
                                     readOnly={true}
@@ -222,12 +222,10 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4;
-                        margin: 5mm;
+                        margin: 0;
                     }
                     .no-print { display: none !important; }
                     body { background: white; margin: 0; padding: 0; }
-                    body * { visibility: hidden !important; }
-                    .batch-report-page, .batch-report-page * { visibility: visible !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
@@ -238,7 +236,7 @@ export default function ClientBatchReports() {
                         display: block;
                         width: 210mm;
                         height: auto;
-                        overflow: hidden;
+                        overflow: visible;
                         margin: 0 auto;
                         padding: 0;
                         margin-bottom: 0; /* Avoid extra space */
@@ -254,8 +252,8 @@ export default function ClientBatchReports() {
                         left: 0 !important;
                         margin: 0 !important;
                         width: 210mm !important;
+                        min-height: 297mm !important;
                         height: auto !important;
-                        min-height: 0 !important;
                         padding: 10mm 8mm 8mm 8mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
