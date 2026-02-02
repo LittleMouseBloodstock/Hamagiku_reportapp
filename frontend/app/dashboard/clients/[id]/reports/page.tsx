@@ -19,6 +19,14 @@ type Horse = {
     sire_en?: string | null;
     dam: string;
     dam_en?: string | null;
+    birth_date?: string | null;
+    clients?: { name: string } | null;
+    trainers?: {
+        trainer_name?: string | null;
+        trainer_name_en?: string | null;
+        trainer_location?: string | null;
+        trainer_location_en?: string | null;
+    } | null;
 };
 
 type Report = {
@@ -41,6 +49,8 @@ type Report = {
         sireJp?: string | null;
         damEn?: string | null;
         damJp?: string | null;
+        conditionEn?: string | null;
+        conditionJp?: string | null;
     };
 };
 type ReportRow = Report & { horses?: Horse | null };
@@ -65,6 +75,13 @@ export default function ClientBatchReports() {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const calculateHorseAge = (birthDate?: string | null) => {
+        if (!birthDate) return null;
+        const year = new Date(birthDate).getFullYear();
+        if (Number.isNaN(year)) return null;
+        return new Date().getFullYear() - year;
+    };
 
     const getRestHeaders = () => {
         if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
@@ -115,7 +132,7 @@ export default function ClientBatchReports() {
 
                 // 2. Fetch Reports for horses owned by client in the selected month
                 const reportsData = await restGet(
-                    `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
+                    `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en))` +
                     `&horses.owner_id=eq.${id}` +
                     `&title=gte.${startOfMonth}` +
                     `&title=lt.${nextMonth}` +
@@ -137,7 +154,7 @@ export default function ClientBatchReports() {
                         if (missingHorseIds.length > 0) {
                             const idList = missingHorseIds.join(',');
                             const missingHorses = await restGet(
-                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url&` +
+                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&` +
                                 `id=in.(${idList})`
                             ) as Horse[];
                             horsesById = new Map(missingHorses.map((h) => [h.id, h]));
@@ -158,6 +175,15 @@ export default function ClientBatchReports() {
                                 dam: horse.dam,
                                 damEn: horse.dam_en || metrics.damEn || '',
                                 damJp: horse.dam || metrics.damJp || '',
+                                ownerName: horse.clients?.name || owner?.name || '',
+                                trainerNameJp: horse.trainers?.trainer_name || '',
+                                trainerNameEn: horse.trainers?.trainer_name_en || '',
+                                trainerLocation: horse.trainers?.trainer_location || '',
+                                trainerLocationEn: horse.trainers?.trainer_location_en || '',
+                                birthDate: horse.birth_date || '',
+                                age: calculateHorseAge(horse.birth_date),
+                                conditionJp: metrics.conditionJp || r.condition || '',
+                                conditionEn: metrics.conditionEn || '',
                                 commentJp: r.body || '',
                                 commentEn: metrics.commentEn || '',
                                 weight: r.weight ? `${r.weight}kg` : '',
@@ -287,6 +313,8 @@ export default function ClientBatchReports() {
                         margin: 0 !important;
                         padding: 0 !important;
                     }
+                    body * { visibility: hidden !important; }
+                    .batch-report-page, .batch-report-page * { visibility: visible !important; }
                     aside, nav, .sidebar, .side-nav { display: none !important; }
                     .batch-report-page { overflow: visible !important; height: auto !important; display: block !important; }
                     .batch-report-page > div { overflow: visible !important; height: auto !important; display: block !important; }
@@ -297,9 +325,9 @@ export default function ClientBatchReports() {
                         break-after: page !important; 
                         break-inside: avoid !important;
                         page-break-inside: avoid !important;
-                        position: relative;
+                        position: static !important;
                         display: block;
-                        width: 190mm;
+                        width: 210mm;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -316,14 +344,14 @@ export default function ClientBatchReports() {
                        Override internal report styles.
                     */
                     .batch-report-page .report-preview {
-                        position: relative !important;
+                        position: static !important;
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 190mm !important;
+                        width: 210mm !important;
                         min-height: 297mm !important;
                         height: auto !important;
-                        padding: 8mm 6mm 6mm 6mm !important;
+                        padding: 10mm 10mm 8mm 10mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;

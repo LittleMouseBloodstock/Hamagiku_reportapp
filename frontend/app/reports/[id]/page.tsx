@@ -186,6 +186,8 @@ export default function ReportEditor() {
                         dam: horse?.dam || '',
                         damEn: metrics.damEn || horse?.dam_en || '',
                         damJp: metrics.damJp || horse?.dam || '',
+                        conditionJp: metrics.conditionJp || report.condition || '',
+                        conditionEn: metrics.conditionEn || '',
                         ownerName: horse?.clients?.name || '',
                         trainerNameJp: horse?.trainers?.trainer_name || '',
                         trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -288,6 +290,8 @@ export default function ReportEditor() {
                                             dam: horse?.dam || '',
                                             damEn: horse?.dam_en || '',
                                             damJp: horse?.dam || '',
+                                            conditionJp: '',
+                                            conditionEn: '',
                                             ownerName: horse?.clients?.name || '',
                                             trainerNameJp: horse?.trainers?.trainer_name || '',
                                             trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -345,6 +349,8 @@ export default function ReportEditor() {
                                     dam: horse?.dam || '',
                                     damEn: metrics.damEn || horse?.dam_en || '',
                                     damJp: metrics.damJp || horse?.dam || '',
+                                    conditionJp: metrics.conditionJp || report.condition || '',
+                                    conditionEn: metrics.conditionEn || '',
                                     ownerName: horse?.clients?.name || '',
                                     trainerNameJp: horse?.trainers?.trainer_name || '',
                                     trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -535,7 +541,9 @@ export default function ReportEditor() {
             damJp: d.damJp,
             showLogo: d.showLogo ?? true,
             horseNameJp: d.horseNameJp,
-            horseNameEn: d.horseNameEn
+            horseNameEn: d.horseNameEn,
+            conditionJp: d.conditionJp,
+            conditionEn: d.conditionEn
         };
 
         const payload = {
@@ -544,6 +552,7 @@ export default function ReportEditor() {
             body: d.commentJp,
             weight: parseFloat(d.weight.replace(/[^0-9.]/g, '') || '0'),
             status_training: d.statusJp, // Map statusJp to status_training
+            condition: d.conditionJp || null,
             target: d.targetJp, // Map targetJp to target
             metrics_json: metricsJson,
             main_photo_url: mainPhotoUrl,
