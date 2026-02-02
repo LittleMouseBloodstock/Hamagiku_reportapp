@@ -168,7 +168,7 @@ export default function ClientBatchReports() {
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans print:bg-white">
+        <div className="min-h-screen bg-gray-100 font-sans print:bg-white batch-report-page">
             {/* Header (No Print) */}
             <div className="bg-[#222] text-white p-4 no-print flex justify-between items-center sticky top-0 z-50 shadow-md">
                 <div className="flex items-center gap-4">
@@ -218,6 +218,7 @@ export default function ClientBatchReports() {
                     }
                     .no-print { display: none !important; }
                     body { background: white; margin: 0; padding: 0; }
+                    body .batch-report-page * { visibility: visible !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
