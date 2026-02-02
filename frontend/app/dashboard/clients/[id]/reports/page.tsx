@@ -162,6 +162,9 @@ export default function ClientBatchReports() {
                             return { report: r, horse: horse, data: rData };
                         }).filter((item): item is { report: Report; horse: Horse; data: ReportData } => item !== null);
 
+                        console.log('[batch] reportsData', reportsData.length, 'formatted', formattedReports.length);
+                        console.log('[batch] missing horses', reportsData.filter((r) => !r.horses).length);
+
                         setReports(formattedReports);
                     } else {
                         setReports([]);
@@ -194,7 +197,7 @@ export default function ClientBatchReports() {
                     <button onClick={() => router.back()} className="hover:text-gray-300"><ArrowLeft /></button>
                     <div>
                         <h1 className="font-bold text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
-                        <p className="text-xs text-gray-400">Total: {reports.length} reports</p>
+                        <p className="text-xs text-gray-400">Total: {reports.length} reports / Rendered: {reports.length}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
