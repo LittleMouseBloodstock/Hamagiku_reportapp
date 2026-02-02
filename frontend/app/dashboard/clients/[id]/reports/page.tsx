@@ -36,6 +36,7 @@ type Report = {
     body: string | null;
     weight: number | null;
     status_training: string | null;
+    condition?: string | null;
     target: string | null;
     horse_id: string;
     main_photo_url: string | null;
