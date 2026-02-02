@@ -269,7 +269,7 @@ export default function ClientBatchReports() {
             </div>
 
             {/* Reports List */}
-            <div className="flex flex-col items-center py-10 print:py-0 print:block">
+            <div className="reports-list flex flex-col items-center py-10 print:py-0 print:block">
                 {reports.length === 0 ? (
                     <div className="text-gray-500 mt-10">No reports found for this month.</div>
                 ) : (
@@ -318,13 +318,14 @@ export default function ClientBatchReports() {
                     aside, nav, .sidebar, .side-nav { display: none !important; }
                     .batch-report-page { overflow: visible !important; height: auto !important; display: block !important; }
                     .batch-report-page > div { overflow: visible !important; height: auto !important; display: block !important; }
+                    .reports-list { display: block !important; width: 100% !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
                         page-break-after: always !important; 
                         break-after: page !important; 
-                        break-inside: avoid !important;
-                        page-break-inside: avoid !important;
+                        break-inside: auto !important;
+                        page-break-inside: auto !important;
                         position: static !important;
                         display: block;
                         width: 210mm;
