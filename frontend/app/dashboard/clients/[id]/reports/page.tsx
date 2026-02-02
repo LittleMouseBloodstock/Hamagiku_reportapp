@@ -248,7 +248,7 @@ export default function ClientBatchReports() {
                     /* 
                        Override internal report styles.
                     */
-                    .batch-report-page #report-preview {
+                    .batch-report-page .report-preview {
                         position: relative !important;
                         top: 0 !important;
                         left: 0 !important;

@@ -471,8 +471,16 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         }
     };
 
+    const rootClassName = batchPrint
+        ? 'bg-white font-sans'
+        : 'flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans';
+
+    const previewWrapperClass = batchPrint
+        ? 'flex-1 bg-white p-0 overflow-visible flex justify-center items-start h-auto print:bg-white print:p-0 print:overflow-visible preview-wrapper'
+        : 'flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper';
+
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
+        <div className={rootClassName}>
             <Fonts disablePrintStyles={batchPrint} />
             {/* Cropper Modal */}
             {isCropping && tempImgSrc && (
@@ -880,11 +888,11 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             )}
 
             {/* --- Right Side: Preview Area --- */}
-            <div className="flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper">
+            <div className={previewWrapperClass}>
                 {/* A4 Container - Uniqlo Style Reverted */}
                 <div
-                    id="report-preview"
-                    className={`bg-white shadow-2xl relative flex flex-col mx-auto transition-transform origin-top scale-[0.9] md:scale-100${isPrintMode ? ' print-mode' : ''}`}
+                    id={batchPrint ? undefined : 'report-preview'}
+                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100'}${isPrintMode ? ' print-mode' : ''}`}
                     style={{
                         width: '210mm',
                         minHeight: '297mm',
