@@ -194,7 +194,6 @@ export default function ClientBatchReports() {
                                 trainingStatusEn: metrics.statusEn || '',
                                 targetJp: r.target || '',
                                 targetEn: metrics.targetEn || '',
-                                conditionJp: '', conditionEn: '',
                                 weightHistory: metrics.weightHistory || [],
                                 mainPhoto: r.main_photo_url || horse.photo_url || '',
                                 showLogo: metrics.showLogo ?? true,
