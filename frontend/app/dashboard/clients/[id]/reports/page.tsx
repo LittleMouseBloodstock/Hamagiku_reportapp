@@ -36,6 +36,7 @@ type Report = {
         statusEn?: string | null;
         targetEn?: string | null;
         weightHistory?: { label: string; value: number }[];
+        showLogo?: boolean | null;
         sireEn?: string | null;
         sireJp?: string | null;
         damEn?: string | null;
