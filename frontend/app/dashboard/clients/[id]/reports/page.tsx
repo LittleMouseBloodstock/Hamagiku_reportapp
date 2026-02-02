@@ -55,6 +55,11 @@ export default function ClientBatchReports() {
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
     const [showLogoInPrint, setShowLogoInPrint] = useState(true);
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        return `${now.getFullYear()}-${month}`;
+    });
 
     const { user, session } = useAuth(); // Add useAuth
 
@@ -98,6 +103,11 @@ export default function ClientBatchReports() {
             setLoading(true);
 
             try {
+                const [year, month] = selectedMonth.split('-').map((v) => parseInt(v, 10));
+                const startOfMonth = `${year}.${String(month).padStart(2, '0')}`;
+                const nextMonthDate = new Date(year, month, 1);
+                const nextMonth = `${nextMonthDate.getFullYear()}.${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
                 // 1. Fetch Client
                 const clientRaw = await restGet(`clients?select=*&id=eq.${id}`);
                 const client = clientRaw && clientRaw.length > 0 ? clientRaw[0] : null;
@@ -107,6 +117,8 @@ export default function ClientBatchReports() {
                 const reportsData = await restGet(
                     `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url)` +
                     `&horses.owner_id=eq.${id}` +
+                    `&title=gte.${startOfMonth}` +
+                    `&title=lt.${nextMonth}` +
                     `&review_status=eq.approved` +
                     `&order=horse_id`
                 ) as ReportRow[];
@@ -187,7 +199,7 @@ export default function ClientBatchReports() {
         fetchData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, user?.id, session?.access_token, refreshKey]);
+    }, [id, user?.id, session?.access_token, refreshKey, selectedMonth]);
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
@@ -203,6 +215,15 @@ export default function ClientBatchReports() {
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-xs text-gray-200">
+                        <span className="font-bold text-gray-100">月</span>
+                        <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-white text-black rounded px-2 py-1 text-xs border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3c34]"
+                        />
+                    </label>
                     <label className="flex items-center gap-2 text-xs text-gray-200">
                         <input
                             type="checkbox"
@@ -259,9 +280,16 @@ export default function ClientBatchReports() {
                         margin: 0;
                     }
                     .no-print { display: none !important; }
-                    body { background: white; margin: 0; padding: 0; }
+                    html, body, #__next {
+                        height: auto !important;
+                        overflow: visible !important;
+                        background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
                     body * { visibility: hidden !important; }
                     .batch-report-page, .batch-report-page * { visibility: visible !important; }
+                    aside, nav, .sidebar, .side-nav { display: none !important; }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
@@ -270,7 +298,7 @@ export default function ClientBatchReports() {
                         break-inside: avoid !important;
                         position: relative;
                         display: block;
-                        width: 210mm;
+                        width: 190mm;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -287,10 +315,10 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 210mm !important;
+                        width: 190mm !important;
                         min-height: 297mm !important;
                         height: auto !important;
-                        padding: 10mm 8mm 8mm 8mm !important;
+                        padding: 8mm 6mm 6mm 6mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
