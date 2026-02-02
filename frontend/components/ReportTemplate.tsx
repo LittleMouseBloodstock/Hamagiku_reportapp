@@ -19,18 +19,17 @@ const Fonts = () => (
     @media print {
       @page { size: A4; margin: 10mm 0 0 0; }
       
-      /* NUCLEAR OPTION: Hide everything by default using visibility */
-      body * {
+      /* Default single-report print rules (disabled for batch print) */
+      body:not(.batch-print) * {
         visibility: hidden;
       }
       
-      /* Show ONLY the report preview and its children */
-      #report-preview, #report-preview * {
+      body:not(.batch-print) #report-preview,
+      body:not(.batch-print) #report-preview * {
         visibility: visible;
       }
       
-      /* Position the preview specifically for print */
-      #report-preview {
+      body:not(.batch-print) #report-preview {
         position: absolute !important; /* Fixed causes repetition on every page, Absolute prints once */
         top: 0 !important;
         left: 0 !important;
@@ -47,48 +46,48 @@ const Fonts = () => (
         border: none !important;
       }
 
-      #report-preview.print-mode {
+      body:not(.batch-print) #report-preview.print-mode {
         top: 20mm !important;
         height: 257mm !important;
       }
 
       /* Print Mode Compression */
-      #report-preview.print-mode .report-header {
+      body:not(.batch-print) #report-preview.print-mode .report-header {
         height: 120px !important;
         padding-top: 6px !important;
         margin-bottom: 6px !important;
       }
 
-      #report-preview.print-mode .owner-line {
+      body:not(.batch-print) #report-preview.print-mode .owner-line {
         margin-bottom: 6px !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;
         font-size: 11px !important;
       }
 
-      #report-preview.print-mode .main-photo {
+      body:not(.batch-print) #report-preview.print-mode .main-photo {
         width: 80% !important;
         margin-bottom: 8px !important;
       }
 
-      #report-preview.print-mode .data-section {
+      body:not(.batch-print) #report-preview.print-mode .data-section {
         height: 105px !important;
         margin-bottom: 6px !important;
         gap: 14px !important;
       }
 
-      #report-preview.print-mode .comment-box {
+      body:not(.batch-print) #report-preview.print-mode .comment-box {
         margin-top: 8px !important;
         min-height: 110px !important;
         padding: 14px !important;
       }
 
-      #report-preview.print-mode .comment-text {
+      body:not(.batch-print) #report-preview.print-mode .comment-text {
         font-size: 15px !important;
         line-height: 1.6 !important;
       }
 
-      #report-preview.print-mode .footer-text {
+      body:not(.batch-print) #report-preview.print-mode .footer-text {
         margin-top: 4px !important;
         font-size: 9px !important;
       }

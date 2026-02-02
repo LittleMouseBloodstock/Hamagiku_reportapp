@@ -82,6 +82,13 @@ export default function ClientBatchReports() {
     };
 
     useEffect(() => {
+        document.body.classList.add('batch-print');
+        return () => {
+            document.body.classList.remove('batch-print');
+        };
+    }, []);
+
+    useEffect(() => {
         if (!id || !session?.access_token) return; // Wait for auth
 
         let isMounted = true;
@@ -225,6 +232,7 @@ export default function ClientBatchReports() {
                     .page-break-after-always { 
                         page-break-after: always !important; 
                         break-after: page !important; 
+                        break-inside: avoid !important;
                         position: relative;
                         display: block;
                         width: 210mm;
@@ -251,6 +259,7 @@ export default function ClientBatchReports() {
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
+                        break-inside: avoid !important;
                         transform: none !important;
                         transform-origin: top center;
                         overflow: visible !important;
