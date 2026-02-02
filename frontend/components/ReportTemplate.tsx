@@ -7,7 +7,7 @@ import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // Google Fonts Component
-const Fonts = () => (
+const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean }) => (
     <style jsx global>{`
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Serif+JP:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
     
@@ -17,19 +17,19 @@ const Fonts = () => (
     
     /* Print Settings */
     @media print {
-      @page { size: A4; margin: 10mm 0 0 0; }
+      ${disablePrintStyles ? '' : '@page { size: A4; margin: 10mm 0 0 0; }'}
       
       /* Default single-report print rules (disabled for batch print) */
-      body:not(.batch-print) * {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) * {
         visibility: hidden;
-      }
+      }`}
       
-      body:not(.batch-print) #report-preview,
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview,
       body:not(.batch-print) #report-preview * {
         visibility: visible;
-      }
+      }`}
       
-      body:not(.batch-print) #report-preview {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview {
         position: absolute !important; /* Fixed causes repetition on every page, Absolute prints once */
         top: 0 !important;
         left: 0 !important;
@@ -44,53 +44,53 @@ const Fonts = () => (
         box-shadow: none !important;
         transform: none !important;
         border: none !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode {
         top: 20mm !important;
         height: 257mm !important;
-      }
+      }`}
 
       /* Print Mode Compression */
-      body:not(.batch-print) #report-preview.print-mode .report-header {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .report-header {
         height: 120px !important;
         padding-top: 6px !important;
         margin-bottom: 6px !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .owner-line {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .owner-line {
         margin-bottom: 6px !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;
         font-size: 11px !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .main-photo {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .main-photo {
         width: 80% !important;
         margin-bottom: 8px !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .data-section {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
         height: 105px !important;
         margin-bottom: 6px !important;
         gap: 14px !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .comment-box {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
         margin-top: 8px !important;
         min-height: 110px !important;
         padding: 14px !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .comment-text {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
         font-size: 15px !important;
         line-height: 1.6 !important;
-      }
+      }`}
 
-      body:not(.batch-print) #report-preview.print-mode .footer-text {
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
         margin-top: 4px !important;
         font-size: 9px !important;
-      }
+      }`}
 
       /* Logo Fix: Clip ALL edges to remove mystery line */
       .logo-container {
@@ -287,9 +287,10 @@ interface ReportTemplateProps {
     initialData?: Partial<ReportData>;
     onDataChange?: (data: ReportData) => void;
     readOnly?: boolean;
+    batchPrint?: boolean;
 }
 
-export default function ReportTemplate({ initialData, onDataChange, readOnly = false }: ReportTemplateProps) {
+export default function ReportTemplate({ initialData, onDataChange, readOnly = false, batchPrint = false }: ReportTemplateProps) {
     const { t, language } = useLanguage();
     const lang = language;
     const formatOwnerName = (name?: string) => {
@@ -472,7 +473,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     return (
         <div className="flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
-            <Fonts />
+            <Fonts disablePrintStyles={batchPrint} />
             {/* Cropper Modal */}
             {isCropping && tempImgSrc && (
                 <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">

@@ -206,10 +206,11 @@ export default function ClientBatchReports() {
                     reports.map((item) => (
                         <div key={item.report.id} className="relative w-[210mm] print:w-full mb-10 print:mb-0 page-break-after-always bg-white shadow-lg print:shadow-none">
                             {/* Wrapper to control page break */}
-                            <div className="print:h-screen print:flex print:flex-col print:justify-start">
+                            <div className="print:flex print:flex-col print:justify-start">
                                 <ReportTemplate
                                     initialData={{ ...item.data, showLogo: showLogoInPrint }}
                                     readOnly={true}
+                                    batchPrint={true}
                                 />
                             </div>
                         </div>
@@ -252,10 +253,10 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 200mm !important;
+                        width: 210mm !important;
                         height: auto !important;
                         min-height: 0 !important;
-                        padding: 12mm 10mm 8mm 10mm !important;
+                        padding: 10mm 8mm 8mm 8mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
