@@ -491,8 +491,8 @@ export default function ClientBatchReports() {
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
-                        page-break-after: always !important; 
-                        break-after: page !important; 
+                        page-break-after: always !important;
+                        break-after: page !important;
                         break-inside: avoid-page !important;
                         page-break-inside: avoid !important;
                         position: static !important;
@@ -504,10 +504,6 @@ export default function ClientBatchReports() {
                         padding: 0;
                         margin-bottom: 0; /* Avoid extra space */
                         padding-bottom: 0;
-                    }
-                    .page-break-after-always:not(:first-child) {
-                        page-break-before: always !important;
-                        break-before: page !important;
                     }
 
                     /* 
@@ -530,8 +526,7 @@ export default function ClientBatchReports() {
                         overflow: visible !important;
                         transform: none !important;
                         transform-origin: top center !important;
-                        page-break-after: always !important;
-                        break-after: page !important;
+                        /* page break handled by wrapper */
                     }
                 }
             `}</style>
