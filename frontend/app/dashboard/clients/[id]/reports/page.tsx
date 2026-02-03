@@ -473,7 +473,7 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 10mm;
+                        margin: 5mm;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -521,17 +521,15 @@ export default function ClientBatchReports() {
                         width: 190mm !important;
                         max-width: 190mm !important;
                         min-height: 0 !important;
-                        height: 277mm !important;
-                        padding: 8mm !important;
+                        height: auto !important;
+                        padding: 6mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
-                        overflow: hidden !important;
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
-                        transform: scale(0.98) !important;
-                        transform-origin: top center !important;
-                        transform-origin: top center;
                         overflow: visible !important;
+                        transform: scale(0.96) !important;
+                        transform-origin: top center !important;
                     }
                 }
             `}</style>
