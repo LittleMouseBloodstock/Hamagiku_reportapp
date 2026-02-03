@@ -532,6 +532,10 @@ export default function ClientBatchReports() {
                         transform-origin: top center !important;
                         /* page break handled by wrapper */
                     }
+                    .batch-report-page .report-preview.print-mode {
+                        height: 277mm !important;
+                        overflow: hidden !important;
+                    }
                 }
             `}</style>
         </div>
