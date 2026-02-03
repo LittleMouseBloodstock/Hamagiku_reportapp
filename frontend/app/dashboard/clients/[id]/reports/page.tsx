@@ -493,8 +493,8 @@ export default function ClientBatchReports() {
                     .page-break-after-always { 
                         page-break-after: always !important; 
                         break-after: page !important; 
-                        break-inside: auto !important;
-                        page-break-inside: auto !important;
+                        break-inside: avoid-page !important;
+                        page-break-inside: avoid !important;
                         position: static !important;
                         display: block;
                         width: 190mm;
@@ -528,8 +528,10 @@ export default function ClientBatchReports() {
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
                         overflow: visible !important;
-                        transform: scale(0.96) !important;
+                        transform: none !important;
                         transform-origin: top center !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
                     }
                 }
             `}</style>
