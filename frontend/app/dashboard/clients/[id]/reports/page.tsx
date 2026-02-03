@@ -75,6 +75,8 @@ export default function ClientBatchReports() {
     });
     const [isPrinting, setIsPrinting] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(() => {
+        const paramMonth = searchParams?.get('month');
+        if (paramMonth) return paramMonth;
         const now = new Date();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         return `${now.getFullYear()}-${month}`;
@@ -187,8 +189,17 @@ export default function ClientBatchReports() {
         const url = new URL(window.location.href);
         url.searchParams.set('print', '1');
         url.searchParams.set('logo', showLogoInPrint ? '1' : '0');
+        url.searchParams.set('month', selectedMonth);
         window.location.assign(url.toString());
     };
+
+    useEffect(() => {
+        const paramMonth = searchParams?.get('month');
+        if (paramMonth && paramMonth !== selectedMonth) {
+            setSelectedMonth(paramMonth);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
     useEffect(() => {
         if (!isPrintView) return;
