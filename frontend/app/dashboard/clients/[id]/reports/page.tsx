@@ -227,7 +227,46 @@ export default function ClientBatchReports() {
             setLoading(true);
 
             try {
-                const effectiveMonth = searchParams?.get('month') || selectedMonth;
+                const resolveMonth = async () => {
+                    const paramMonth = searchParams?.get('month');
+                    if (paramMonth) return paramMonth;
+
+                    if (typeof window !== 'undefined') {
+                        const cached = window.sessionStorage.getItem('batchReportsMonth');
+                        if (cached) return cached;
+                    }
+
+                    if (isPrintView) {
+                        try {
+                            const latest = await restGet(
+                                `reports?select=title,horses!inner(id)` +
+                                `&horses.owner_id=eq.${id}` +
+                                `&review_status=eq.approved` +
+                                `&order=title.desc` +
+                                `&limit=1`
+                            ) as { title?: string | null }[];
+                            const title = latest?.[0]?.title || '';
+                            if (title && /^\d{4}\.\d{2}$/.test(title)) {
+                                return title.replace('.', '-');
+                            }
+                        } catch {
+                            // fall through to selectedMonth
+                        }
+                    }
+
+                    return selectedMonth;
+                };
+
+                const effectiveMonth = await resolveMonth();
+                if (effectiveMonth !== selectedMonth) {
+                    setSelectedMonth(effectiveMonth);
+                }
+                if (isPrintView && searchParams && !searchParams.get('month')) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('month', effectiveMonth);
+                    window.history.replaceState({}, '', url.toString());
+                }
+
                 const [year, month] = effectiveMonth.split('-').map((v) => parseInt(v, 10));
                 const startOfMonth = `${year}.${String(month).padStart(2, '0')}`;
                 const nextMonthDate = new Date(year, month, 1);
