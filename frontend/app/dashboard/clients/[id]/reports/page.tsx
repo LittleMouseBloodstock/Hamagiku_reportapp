@@ -75,6 +75,10 @@ export default function ClientBatchReports() {
     });
     const [isPrinting, setIsPrinting] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const cached = window.sessionStorage.getItem('batchReportsMonth');
+            if (cached) return cached;
+        }
         const paramMonth = searchParams?.get('month');
         if (paramMonth) return paramMonth;
         const now = new Date();
@@ -198,8 +202,11 @@ export default function ClientBatchReports() {
         if (paramMonth && paramMonth !== selectedMonth) {
             setSelectedMonth(paramMonth);
         }
+        if (typeof window !== 'undefined') {
+            window.sessionStorage.setItem('batchReportsMonth', selectedMonth);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams]);
+    }, [searchParams, selectedMonth]);
 
     useEffect(() => {
         if (!isPrintView) return;
@@ -220,7 +227,8 @@ export default function ClientBatchReports() {
             setLoading(true);
 
             try {
-                const [year, month] = selectedMonth.split('-').map((v) => parseInt(v, 10));
+                const effectiveMonth = searchParams?.get('month') || selectedMonth;
+                const [year, month] = effectiveMonth.split('-').map((v) => parseInt(v, 10));
                 const startOfMonth = `${year}.${String(month).padStart(2, '0')}`;
                 const nextMonthDate = new Date(year, month, 1);
                 const nextMonth = `${nextMonthDate.getFullYear()}.${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
