@@ -277,10 +277,21 @@ export default function ClientBatchReports() {
                 const client = clientRaw && clientRaw.length > 0 ? clientRaw[0] : null;
                 if (isMounted && client) setOwner(client);
 
-                // 2. Fetch Reports for horses owned by client in the selected month
+                // 2. Fetch horse ids for this owner
+                const ownerHorses = await restGet(
+                    `horses?select=id&owner_id=eq.${id}`
+                ) as { id: string }[];
+                const horseIds = ownerHorses.map((h) => h.id);
+
+                if (horseIds.length === 0) {
+                    if (isMounted) setReports([]);
+                    return;
+                }
+
+                // 3. Fetch Reports for those horses in the selected month
                 const reportsData = await restGet(
-                    `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en))` +
-                    `&owner_id=eq.${id}` +
+                    `reports?select=*` +
+                    `&horse_id=in.(${horseIds.join(',')})` +
                     `&title=gte.${startOfMonth}` +
                     `&title=lt.${nextMonth}` +
                     `&review_status=eq.approved` +
@@ -289,26 +300,21 @@ export default function ClientBatchReports() {
 
                 if (isMounted) {
                     if (Array.isArray(reportsData) && reportsData.length > 0) {
-                        const missingHorseIds = Array.from(
-                            new Set(
-                                reportsData
-                                    .filter((r) => !r.horses && r.horse_id)
-                                    .map((r) => r.horse_id)
-                            )
-                        );
+                        const idList = Array.from(
+                            new Set(reportsData.map((r) => r.horse_id).filter(Boolean))
+                        ).join(',');
 
-                        let horsesById = new Map<string, Horse>();
-                        if (missingHorseIds.length > 0) {
-                            const idList = missingHorseIds.join(',');
-                            const missingHorses = await restGet(
+                        const horsesById = new Map<string, Horse>();
+                        if (idList) {
+                            const horses = await restGet(
                                 `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)` +
                                 `&id=in.(${idList})`
                             ) as Horse[];
-                            horsesById = new Map(missingHorses.map((h) => [h.id, h]));
+                            horses.forEach((h) => horsesById.set(h.id, h));
                         }
 
                         const formattedReports = reportsData.map((r: ReportRow) => {
-                            const horse = r.horses || horsesById.get(r.horse_id) || null;
+                            const horse = horsesById.get(r.horse_id) || null;
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
@@ -349,7 +355,6 @@ export default function ClientBatchReports() {
                         }).filter((item): item is { report: Report; horse: Horse; data: ReportData } => item !== null);
 
                         console.log('[batch] reportsData', reportsData.length, 'formatted', formattedReports.length);
-                        console.log('[batch] missing horses', reportsData.filter((r) => !r.horses).length);
 
                         setReports(formattedReports);
                     } else {
