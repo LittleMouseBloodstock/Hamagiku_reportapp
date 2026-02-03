@@ -430,7 +430,11 @@ export default function ClientBatchReports() {
                             {/* Wrapper to control page break */}
                             <div className="print:block">
                                 <ReportTemplate
-                                    initialData={{ ...item.data, showLogo: showLogoInPrint }}
+                                    initialData={{
+                                        ...item.data,
+                                        showLogo: showLogoInPrint,
+                                        ...(isPrintView ? { outputMode: 'print' as const } : {})
+                                    }}
                                     readOnly={true}
                                     batchPrint={true}
                                 />
