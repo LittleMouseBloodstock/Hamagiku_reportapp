@@ -520,14 +520,16 @@ export default function ClientBatchReports() {
                         margin: 0 !important;
                         width: 190mm !important;
                         max-width: 190mm !important;
-                        min-height: 277mm !important;
-                        height: auto !important;
+                        min-height: 0 !important;
+                        height: 277mm !important;
                         padding: 8mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
+                        overflow: hidden !important;
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
-                        transform: none !important;
+                        transform: scale(0.98) !important;
+                        transform-origin: top center !important;
                         transform-origin: top center;
                         overflow: visible !important;
                     }
