@@ -187,7 +187,7 @@ export default function ClientBatchReports() {
         const url = new URL(window.location.href);
         url.searchParams.set('print', '1');
         url.searchParams.set('logo', showLogoInPrint ? '1' : '0');
-        window.open(url.toString(), '_blank', 'noopener,noreferrer');
+        window.location.assign(url.toString());
     };
 
     useEffect(() => {
