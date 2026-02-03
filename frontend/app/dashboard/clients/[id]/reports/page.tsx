@@ -279,8 +279,8 @@ export default function ClientBatchReports() {
 
                 // 2. Fetch Reports for horses owned by client in the selected month
                 const reportsData = await restGet(
-                    `reports?select=*,horses!inner(id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en))` +
-                    `&horses.owner_id=eq.${id}` +
+                    `reports?select=*,horses(id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en))` +
+                    `&owner_id=eq.${id}` +
                     `&title=gte.${startOfMonth}` +
                     `&title=lt.${nextMonth}` +
                     `&review_status=eq.approved` +
@@ -301,8 +301,8 @@ export default function ClientBatchReports() {
                         if (missingHorseIds.length > 0) {
                             const idList = missingHorseIds.join(',');
                             const missingHorses = await restGet(
-                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&` +
-                                `id=in.(${idList})`
+                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)` +
+                                `&id=in.(${idList})`
                             ) as Horse[];
                             horsesById = new Map(missingHorses.map((h) => [h.id, h]));
                         }
