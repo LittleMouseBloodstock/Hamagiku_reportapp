@@ -473,7 +473,7 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 10mm;
+                        margin: 0;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -483,13 +483,20 @@ export default function ClientBatchReports() {
                         margin: 0 !important;
                         padding: 0 !important;
                     }
-                    body.printing * { visibility: hidden !important; }
-                    body.printing .batch-report-page,
-                    body.printing .batch-report-page * { visibility: visible !important; }
+                    body.printing * { visibility: visible !important; }
                     aside, nav, .sidebar, .side-nav { display: none !important; }
                     .batch-report-page { overflow: visible !important; height: auto !important; display: block !important; }
                     .batch-report-page > div { overflow: visible !important; height: auto !important; display: block !important; }
                     .reports-list { display: block !important; width: 100% !important; }
+                    body.batch-print-view,
+                    body.batch-print-view #__next,
+                    body.batch-print-view .batch-report-page,
+                    body.printing,
+                    body.printing #__next,
+                    body.printing .batch-report-page {
+                        padding: 10mm !important;
+                        box-sizing: border-box !important;
+                    }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
@@ -499,7 +506,7 @@ export default function ClientBatchReports() {
                         page-break-inside: auto !important;
                         position: static !important;
                         display: block;
-                        width: 190mm;
+                        width: 100%;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -520,10 +527,11 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 190mm !important;
-                        min-height: 277mm !important;
+                        width: 100% !important;
+                        max-width: 190mm !important;
+                        min-height: 0 !important;
                         height: auto !important;
-                        padding: 8mm 8mm 6mm 8mm !important;
+                        padding: 0 !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
