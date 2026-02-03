@@ -473,7 +473,7 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 0;
+                        margin: 10mm;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -488,15 +488,6 @@ export default function ClientBatchReports() {
                     .batch-report-page { overflow: visible !important; height: auto !important; display: block !important; }
                     .batch-report-page > div { overflow: visible !important; height: auto !important; display: block !important; }
                     .reports-list { display: block !important; width: 100% !important; }
-                    body.batch-print-view,
-                    body.batch-print-view #__next,
-                    body.batch-print-view .batch-report-page,
-                    body.printing,
-                    body.printing #__next,
-                    body.printing .batch-report-page {
-                        padding: 10mm !important;
-                        box-sizing: border-box !important;
-                    }
                     
                     /* Wrapper for each report page */
                     .page-break-after-always { 
@@ -506,7 +497,7 @@ export default function ClientBatchReports() {
                         page-break-inside: auto !important;
                         position: static !important;
                         display: block;
-                        width: 100%;
+                        width: 190mm;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -527,11 +518,11 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         left: 0 !important;
                         margin: 0 !important;
-                        width: 100% !important;
+                        width: 190mm !important;
                         max-width: 190mm !important;
-                        min-height: 0 !important;
+                        min-height: 277mm !important;
                         height: auto !important;
-                        padding: 0 !important;
+                        padding: 8mm !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
