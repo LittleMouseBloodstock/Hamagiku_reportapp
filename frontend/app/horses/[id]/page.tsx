@@ -74,7 +74,7 @@ export default function HorseDetail() {
                 updated_at: new Date().toISOString()
             });
 
-            setHorse({ ...horse, ...formData });
+            setHorse(prev => (prev ? { ...prev, ...formData } : prev));
             setEditMode(false);
         } catch (error) {
             console.error(error);
