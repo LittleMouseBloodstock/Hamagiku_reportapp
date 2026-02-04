@@ -536,6 +536,22 @@ export default function ClientBatchReports() {
                         transform-origin: top center !important;
                         /* page break handled by wrapper */
                     }
+                    .batch-report-page .horse-name-primary,
+                    .batch-report-page .horse-name-secondary,
+                    .batch-report-page .sire-dam-line {
+                        white-space: nowrap !important;
+                    }
+                    .batch-report-page .horse-name-primary {
+                        font-size: 34px !important;
+                        line-height: 1.1 !important;
+                    }
+                    .batch-report-page .horse-name-secondary {
+                        font-size: 18px !important;
+                        line-height: 1.2 !important;
+                    }
+                    .batch-report-page .sire-dam-line {
+                        font-size: 13px !important;
+                    }
                 }
             `}</style>
         </div>
