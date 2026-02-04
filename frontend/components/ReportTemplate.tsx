@@ -337,6 +337,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print' || !showLogo;
+    const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
 
     // --- Cropper State ---
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -984,14 +985,24 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Main Photo - Reduced width to save vertical space */}
                         <div className="main-photo w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
-                            {data.mainPhoto ? (
-                                <Image
-                                    src={data.mainPhoto}
-                                    alt="Main"
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                />
+                            {mainPhotoSrc ? (
+                                batchPrint || isPrintMode ? (
+                                    <img
+                                        src={mainPhotoSrc}
+                                        alt="Main"
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        loading="eager"
+                                        decoding="sync"
+                                    />
+                                ) : (
+                                    <Image
+                                        src={mainPhotoSrc}
+                                        alt="Main"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                )
                             ) : (
                                 <div className="flex items-center justify-center w-full h-full text-gray-400 font-serif-en italic">
                                     No Photo Selected
