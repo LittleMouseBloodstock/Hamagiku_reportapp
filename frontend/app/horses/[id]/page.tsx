@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 export const runtime = 'edge';
-import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, ArrowLeft, FileText, Calendar, Activity } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
+import { restGet, restPatch, restPost } from '@/lib/restClient';
 
 import Link from 'next/link';
 
@@ -45,9 +45,10 @@ export default function HorseDetail() {
         const fetchData = async () => {
             if (!id) return;
             // Fetch Horse
-            const { data: h } = await supabase.from('horses').select('*').eq('id', id).single();
+            const horseRes = await restGet(`horses?select=*&id=eq.${id}`);
+            const h = horseRes && horseRes.length > 0 ? horseRes[0] : null;
             if (h) {
-                setHorse(h);
+                setHorse(h as Horse);
                 setFormData({
                     name: h.name || '',
                     name_en: h.name_en || '',
@@ -57,45 +58,34 @@ export default function HorseDetail() {
             }
 
             // Fetch Reports
-            const { data: r } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('horse_id', id)
-                .order('created_at', { ascending: false });
-            if (r) setReports(r);
+            const reportsRes = await restGet(`reports?select=*&horse_id=eq.${id}&order=created_at.desc`);
+            if (reportsRes) setReports(reportsRes as Report[]);
         };
         fetchData();
     }, [id, refreshKey]);
 
     const handleUpdateHorse = async () => {
-        const { error } = await supabase
-            .from('horses')
-            .update({
+        try {
+            await restPatch(`horses?id=eq.${id}`, {
                 name: formData.name,
                 name_en: formData.name_en,
                 sire: formData.sire,
                 dam: formData.dam,
                 updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
+            });
 
-        if (!error && horse) {
             setHorse({ ...horse, ...formData });
             setEditMode(false);
-        } else {
+        } catch (error) {
+            console.error(error);
             alert('Failed to update');
         }
     };
 
     const createReport = async () => {
-        const { data } = await supabase
-            .from('reports')
-            .insert([{ horse_id: id, status_training: 'Training' }])
-            .select()
-            .single();
-
-        if (data) {
-            router.push(`/reports/${data.id}`);
+        const created = await restPost('reports', [{ horse_id: id, status_training: 'Training' }]);
+        if (created && created.length > 0) {
+            router.push(`/reports/${created[0].id}`);
         }
     };
 

@@ -6,14 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
+import { buildRestHeaders, restCount, restDelete, restGet } from '@/lib/restClient';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
     const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
     const refreshKey = useResumeRefresh();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     interface DashboardReport {
         id: string;
@@ -52,50 +51,22 @@ export default function Dashboard() {
     useEffect(() => {
         let isMounted = true;
         const getRestHeaders = () => {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            return {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            };
-        };
-
-        const restGet = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                headers: getRestHeaders()
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`REST GET failed: ${res.status} ${text}`);
-            }
-            return res.json();
-        };
-
-        const restCount = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                method: 'HEAD',
-                headers: {
-                    ...getRestHeaders(),
-                    'Prefer': 'count=exact'
-                }
-            });
-            if (!res.ok) return 0;
-            const range = res.headers.get('content-range') || '';
-            const total = range.split('/')[1];
-            return Number(total || 0);
+            return buildRestHeaders({ bearerToken: session.access_token });
         };
 
         const fetchReports = async (retryCount = 0) => {
             try {
                 if (!session?.access_token) return;
 
-                const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc');
+                const headers = getRestHeaders();
+                const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
                 const [reportsCount, horsesCount, clientsCount] = await Promise.all([
-                    restCount('reports?select=*'),
-                    restCount('horses?select=*'),
-                    restCount('clients?select=*')
+                    restCount('reports?select=*', headers),
+                    restCount('horses?select=*', headers),
+                    restCount('clients?select=*', headers)
                 ]);
 
                 const typedData = (data || []) as ReportRow[];
@@ -169,20 +140,10 @@ export default function Dashboard() {
         if (!window.confirm(t('confirmDeleteReport'))) return;
 
         try {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${reportId}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`Delete failed: ${res.status} ${text}`);
-            }
+            await restDelete(`reports?id=eq.${reportId}`, buildRestHeaders({ bearerToken: session.access_token }));
 
             alert(t('deleteSuccess'));
             setReports(prev => prev.filter(r => r.id !== reportId));

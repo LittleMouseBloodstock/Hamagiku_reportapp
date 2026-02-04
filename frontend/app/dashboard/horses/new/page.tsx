@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
 
 export default function NewHorsePage() {
     const { t } = useLanguage();
@@ -55,40 +56,11 @@ export default function NewHorsePage() {
     const [ownerSearch, setOwnerSearch] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
     const getRestHeaders = () => {
-        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-            throw new Error('Missing env vars or access token for REST');
+        if (!session?.access_token) {
+            throw new Error('Missing access token for REST');
         }
-        return {
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-        };
-    };
-
-    const restGet = async (path: string) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST GET failed: ${res.status} ${text}`);
-        }
-        return res.json();
-    };
-
-    const restPost = async (path: string, body: unknown) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            method: 'POST',
-            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST POST failed: ${res.status} ${text}`);
-        }
-        return res.json();
+        return buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
     };
 
     // Filter clients based on search
@@ -99,11 +71,11 @@ export default function NewHorsePage() {
     useEffect(() => {
         if (!session?.access_token) return;
         const fetchClients = async () => {
-            const data = await restGet('clients?select=id,name&order=name');
+            const data = await restGet('clients?select=id,name&order=name', getRestHeaders());
             if (data) setClients(data);
         };
         const fetchTrainers = async () => {
-            const data = await restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name');
+            const data = await restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name', getRestHeaders());
             if (data) setTrainers(data);
         };
         fetchClients();
@@ -125,7 +97,7 @@ export default function NewHorsePage() {
                     finalOwnerId = existing.id;
                 } else {
                     // Create new client
-                    const created = await restPost('clients', { name: ownerSearch });
+                    const created = await restPost('clients', { name: ownerSearch }, getRestHeaders());
                     if (!created || created.length === 0) throw new Error('Failed to create client');
                     finalOwnerId = created[0].id;
                 }
@@ -140,7 +112,7 @@ export default function NewHorsePage() {
                     trainer_name: newTrainer.trainer_name,
                     trainer_name_en: newTrainer.trainer_name_en || null,
                     trainer_location: newTrainer.trainer_location || null
-                });
+                }, getRestHeaders());
                 if (!createdTrainer || createdTrainer.length === 0) throw new Error('Failed to create trainer');
                 finalTrainerId = createdTrainer[0].id;
             }
@@ -154,7 +126,7 @@ export default function NewHorsePage() {
                 dam: formData.dam,
                 birth_date: formData.birth_date || null,
                 horse_status: formData.horse_status || 'Active'
-            });
+            }, getRestHeaders());
             router.push('/dashboard/horses');
             router.refresh();
         } catch (error: unknown) {

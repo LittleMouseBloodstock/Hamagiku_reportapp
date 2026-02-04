@@ -5,6 +5,7 @@ import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
+import { buildRestHeaders, restDelete, restGet } from '@/lib/restClient';
 
 export default function ClientsPage() {
     interface Client {
@@ -25,35 +26,18 @@ export default function ClientsPage() {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
         const getRestHeaders = () => {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            return {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            };
-        };
-
-        const restGet = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                headers: getRestHeaders()
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`REST GET failed: ${res.status} ${text}`);
-            }
-            return res.json();
+            return buildRestHeaders({ bearerToken: session.access_token });
         };
 
         const fetchClients = async (retryCount = 0) => {
             try {
                 if (!session?.access_token) return;
-                const data = await restGet('clients?select=*&order=name');
+                const data = await restGet('clients?select=*&order=name', getRestHeaders());
                 if (isMounted) setClients(data as Client[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const msg = String(error?.message || '');
@@ -80,22 +64,10 @@ export default function ClientsPage() {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
 
         try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            const res = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`Delete failed: ${res.status} ${text}`);
-            }
+            await restDelete(`clients?id=eq.${id}`, buildRestHeaders({ bearerToken: session.access_token }));
             setClients(prev => prev.filter(c => c.id !== id));
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error('Delete error:', error);

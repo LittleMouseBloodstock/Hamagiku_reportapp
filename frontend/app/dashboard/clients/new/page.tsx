@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildRestHeaders, restPost } from '@/lib/restClient';
 
 export default function NewClientPage() {
     const router = useRouter();
@@ -12,31 +13,11 @@ export default function NewClientPage() {
     const { session } = useAuth();
     const [saving, setSaving] = useState(false);
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
     const getRestHeaders = () => {
-        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-            throw new Error('Missing env vars or access token for REST');
+        if (!session?.access_token) {
+            throw new Error('Missing access token for REST');
         }
-        return {
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-        };
-    };
-
-    const restPost = async (path: string, body: unknown) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            method: 'POST',
-            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST POST failed: ${res.status} ${text}`);
-        }
-        return res.json();
+        return buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
     };
 
     const [formData, setFormData] = useState({
@@ -68,7 +49,7 @@ export default function NewClientPage() {
                 representative_name: formData.representative_name,
                 notes: formData.notes,
                 report_output_mode: formData.report_output_mode
-            });
+            }, getRestHeaders());
             router.push('/dashboard/clients');
             router.refresh();
         } catch (error: unknown) {

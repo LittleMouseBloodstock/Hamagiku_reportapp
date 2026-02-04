@@ -5,6 +5,7 @@ import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { buildRestHeaders, restDelete, restGet } from '@/lib/restClient';
 
 export default function HorsesPage() {
     interface Horse {
@@ -24,8 +25,6 @@ export default function HorsesPage() {
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
     const refreshKey = useResumeRefresh();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     const calculateHorseAge = (birthDate?: string | null) => {
         if (!birthDate) return '';
@@ -52,31 +51,16 @@ export default function HorsesPage() {
 
         let isMounted = true;
         const getRestHeaders = () => {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            return {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            };
-        };
-
-        const restGet = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                headers: getRestHeaders()
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`REST GET failed: ${res.status} ${text}`);
-            }
-            return res.json();
+            return buildRestHeaders({ bearerToken: session.access_token });
         };
 
         const fetchHorses = async (retryCount = 0) => {
             try {
                 if (!session?.access_token) return;
-                const data = await restGet('horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name');
+                const data = await restGet('horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name', getRestHeaders());
                 if (isMounted) setHorses(data as Horse[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const msg = String(error?.message || '');
@@ -101,20 +85,10 @@ export default function HorsesPage() {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
 
         try {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            const res = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`Delete failed: ${res.status} ${text}`);
-            }
+            await restDelete(`horses?id=eq.${id}`, buildRestHeaders({ bearerToken: session.access_token }));
             setHorses(prev => prev.filter(h => h.id !== id));
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error('Delete error:', error);

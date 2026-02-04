@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
 
 type Horse = {
     id: string;
@@ -38,36 +39,21 @@ export default function WeightsPage() {
         if (!session?.access_token) return;
 
         let isMounted = true;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
         const getRestHeaders = () => {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            return {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            };
-        };
-
-        const restGet = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                headers: getRestHeaders()
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`REST GET failed: ${res.status} ${text}`);
-            }
-            return res.json();
+            return buildRestHeaders({ bearerToken: session.access_token });
         };
 
         const fetchData = async (retryCount = 0) => {
             setLoading(true);
             try {
                 const orFilter = encodeURIComponent('(horse_status.is.null,horse_status.eq.Active)');
-                const horseData = await restGet(`horses?select=id,name,name_en,horse_status&or=${orFilter}&order=name`);
+                const horseData = await restGet(
+                    `horses?select=id,name,name_en,horse_status&or=${orFilter}&order=name`,
+                    getRestHeaders()
+                );
 
                 if (!horseData || horseData.length === 0) {
                     if (isMounted) {
@@ -82,8 +68,14 @@ export default function WeightsPage() {
                 const ids = horseData.map((h: Horse) => h.id);
                 const idsFilter = encodeURIComponent(`(${ids.join(',')})`);
                 const [dayWeights, latestWeights] = await Promise.all([
-                    restGet(`horse_weights?select=horse_id,weight,measured_at&measured_at=eq.${selectedDate}&horse_id=in.${idsFilter}`),
-                    restGet(`horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`)
+                    restGet(
+                        `horse_weights?select=horse_id,weight,measured_at&measured_at=eq.${selectedDate}&horse_id=in.${idsFilter}`,
+                        getRestHeaders()
+                    ),
+                    restGet(
+                        `horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`,
+                        getRestHeaders()
+                    )
                 ]);
 
                 const latestByHorse: Record<string, HorseWeight | null> = {};
@@ -146,39 +138,20 @@ export default function WeightsPage() {
                 return;
             }
 
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
-            }
-
-            const upsertRes = await fetch(`${supabaseUrl}/rest/v1/horse_weights?on_conflict=horse_id,measured_at`, {
-                method: 'POST',
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates,return=representation'
-                },
-                body: JSON.stringify(payload)
-            });
-            if (!upsertRes.ok) {
-                const text = await upsertRes.text();
-                throw new Error(`Upsert failed: ${upsertRes.status} ${text}`);
-            }
+            await restPost(
+                'horse_weights?on_conflict=horse_id,measured_at',
+                payload,
+                buildRestHeaders({
+                    bearerToken: session.access_token,
+                    prefer: 'resolution=merge-duplicates,return=representation'
+                })
+            );
 
             const idsFilter = encodeURIComponent(`(${horses.map(h => h.id).join(',')})`);
-            const latestRes = await fetch(`${supabaseUrl}/rest/v1/horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`, {
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!latestRes.ok) {
-                const text = await latestRes.text();
-                throw new Error(`Latest fetch failed: ${latestRes.status} ${text}`);
-            }
-            const latestWeightsRes = await latestRes.json();
+            const latestWeightsRes = await restGet(
+                `horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`,
+                buildRestHeaders({ bearerToken: session.access_token })
+            );
 
             const latestByHorse: Record<string, HorseWeight | null> = {};
             (latestWeightsRes || []).forEach((row: HorseWeight) => {

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildRestHeaders, restGet, restPatch } from '@/lib/restClient';
 
 export default function ClientDetailClient({ id }: { id: string }) {
     const router = useRouter();
@@ -29,40 +30,11 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
     const { user, session } = useAuth(); // Add useAuth
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
     const getRestHeaders = () => {
-        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-            throw new Error('Missing env vars or access token for REST');
+        if (!session?.access_token) {
+            throw new Error('Missing access token for REST');
         }
-        return {
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-        };
-    };
-
-    const restGet = async (path: string) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST GET failed: ${res.status} ${text}`);
-        }
-        return res.json();
-    };
-
-    const restPatch = async (path: string, body: unknown) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            method: 'PATCH',
-            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST PATCH failed: ${res.status} ${text}`);
-        }
-        return res.json();
+        return buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
     };
 
     useEffect(() => {
@@ -71,7 +43,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
         let isMounted = true;
         const fetchClient = async (retryCount = 0) => {
             try {
-                const raw = await restGet(`clients?select=*&id=eq.${id}`);
+                const raw = await restGet(`clients?select=*&id=eq.${id}`, getRestHeaders());
                 const data = raw && raw.length > 0 ? raw[0] : null;
                 if (data && isMounted) {
                     setFormData({
@@ -120,7 +92,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                 representative_name: formData.representative_name,
                 notes: formData.notes,
                 report_output_mode: formData.report_output_mode
-            });
+            }, getRestHeaders());
             router.push('/dashboard/clients');
             router.refresh();
         } catch (error: unknown) {

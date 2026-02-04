@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildRestHeaders, restDelete, restGet, restPost } from '@/lib/restClient';
 
 interface AllowedUser {
     id: string;
@@ -22,51 +23,11 @@ export default function SettingsPage() {
     const [adding, setAdding] = useState(false);
     const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null);
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
     const getRestHeaders = () => {
-        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-            throw new Error('Missing env vars or access token for REST');
+        if (!session?.access_token) {
+            throw new Error('Missing access token for REST');
         }
-        return {
-            'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-        };
-    };
-
-    const restGet = async (path: string) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: getRestHeaders() });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST GET failed: ${res.status} ${text}`);
-        }
-        return res.json();
-    };
-
-    const restPost = async (path: string, body: unknown) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            method: 'POST',
-            headers: { ...getRestHeaders(), 'Prefer': 'return=representation' },
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST POST failed: ${res.status} ${text}`);
-        }
-        return res.json();
-    };
-
-    const restDelete = async (path: string) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            method: 'DELETE',
-            headers: getRestHeaders()
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`REST DELETE failed: ${res.status} ${text}`);
-        }
+        return buildRestHeaders({ bearerToken: session.access_token });
     };
 
     // Fetch users on mount
@@ -78,7 +39,7 @@ export default function SettingsPage() {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const data = await restGet('allowed_users?select=*&order=created_at');
+            const data = await restGet('allowed_users?select=*&order=created_at', getRestHeaders());
             setUsers(data || []);
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error('Error fetching users:', error);
@@ -96,7 +57,7 @@ export default function SettingsPage() {
         setMessage(null);
 
         try {
-            await restPost('allowed_users', [{ email: newUserEmail }]);
+            await restPost('allowed_users', [{ email: newUserEmail }], getRestHeaders());
 
             setMessage({ text: 'User added successfully', type: 'success' });
             setNewUserEmail('');
@@ -114,7 +75,7 @@ export default function SettingsPage() {
         }
 
         try {
-            await restDelete(`allowed_users?email=eq.${encodeURIComponent(email)}`);
+            await restDelete(`allowed_users?email=eq.${encodeURIComponent(email)}`, getRestHeaders());
 
             setMessage({ text: t('userRemoved'), type: 'success' });
             fetchUsers(); // Refresh list

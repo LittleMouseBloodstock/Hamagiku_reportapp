@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { buildRestHeaders, restDelete, restGet, restPatch, restPost } from '@/lib/restClient';
 
 type Trainer = {
     id: string;
@@ -35,35 +36,18 @@ export default function TrainersPage() {
         // Allow refetch on resume even if user is temporarily null
 
         let isMounted = true;
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
         const getRestHeaders = () => {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            return {
-                'apikey': supabaseAnonKey,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            };
-        };
-
-        const restGet = async (path: string) => {
-            const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-                headers: getRestHeaders()
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`REST GET failed: ${res.status} ${text}`);
-            }
-            return res.json();
+            return buildRestHeaders({ bearerToken: session.access_token });
         };
 
         const fetchTrainers = async (retryCount = 0) => {
             try {
                 if (!session?.access_token) return;
-                const data = await restGet('trainers?select=*&order=trainer_name');
+                const data = await restGet('trainers?select=*&order=trainer_name', getRestHeaders());
                 if (isMounted) setTrainers(data as Trainer[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error('Error fetching trainers:', error);
@@ -99,22 +83,10 @@ export default function TrainersPage() {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
         try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
-            const res = await fetch(`${supabaseUrl}/rest/v1/trainers?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`Delete failed: ${res.status} ${text}`);
-            }
+            await restDelete(`trainers?id=eq.${id}`, buildRestHeaders({ bearerToken: session.access_token }));
             setTrainers(prev => prev.filter(t => t.id !== id));
             if (isEditingId === id) resetForm();
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -130,11 +102,10 @@ export default function TrainersPage() {
         }
 
         try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing env vars or access token for REST');
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
             }
+            const headers = buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
 
             const payload = {
                 trainer_name: formData.trainer_name,
@@ -145,48 +116,14 @@ export default function TrainersPage() {
             };
 
             if (isEditingId) {
-                const res = await fetch(`${supabaseUrl}/rest/v1/trainers?id=eq.${isEditingId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': supabaseAnonKey,
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(`Update failed: ${res.status} ${text}`);
-                }
+                await restPatch(`trainers?id=eq.${isEditingId}`, payload, headers);
             } else {
-                const res = await fetch(`${supabaseUrl}/rest/v1/trainers`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': supabaseAnonKey,
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(`Insert failed: ${res.status} ${text}`);
-                }
+                await restPost('trainers', payload, headers);
             }
 
             resetForm();
-            const listRes = await fetch(`${supabaseUrl}/rest/v1/trainers?select=*&order=trainer_name`, {
-                headers: {
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            });
-            if (listRes.ok) {
-                const data = await listRes.json();
-                setTrainers(data as Trainer[]);
-            }
+            const data = await restGet('trainers?select=*&order=trainer_name', buildRestHeaders({ bearerToken: session.access_token }));
+            setTrainers(data as Trainer[]);
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert('Failed to save: ' + (error.message || 'Unknown error'));
         }
