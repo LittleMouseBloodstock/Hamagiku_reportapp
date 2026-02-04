@@ -117,8 +117,13 @@ export default function WeightsPage() {
 
     const handleSave = async () => {
         if (!hasHorses) return;
+        if (!session?.access_token) {
+            alert(language === 'ja' ? 'セッションがありません。再ログインしてください。' : 'Session missing. Please re-login.');
+            return;
+        }
         setSaving(true);
         try {
+            const token = session.access_token;
             const payload = horses
                 .map((horse) => {
                     const raw = weights[horse.id];
@@ -142,7 +147,7 @@ export default function WeightsPage() {
                 'horse_weights?on_conflict=horse_id,measured_at',
                 payload,
                 buildRestHeaders({
-                    bearerToken: session.access_token,
+                    bearerToken: token,
                     prefer: 'resolution=merge-duplicates,return=representation'
                 })
             );
@@ -150,7 +155,7 @@ export default function WeightsPage() {
             const idsFilter = encodeURIComponent(`(${horses.map(h => h.id).join(',')})`);
             const latestWeightsRes = await restGet(
                 `horse_weights?select=horse_id,weight,measured_at&horse_id=in.${idsFilter}&order=measured_at.desc`,
-                buildRestHeaders({ bearerToken: session.access_token })
+                buildRestHeaders({ bearerToken: token })
             );
 
             const latestByHorse: Record<string, HorseWeight | null> = {};
