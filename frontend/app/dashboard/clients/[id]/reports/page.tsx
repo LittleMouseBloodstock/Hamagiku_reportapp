@@ -501,7 +501,7 @@ export default function ClientBatchReports() {
                         page-break-inside: avoid !important;
                         position: static !important;
                         display: block;
-                        width: 190mm;
+                        width: 210mm;
                         height: auto;
                         overflow: visible;
                         margin: 0 auto;
@@ -521,12 +521,12 @@ export default function ClientBatchReports() {
                         position: static !important;
                         top: 0 !important;
                         left: 0 !important;
-                        margin: 0 !important;
-                        width: 190mm !important;
-                        max-width: 190mm !important;
-                        min-height: 0 !important;
-                        height: auto !important;
-                        padding: 6mm !important;
+                        margin: 0 auto !important;
+                        width: 210mm !important;
+                        max-width: 210mm !important;
+                        min-height: 297mm !important;
+                        height: 297mm !important;
+                        padding: 20px 30px 10px !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
@@ -535,10 +535,6 @@ export default function ClientBatchReports() {
                         transform: none !important;
                         transform-origin: top center !important;
                         /* page break handled by wrapper */
-                    }
-                    .batch-report-page .report-preview.print-mode {
-                        height: 277mm !important;
-                        overflow: hidden !important;
                     }
                 }
             `}</style>
