@@ -509,6 +509,10 @@ export default function ClientBatchReports() {
                         margin-bottom: 0; /* Avoid extra space */
                         padding-bottom: 0;
                     }
+                    .page-break-after-always:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
 
                     /* 
                        Override internal report styles.
