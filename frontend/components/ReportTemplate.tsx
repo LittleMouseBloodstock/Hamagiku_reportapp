@@ -1054,8 +1054,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className="comment-text text-[15px] leading-[1.8] text-justify font-serif-en text-[#111] whitespace-pre-wrap break-words font-semibold">
-                                    {data.commentEn ? `"${data.commentEn}"` : ''}
+                                <div className="comment-text text-[16px] leading-[1.8] text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold">
+                                    {data.commentEn || ''}
                                 </div>
                             )}
                         </div>
