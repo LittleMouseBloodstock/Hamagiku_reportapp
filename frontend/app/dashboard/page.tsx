@@ -42,6 +42,7 @@ export default function Dashboard() {
     const [stats, setStats] = useState({
         totalReports: 0,
         activeHorses: 0,
+        retiredHorses: 0,
         clients: 0,
         pendingReview: 0,
         draftReports: 0,
@@ -63,9 +64,10 @@ export default function Dashboard() {
 
                 const headers = getRestHeaders();
                 const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
-                const [reportsCount, horsesCount, clientsCount] = await Promise.all([
+                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount] = await Promise.all([
                     restCount('reports?select=*', headers),
-                    restCount('horses?select=*', headers),
+                    restCount('horses?select=*&departure_date=is.null', headers),
+                    restCount('horses?select=*&departure_date=not.is.null', headers),
                     restCount('clients?select=*', headers)
                 ]);
 
@@ -74,7 +76,7 @@ export default function Dashboard() {
                 const draftCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'draft').length || 0;
                 const approvedCount = typedData.filter((r) => (r.review_status || '').toLowerCase() === 'approved').length || 0;
                 const isEmptySnapshot = (reportsCount || 0) === 0
-                    && (horsesCount || 0) === 0
+                    && ((activeHorsesCount || 0) + (retiredHorsesCount || 0)) === 0
                     && (clientsCount || 0) === 0
                     && typedData.length === 0;
 
@@ -87,7 +89,8 @@ export default function Dashboard() {
                 if (isMounted) {
                     setStats({
                         totalReports: reportsCount || 0,
-                        activeHorses: horsesCount || 0,
+                        activeHorses: activeHorsesCount || 0,
+                        retiredHorses: retiredHorsesCount || 0,
                         clients: clientsCount || 0,
                         pendingReview: pendingCount || 0,
                         draftReports: draftCount || 0,
@@ -191,8 +194,17 @@ export default function Dashboard() {
                                 <span className="material-symbols-outlined text-[#1a3c34]">format_list_bulleted</span>
                             </div>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Active Horses</h3>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('activeHorsesLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.activeHorses}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
+                                <span className="material-symbols-outlined text-[#1a3c34]">archive</span>
+                            </div>
+                        </div>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('retiredHorsesLabel')}</h3>
+                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.retiredHorses}</p>
                     </div>
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">

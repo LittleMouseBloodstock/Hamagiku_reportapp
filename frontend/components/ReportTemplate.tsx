@@ -51,6 +51,10 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         height: 257mm !important;
       }`}
 
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
+        top: 5mm !important; /* Move up ~1.5cm when logo is hidden */
+      }`}
+
       /* Print Mode Compression */
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .report-header {
         height: 120px !important;
@@ -893,7 +897,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                 {/* A4 Container - Uniqlo Style Reverted */}
                 <div
                     id={batchPrint ? undefined : 'report-preview'}
-                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100'}${isPrintMode ? ' print-mode' : ''}`}
+                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100'}${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
                     style={{
                         width: '210mm',
                         minHeight: '297mm',

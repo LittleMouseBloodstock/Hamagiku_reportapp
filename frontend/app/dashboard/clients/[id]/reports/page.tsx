@@ -536,6 +536,9 @@ export default function ClientBatchReports() {
                         transform-origin: top center !important;
                         /* page break handled by wrapper */
                     }
+                    .batch-report-page .report-preview.no-logo {
+                        transform: translateY(-15mm) !important;
+                    }
                     .batch-report-page .horse-name-primary,
                     .batch-report-page .horse-name-secondary,
                     .batch-report-page .sire-dam-line {

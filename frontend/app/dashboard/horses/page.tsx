@@ -14,6 +14,7 @@ export default function HorsesPage() {
         name_en: string;
         birth_date?: string | null;
         horse_status?: string | null;
+        departure_date?: string | null;
         owner_id?: string;
         clients?: { name: string; };
         trainer_id?: string | null;
@@ -24,6 +25,7 @@ export default function HorsesPage() {
     const { user, session } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
+    const [showMode, setShowMode] = useState<'active' | 'retired'>('active');
     const refreshKey = useResumeRefresh();
 
     const calculateHorseAge = (birthDate?: string | null) => {
@@ -105,6 +107,14 @@ export default function HorsesPage() {
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
                     <select
+                        value={showMode}
+                        onChange={(e) => setShowMode(e.target.value as 'active' | 'retired')}
+                        className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
+                    >
+                        <option value="active">{t('showActiveOnly')}</option>
+                        <option value="retired">{t('showRetiredOnly')}</option>
+                    </select>
+                    <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as 'name' | 'trainer')}
                         className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
@@ -136,6 +146,10 @@ export default function HorsesPage() {
                             </thead>
                             <tbody className="divide-y divide-stone-200">
                                 {[...horses]
+                                    .filter((horse) => {
+                                        const isRetired = !!horse.departure_date;
+                                        return showMode === 'active' ? !isRetired : isRetired;
+                                    })
                                     .sort((a, b) => {
                                         if (sortMode === 'trainer') {
                                             const aName = (language === 'ja'

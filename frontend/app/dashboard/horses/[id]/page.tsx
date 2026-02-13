@@ -22,6 +22,11 @@ type Horse = {
     updated_at: string;
     birth_date?: string | null;
     horse_status?: string | null;
+    departure_date?: string | null;
+    last_farrier_date?: string | null;
+    last_farrier_note?: string | null;
+    last_worming_date?: string | null;
+    last_worming_note?: string | null;
     owner_id: string | null;
     clients: { id: string, name: string } | null;
     trainer_id?: string | null;
@@ -91,7 +96,12 @@ export default function HorseDetail() {
         dam_en: '',
         owner_id: '',
         birth_date: '',
-        horse_status: 'Active'
+        horse_status: 'Active',
+        departure_date: '',
+        last_farrier_date: '',
+        last_farrier_note: '',
+        last_worming_date: '',
+        last_worming_note: ''
     });
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -190,7 +200,12 @@ export default function HorseDetail() {
                         dam_en: horseDataItem.dam_en || '',
                         owner_id: horseDataItem.owner_id || '',
                         birth_date: horseDataItem.birth_date || '',
-                        horse_status: horseDataItem.horse_status || 'Active'
+                        horse_status: horseDataItem.horse_status || 'Active',
+                        departure_date: horseDataItem.departure_date || '',
+                        last_farrier_date: horseDataItem.last_farrier_date || '',
+                        last_farrier_note: horseDataItem.last_farrier_note || '',
+                        last_worming_date: horseDataItem.last_worming_date || '',
+                        last_worming_note: horseDataItem.last_worming_note || ''
                     });
                     setTrainerId(horseDataItem.trainer_id || '');
                     if (horseDataItem.clients) setOwnerSearch(horseDataItem.clients.name);
@@ -263,6 +278,11 @@ export default function HorseDetail() {
                 trainer_id: finalTrainerId,
                 birth_date: formData.birth_date || null,
                 horse_status: formData.horse_status || 'Active',
+                departure_date: formData.departure_date || null,
+                last_farrier_date: formData.last_farrier_date || null,
+                last_farrier_note: formData.last_farrier_note || null,
+                last_worming_date: formData.last_worming_date || null,
+                last_worming_note: formData.last_worming_note || null,
                 updated_at: new Date().toISOString()
             });
 
@@ -296,6 +316,10 @@ export default function HorseDetail() {
         if (created && created.length > 0) {
             router.push(`/reports/${created[0].id}`);
         }
+    };
+
+    const createDepartureReport = () => {
+        router.push(`/reports/new?horseId=${id}&reportType=departure`);
     };
 
     const handleDeleteReport = async (reportId: string) => {
@@ -508,6 +532,51 @@ export default function HorseDetail() {
                                             <option value="Other">{t('horseStatusOther')}</option>
                                         </select>
                                     </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('departureDate')}</label>
+                                        <input
+                                            type="date"
+                                            className="w-full border border-gray-300 rounded p-2"
+                                            value={formData.departure_date}
+                                            onChange={e => setFormData({ ...formData, departure_date: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('lastFarrier')}</label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.last_farrier_date}
+                                                onChange={e => setFormData({ ...formData, last_farrier_date: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                placeholder={language === 'ja' ? '例: 両前装蹄' : 'e.g. Front Shoes'}
+                                                value={formData.last_farrier_note}
+                                                onChange={e => setFormData({ ...formData, last_farrier_note: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('lastWorming')}</label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.last_worming_date}
+                                                onChange={e => setFormData({ ...formData, last_worming_date: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                placeholder={language === 'ja' ? '例: エクイバランゴールド' : 'e.g. Eqvulan Gold'}
+                                                value={formData.last_worming_note}
+                                                onChange={e => setFormData({ ...formData, last_worming_note: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -539,6 +608,18 @@ export default function HorseDetail() {
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{t('horseStatusLabel')}</span>
                                         {horse.horse_status ? t(`horseStatus${horse.horse_status}`) : t('horseStatusActive')}
                                     </div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('departureDate')}</span>
+                                        {horse.departure_date || '-'}
+                                    </div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('lastFarrier')}</span>
+                                        {horse.last_farrier_date ? `${horse.last_farrier_date} ${horse.last_farrier_note || ''}`.trim() : '-'}
+                                    </div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('lastWorming')}</span>
+                                        {horse.last_worming_date ? `${horse.last_worming_date} ${horse.last_worming_note || ''}`.trim() : '-'}
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -550,6 +631,12 @@ export default function HorseDetail() {
                             className="bg-[var(--color-primary)] hover:brightness-110 text-white px-5 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all whitespace-nowrap"
                         >
                             <Plus size={18} /> {t('createReportBtn')}
+                        </button>
+                        <button
+                            onClick={createDepartureReport}
+                            className="bg-white border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white px-5 py-2.5 rounded-full font-bold shadow-sm flex items-center gap-2 transition-all whitespace-nowrap"
+                        >
+                            <FileText size={18} /> {t('createDepartureReport')}
                         </button>
                         {editMode ? (
                             <div className="flex gap-2">

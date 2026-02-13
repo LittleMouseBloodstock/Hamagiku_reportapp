@@ -37,6 +37,7 @@ const translations: Translations = {
 
     // Table Headers
     reportTitle: { ja: "レポート名", en: "Report Title" },
+    date: { ja: "日付", en: "Date" },
     created: { ja: "作成日", en: "Created" },
     status: { ja: "ステータス", en: "Status" },
     language: { ja: "言語", en: "Language" },
@@ -189,6 +190,20 @@ const translations: Translations = {
     horseStatusRetired: { ja: "引退", en: "Retired" },
     horseStatusSold: { ja: "売却", en: "Sold" },
     horseStatusOther: { ja: "その他", en: "Other" },
+    activeHorsesLabel: { ja: "在厩馬", en: "Active Horses" },
+    retiredHorsesLabel: { ja: "退厩馬", en: "Departed Horses" },
+    horseListFilterLabel: { ja: "表示", en: "Show" },
+    showActiveOnly: { ja: "在厩馬のみ", en: "Active only" },
+    showRetiredOnly: { ja: "退厩馬のみ", en: "Departed only" },
+    departureDate: { ja: "退厩日", en: "Departure Date" },
+    lastFarrier: { ja: "最終装蹄", en: "Farrier" },
+    lastWorming: { ja: "最終駆虫", en: "Recent Worming" },
+    feeding: { ja: "飼葉内容", en: "Feeding" },
+    exercise: { ja: "調教内容", en: "Exercise Routine" },
+    sexAge: { ja: "性別・年齢", en: "Sex / Age" },
+    departureReport: { ja: "退厩レポート", en: "Departure Report" },
+    createDepartureReport: { ja: "退厩レポート作成", en: "Create Departure Report" },
+    weightDate: { ja: "体重測定日", en: "Weight Date" },
 
     // Statuses
     status_Draft: { ja: "下書き", en: "Draft" },

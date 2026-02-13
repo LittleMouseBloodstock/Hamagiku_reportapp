@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
+import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -21,9 +22,10 @@ export default function ReportEditor() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [reviewStatus, setReviewStatus] = useState<string>('draft');
     const [isDirty, setIsDirty] = useState(false);
+    const [reportType, setReportType] = useState<'monthly' | 'departure'>('monthly');
 
     // Initial Data for Template
-    const [initialData, setInitialData] = useState<Partial<ReportData>>({});
+    const [initialData, setInitialData] = useState<Partial<ReportData | DepartureReportData>>({});
     const [horseId, setHorseId] = useState<string | null>(null);
 
     // Horse Selection (for New Reports)
@@ -31,7 +33,7 @@ export default function ReportEditor() {
     const [horses, setHorses] = useState<{ id: string, name: string, name_en: string }[]>([]);
 
     // Current Data (Synced from Child)
-    const reportDataRef = useRef<ReportData | null>(null);
+    const reportDataRef = useRef<ReportData | DepartureReportData | null>(null);
 
     const { user, session } = useAuth(); // Add useAuth
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -74,10 +76,19 @@ export default function ReportEditor() {
         return 'pdf';
     };
 
-    const fetchLatestWeight = async (horseId: string) => {
+    const fetchLatestWeightEntry = async (horseId: string) => {
         try {
             const data = await restGet(`horse_weights?horse_id=eq.${horseId}&select=weight,measured_at&order=measured_at.desc&limit=1`);
-            return data?.[0]?.weight ?? null;
+            return data?.[0] ?? null;
+        } catch {
+            return null;
+        }
+    };
+
+    const fetchLatestReport = async (horseId: string) => {
+        try {
+            const data = await restGet(`reports?horse_id=eq.${horseId}&select=weight,metrics_json,created_at&order=created_at.desc&limit=1`);
+            return data?.[0] ?? null;
         } catch {
             return null;
         }
@@ -94,6 +105,9 @@ export default function ReportEditor() {
                     // Determine horseId from URL params (if linked from Horse Detail)
                     const params = new URLSearchParams(window.location.search);
                     const paramHorseId = params.get('horseId');
+                    const reportTypeParam = params.get('reportType');
+                    const nextReportType = reportTypeParam === 'departure' ? 'departure' : 'monthly';
+                    if (isMounted) setReportType(nextReportType);
                     const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
                     const sixMonthsAgo = new Date();
                     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -108,9 +122,10 @@ export default function ReportEditor() {
                         // Fetch past weight history (last 6 months)
                         const weights = await restGet(`horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
-                        const latestWeight = await fetchLatestWeight(paramHorseId);
+                        const latestWeightEntry = await fetchLatestWeightEntry(paramHorseId);
+                        const latestReport = await fetchLatestReport(paramHorseId);
 
-                        const weightHistory = weights?.map((r: { measured_at: string; weight: number | null }) => {
+                        const weightHistoryFromWeights = weights?.map((r: { measured_at: string; weight: number | null }) => {
                             const d = new Date(r.measured_at);
                             return {
                                 label: `${d.getMonth() + 1}月`,
@@ -119,7 +134,41 @@ export default function ReportEditor() {
                         }).filter((item: { value: number }) => item.value > 0) || [];
 
                     if (isMounted) {
-                        setInitialData({
+                        const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
+                        const latestWeightDate = latestWeightEntry?.measured_at || '';
+                        const latestHistory = latestReport?.metrics_json?.weightHistory;
+                        const weightHistory = Array.isArray(latestHistory) && latestHistory.length > 0
+                            ? latestHistory
+                            : weightHistoryFromWeights;
+
+                        if (nextReportType === 'departure') {
+                            setInitialData({
+                                reportDate: new Date().toISOString().slice(0, 10),
+                                horseNameJp: horse?.name || '',
+                                horseNameEn: horse?.name_en || '',
+                                sexAgeJp: '',
+                                sexAgeEn: '',
+                                sireJp: horse?.sire || '',
+                                sireEn: horse?.sire_en || '',
+                                damJp: horse?.dam || '',
+                                damEn: horse?.dam_en || '',
+                                weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
+                                weightDate: latestWeightDate || '',
+                                farrierJp: horse?.last_farrier_note || '',
+                                farrierEn: horse?.last_farrier_note || '',
+                                farrierDate: horse?.last_farrier_date || '',
+                                wormingJp: horse?.last_worming_note || '',
+                                wormingEn: horse?.last_worming_note || '',
+                                wormingDate: horse?.last_worming_date || '',
+                                feedingJp: '',
+                                feedingEn: '',
+                                exerciseJp: '',
+                                exerciseEn: '',
+                                commentJp: '',
+                                commentEn: ''
+                            });
+                        } else {
+                            setInitialData({
                                 reportDate: defaultDate,
                                 horseNameJp: horse?.name || '',
                                 horseNameEn: horse?.name_en || '',
@@ -140,11 +189,13 @@ export default function ReportEditor() {
                                 mainPhoto: horse?.photo_url || '',
                                 originalPhoto: horse?.photo_url || '',
                                 statusEn: 'Training', statusJp: '調整中',
-                                weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
+                                weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '',
+                                targetEn: '', targetJp: '',
                                 commentEn: '', commentJp: '',
                                 weightHistory: weightHistory
                             });
-                            setLoading(false);
+                        }
+                        setLoading(false);
                         }
                     } else {
                         // No horse selected, fetch list and show selector
@@ -172,49 +223,79 @@ export default function ReportEditor() {
 
                     // Parse metrics_json for extra fields
                     const metrics = report.metrics_json || {};
+                    const reportTypeFromMetrics = metrics.reportType === 'departure' ? 'departure' : 'monthly';
+                    setReportType(reportTypeFromMetrics);
 
                     // Map DB to ReportData
-                    const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
-                    const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
-                    setInitialData({
-                        reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
-                        horseNameJp: metrics.horseNameJp || horse?.name || '',
-                        horseNameEn: metrics.horseNameEn || horse?.name_en || '',
-                        sire: horse?.sire || '',
-                        sireEn: metrics.sireEn || horse?.sire_en || '',
-                        sireJp: metrics.sireJp || horse?.sire || '',
-                        dam: horse?.dam || '',
-                        damEn: metrics.damEn || horse?.dam_en || '',
-                        damJp: metrics.damJp || horse?.dam || '',
-                        conditionJp: metrics.conditionJp || report.condition || '',
-                        conditionEn: metrics.conditionEn || '',
-                        ownerName: horse?.clients?.name || '',
-                        trainerNameJp: horse?.trainers?.trainer_name || '',
-                        trainerNameEn: horse?.trainers?.trainer_name_en || '',
-                        trainerLocation: horse?.trainers?.trainer_location || '',
-                        trainerLocationEn: horse?.trainers?.trainer_location_en || '',
-                        birthDate: horse?.birth_date || '',
-                        age: calculateHorseAge(horse?.birth_date),
-                        outputMode: resolvedMode,
-                        showLogo: showLogo,
+                    if (reportTypeFromMetrics === 'departure') {
+                        setInitialData({
+                            reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
+                            horseNameJp: metrics.horseNameJp || horse?.name || '',
+                            horseNameEn: metrics.horseNameEn || horse?.name_en || '',
+                            sexAgeJp: metrics.sexAgeJp || '',
+                            sexAgeEn: metrics.sexAgeEn || '',
+                            sireJp: metrics.sireJp || horse?.sire || '',
+                            sireEn: metrics.sireEn || horse?.sire_en || '',
+                            damJp: metrics.damJp || horse?.dam || '',
+                            damEn: metrics.damEn || horse?.dam_en || '',
+                            weight: report.weight ? `${report.weight}kg` : '',
+                            weightDate: metrics.weightDate || '',
+                            farrierJp: metrics.farrierJp || '',
+                            farrierEn: metrics.farrierEn || '',
+                            farrierDate: metrics.farrierDate || '',
+                            wormingJp: metrics.wormingJp || '',
+                            wormingEn: metrics.wormingEn || '',
+                            wormingDate: metrics.wormingDate || '',
+                            feedingJp: metrics.feedingJp || '',
+                            feedingEn: metrics.feedingEn || '',
+                            exerciseJp: metrics.exerciseJp || '',
+                            exerciseEn: metrics.exerciseEn || '',
+                            commentJp: report.body || metrics.commentJp || '',
+                            commentEn: metrics.commentEn || ''
+                        });
+                    } else {
+                        const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                        const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
+                        setInitialData({
+                            reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
+                            horseNameJp: metrics.horseNameJp || horse?.name || '',
+                            horseNameEn: metrics.horseNameEn || horse?.name_en || '',
+                            sire: horse?.sire || '',
+                            sireEn: metrics.sireEn || horse?.sire_en || '',
+                            sireJp: metrics.sireJp || horse?.sire || '',
+                            dam: horse?.dam || '',
+                            damEn: metrics.damEn || horse?.dam_en || '',
+                            damJp: metrics.damJp || horse?.dam || '',
+                            conditionJp: metrics.conditionJp || report.condition || '',
+                            conditionEn: metrics.conditionEn || '',
+                            ownerName: horse?.clients?.name || '',
+                            trainerNameJp: horse?.trainers?.trainer_name || '',
+                            trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                            trainerLocation: horse?.trainers?.trainer_location || '',
+                            trainerLocationEn: horse?.trainers?.trainer_location_en || '',
+                            birthDate: horse?.birth_date || '',
+                            age: calculateHorseAge(horse?.birth_date),
+                            outputMode: resolvedMode,
+                            showLogo: showLogo,
 
-                        commentJp: report.body || '',
-                        commentEn: metrics.commentEn || '',
+                            commentJp: report.body || '',
+                            commentEn: metrics.commentEn || '',
 
-                        weight: report.weight ? `${report.weight} kg` : '',
+                            weight: report.weight ? `${report.weight} kg` : '',
 
-                        statusJp: report.status_training || '',
-                        statusEn: metrics.statusEn || '',
+                            statusJp: report.status_training || '',
+                            statusEn: metrics.statusEn || '',
 
-                        targetJp: report.target || '',
-                        targetEn: metrics.targetEn || '',
+                            targetJp: report.target || '',
+                            targetEn: metrics.targetEn || '',
 
-                        weightHistory: metrics.weightHistory || [],
+                            weightHistory: metrics.weightHistory || [],
 
-                        mainPhoto: report.main_photo_url || horse?.photo_url || '',
-                        originalPhoto: report.main_photo_url || horse?.photo_url || '',
-                        logo: null
-                    });
+                            mainPhoto: report.main_photo_url || horse?.photo_url || '',
+                            originalPhoto: report.main_photo_url || horse?.photo_url || '',
+                            logo: null
+                        });
+                    }
 
                         setReviewStatus(report.review_status || 'draft');
                         setIsDirty(false);
@@ -408,9 +489,10 @@ export default function ReportEditor() {
         // Fetch past weight history (last 6 months)
         const weights = await restGet(`horse_weights?horse_id=eq.${selectedHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
-        const latestWeight = await fetchLatestWeight(selectedHorseId);
+        const latestWeightEntry = await fetchLatestWeightEntry(selectedHorseId);
+        const latestReport = await fetchLatestReport(selectedHorseId);
 
-        const weightHistory = weights?.map((r: { measured_at: string; weight: number | null }) => {
+        const weightHistoryFromWeights = weights?.map((r: { measured_at: string; weight: number | null }) => {
             const d = new Date(r.measured_at);
             return {
                 label: `${d.getMonth() + 1}月`,
@@ -418,36 +500,71 @@ export default function ReportEditor() {
             };
         }).filter((item: { value: number }) => item.value > 0) || [];
 
-        setInitialData({
-            reportDate: defaultDate,
-            horseNameJp: horse?.name || '',
-            horseNameEn: horse?.name_en || '',
-            sire: horse?.sire || '',
-            sireEn: horse?.sire_en || '',
-            sireJp: horse?.sire || '',
-            dam: horse?.dam || '',
-            damEn: horse?.dam_en || '',
-            damJp: horse?.dam || '',
-            ownerName: horse?.clients?.name || '',
-            trainerNameJp: horse?.trainers?.trainer_name || '',
-            trainerNameEn: horse?.trainers?.trainer_name_en || '',
-            trainerLocation: horse?.trainers?.trainer_location || '',
-            trainerLocationEn: horse?.trainers?.trainer_location_en || '',
-            birthDate: horse?.birth_date || '',
-            age: calculateHorseAge(horse?.birth_date),
-            outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
-            showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
-            mainPhoto: horse?.photo_url || '',
-            originalPhoto: horse?.photo_url || '',
-            statusEn: 'Training', statusJp: '調整中',
-            weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
-            commentEn: '', commentJp: '',
-            weightHistory: weightHistory
-        });
+        const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
+        const latestWeightDate = latestWeightEntry?.measured_at || '';
+        const latestHistory = latestReport?.metrics_json?.weightHistory;
+        const weightHistory = Array.isArray(latestHistory) && latestHistory.length > 0
+            ? latestHistory
+            : weightHistoryFromWeights;
+
+        if (reportType === 'departure') {
+            setInitialData({
+                reportDate: new Date().toISOString().slice(0, 10),
+                horseNameJp: horse?.name || '',
+                horseNameEn: horse?.name_en || '',
+                sexAgeJp: '',
+                sexAgeEn: '',
+                sireJp: horse?.sire || '',
+                sireEn: horse?.sire_en || '',
+                damJp: horse?.dam || '',
+                damEn: horse?.dam_en || '',
+                weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
+                weightDate: latestWeightDate || '',
+                farrierJp: horse?.last_farrier_note || '',
+                farrierEn: horse?.last_farrier_note || '',
+                farrierDate: horse?.last_farrier_date || '',
+                wormingJp: horse?.last_worming_note || '',
+                wormingEn: horse?.last_worming_note || '',
+                wormingDate: horse?.last_worming_date || '',
+                feedingJp: '',
+                feedingEn: '',
+                exerciseJp: '',
+                exerciseEn: '',
+                commentJp: '',
+                commentEn: ''
+            });
+        } else {
+            setInitialData({
+                reportDate: defaultDate,
+                horseNameJp: horse?.name || '',
+                horseNameEn: horse?.name_en || '',
+                sire: horse?.sire || '',
+                sireEn: horse?.sire_en || '',
+                sireJp: horse?.sire || '',
+                dam: horse?.dam || '',
+                damEn: horse?.dam_en || '',
+                damJp: horse?.dam || '',
+                ownerName: horse?.clients?.name || '',
+                trainerNameJp: horse?.trainers?.trainer_name || '',
+                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                trainerLocation: horse?.trainers?.trainer_location || '',
+                trainerLocationEn: horse?.trainers?.trainer_location_en || '',
+                birthDate: horse?.birth_date || '',
+                age: calculateHorseAge(horse?.birth_date),
+                outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
+                showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
+                mainPhoto: horse?.photo_url || '',
+                originalPhoto: horse?.photo_url || '',
+                statusEn: 'Training', statusJp: '調整中',
+                weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '', targetEn: '', targetJp: '',
+                commentEn: '', commentJp: '',
+                weightHistory: weightHistory
+            });
+        }
         setLoading(false);
     };
 
-    const handleDataChange = useCallback((data: ReportData) => {
+    const handleDataChange = useCallback((data: ReportData | DepartureReportData) => {
         reportDataRef.current = data;
         setIsDirty(true);
     }, []);
@@ -495,13 +612,90 @@ export default function ReportEditor() {
             alert('Save is taking too long. Please try again.');
         }, 25000);
 
-        let mainPhotoUrl = d.mainPhoto;
-        const isNewPhoto = !!d.mainPhoto && (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:'));
-        const isSameAsOriginal = !!d.originalPhoto && d.mainPhoto === d.originalPhoto;
-        // const logoUrl = d.logo; // Unused
-
         try {
+            if (reportType === 'departure') {
+                const dep = d as DepartureReportData;
+                const metricsJson = {
+                    reportType: 'departure',
+                    horseNameJp: dep.horseNameJp,
+                    horseNameEn: dep.horseNameEn,
+                    sexAgeJp: dep.sexAgeJp,
+                    sexAgeEn: dep.sexAgeEn,
+                    sireJp: dep.sireJp,
+                    sireEn: dep.sireEn,
+                    damJp: dep.damJp,
+                    damEn: dep.damEn,
+                    weightDate: dep.weightDate,
+                    farrierJp: dep.farrierJp,
+                    farrierEn: dep.farrierEn,
+                    farrierDate: dep.farrierDate,
+                    wormingJp: dep.wormingJp,
+                    wormingEn: dep.wormingEn,
+                    wormingDate: dep.wormingDate,
+                    feedingJp: dep.feedingJp,
+                    feedingEn: dep.feedingEn,
+                    exerciseJp: dep.exerciseJp,
+                    exerciseEn: dep.exerciseEn,
+                    commentJp: dep.commentJp,
+                    commentEn: dep.commentEn
+                };
 
+                const payload = {
+                    horse_id: horseId,
+                    title: dep.reportDate,
+                    body: dep.commentJp || null,
+                    weight: parseFloat(dep.weight.replace(/[^0-9.]/g, '') || '0'),
+                    status_training: 'Departed',
+                    metrics_json: metricsJson,
+                    updated_at: new Date().toISOString()
+                };
+
+                let newReportId: string | null = null;
+                const controller = new AbortController();
+                const abortId = window.setTimeout(() => controller.abort(), 8000);
+                const headers = getRestHeaders();
+                if (isNew) {
+                    const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                    window.clearTimeout(abortId);
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(`REST insert failed: ${res.status} ${text}`);
+                    }
+                    const data = await res.json();
+                    newReportId = data?.[0]?.id ?? null;
+                } else {
+                    const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+                    window.clearTimeout(abortId);
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(`REST update failed: ${res.status} ${text}`);
+                    }
+                }
+
+                setLastSaved(new Date());
+                setIsDirty(false);
+                setSaving(false);
+                if (isNew && newReportId) {
+                    router.replace(`/reports/${newReportId}`);
+                }
+                return;
+            }
+
+            const monthly = d as ReportData;
+            let mainPhotoUrl = monthly.mainPhoto;
+            const isNewPhoto = !!monthly.mainPhoto && (monthly.mainPhoto.startsWith('data:') || monthly.mainPhoto.startsWith('blob:'));
+            const isSameAsOriginal = !!monthly.originalPhoto && monthly.mainPhoto === monthly.originalPhoto;
+            // const logoUrl = d.logo; // Unused
             // Check if mainPhoto is new (Base64 or Blob) - only upload if changed
             if (isNewPhoto && !isSameAsOriginal) {
                 console.log('[save] uploading photo');
@@ -509,7 +703,7 @@ export default function ReportEditor() {
                 const reportPathId = isNew ? `temp_${Date.now()}` : id;
                 const path = `${horseId}/${reportPathId}/${fileName}`;
                 const uploadResult = await Promise.race([
-                    uploadImage(d.mainPhoto, path),
+                    uploadImage(monthly.mainPhoto, path),
                     new Promise<{ url: string | null, error: unknown }>((_, reject) =>
                         setTimeout(() => reject(new Error('Upload timeout')), 12000)
                     )
@@ -526,34 +720,35 @@ export default function ReportEditor() {
                 }
                 console.log('[save] upload done');
             } else if (isSameAsOriginal) {
-                mainPhotoUrl = d.originalPhoto || d.mainPhoto;
+                mainPhotoUrl = monthly.originalPhoto || monthly.mainPhoto;
             }
 
         // Pack extra fields into metrics_json
         const metricsJson = {
-            commentEn: d.commentEn,
-            statusEn: d.statusEn,
-            targetEn: d.targetEn,
-            weightHistory: d.weightHistory,
-            sireEn: d.sireEn,
-            sireJp: d.sireJp,
-            damEn: d.damEn,
-            damJp: d.damJp,
-            showLogo: d.showLogo ?? true,
-            horseNameJp: d.horseNameJp,
-            horseNameEn: d.horseNameEn,
-            conditionJp: d.conditionJp,
-            conditionEn: d.conditionEn
+            reportType: 'monthly',
+            commentEn: monthly.commentEn,
+            statusEn: monthly.statusEn,
+            targetEn: monthly.targetEn,
+            weightHistory: monthly.weightHistory,
+            sireEn: monthly.sireEn,
+            sireJp: monthly.sireJp,
+            damEn: monthly.damEn,
+            damJp: monthly.damJp,
+            showLogo: monthly.showLogo ?? true,
+            horseNameJp: monthly.horseNameJp,
+            horseNameEn: monthly.horseNameEn,
+            conditionJp: monthly.conditionJp,
+            conditionEn: monthly.conditionEn
         };
 
         const payload = {
             horse_id: horseId, // Ensure horse_id is set
-            title: d.reportDate, // Store report date in title
-            body: d.commentJp,
-            weight: parseFloat(d.weight.replace(/[^0-9.]/g, '') || '0'),
-            status_training: d.statusJp, // Map statusJp to status_training
-            condition: d.conditionJp || null,
-            target: d.targetJp, // Map targetJp to target
+            title: monthly.reportDate, // Store report date in title
+            body: monthly.commentJp,
+            weight: parseFloat(monthly.weight.replace(/[^0-9.]/g, '') || '0'),
+            status_training: monthly.statusJp, // Map statusJp to status_training
+            condition: monthly.conditionJp || null,
+            target: monthly.targetJp, // Map targetJp to target
             metrics_json: metricsJson,
             main_photo_url: mainPhotoUrl,
             updated_at: new Date().toISOString()
@@ -600,12 +795,12 @@ export default function ReportEditor() {
                     method: 'PATCH',
                     headers,
                     body: JSON.stringify({
-                        name: d.horseNameJp,
-                        name_en: d.horseNameEn,
-                        sire: d.sireJp || d.sire,
-                        dam: d.damJp || d.dam,
-                        sire_en: d.sireEn || null,
-                        dam_en: d.damEn || null,
+                        name: monthly.horseNameJp,
+                        name_en: monthly.horseNameEn,
+                        sire: monthly.sireJp || monthly.sire,
+                        dam: monthly.damJp || monthly.dam,
+                        sire_en: monthly.sireEn || null,
+                        dam_en: monthly.damEn || null,
                         photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
                         updated_at: new Date().toISOString()
                     })
@@ -622,8 +817,10 @@ export default function ReportEditor() {
             if (isNew && newReportId) {
                 router.replace(`/reports/${newReportId}`);
             } else {
-                if (d.mainPhoto.startsWith('data:') || d.mainPhoto.startsWith('blob:')) {
-                    if (reportDataRef.current) reportDataRef.current.mainPhoto = mainPhotoUrl;
+                if (monthly.mainPhoto.startsWith('data:') || monthly.mainPhoto.startsWith('blob:')) {
+                    if (reportDataRef.current && 'mainPhoto' in reportDataRef.current) {
+                        reportDataRef.current.mainPhoto = mainPhotoUrl;
+                    }
                 }
             }
         } catch (err) {
@@ -770,7 +967,11 @@ export default function ReportEditor() {
                So we should just let it be full width. */}
 
             <div className="w-full flex justify-center overflow-x-auto pb-8 print:pb-0 print:overflow-visible">
-                <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+                {reportType === 'departure' ? (
+                    <DepartureReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+                ) : (
+                    <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+                )}
             </div>
         </div>
     );
