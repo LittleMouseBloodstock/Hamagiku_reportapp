@@ -540,12 +540,22 @@ export default function HorseDetail() {
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('birthDate') : 'Birth Date'}</label>
-                                        <input
-                                            type="date"
-                                            className="w-full border border-gray-300 rounded p-2"
-                                            value={formData.birth_date}
-                                            onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
-                                        />
+                                        {language === 'ja' ? (
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.birth_date}
+                                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                                            />
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                placeholder="YYYY-MM-DD"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.birth_date}
+                                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                                            />
+                                        )}
                                         <div className="text-xs text-gray-500 mt-1">{language === 'ja' ? t('age') : 'Age'}: {calculateHorseAge(formData.birth_date) || '-'}</div>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
@@ -578,12 +588,22 @@ export default function HorseDetail() {
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('departureDate') : 'Departure Date'}</label>
-                                        <input
-                                            type="date"
-                                            className="w-full border border-gray-300 rounded p-2"
-                                            value={formData.departure_date}
-                                            onChange={e => setFormData({ ...formData, departure_date: e.target.value })}
-                                        />
+                                        {language === 'ja' ? (
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.departure_date}
+                                                onChange={e => setFormData({ ...formData, departure_date: e.target.value })}
+                                            />
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                placeholder="YYYY-MM-DD"
+                                                className="w-full border border-gray-300 rounded p-2"
+                                                value={formData.departure_date}
+                                                onChange={e => setFormData({ ...formData, departure_date: e.target.value })}
+                                            />
+                                        )}
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('lastFarrier') : 'Last Farrier'}</label>
