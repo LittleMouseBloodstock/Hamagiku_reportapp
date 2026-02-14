@@ -77,6 +77,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
     useEffect(() => {
         if (initialData && Object.keys(initialData).length > 0) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setData(prev => ({ ...prev, ...initialData }));
         }
     }, [initialData]);
