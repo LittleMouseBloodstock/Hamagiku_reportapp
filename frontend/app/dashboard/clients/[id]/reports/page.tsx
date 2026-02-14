@@ -537,6 +537,7 @@ export default function ClientBatchReports() {
                         /* page break handled by wrapper */
                     }
                     .batch-report-page .report-preview.no-logo {
+                        top: 0 !important;
                         transform: translateY(-15mm) !important;
                     }
                     .batch-report-page .horse-name-primary,
