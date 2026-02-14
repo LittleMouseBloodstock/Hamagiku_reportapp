@@ -6,6 +6,9 @@ export type DepartureReportData = {
     reportDate: string;
     horseNameJp: string;
     horseNameEn: string;
+    ownerName: string;
+    trainerNameJp: string;
+    trainerNameEn: string;
     sexAgeJp: string;
     sexAgeEn: string;
     sireJp: string;
@@ -52,6 +55,9 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         reportDate: new Date().toISOString().slice(0, 10),
         horseNameJp: '',
         horseNameEn: '',
+        ownerName: '',
+        trainerNameJp: '',
+        trainerNameEn: '',
         sexAgeJp: '',
         sexAgeEn: '',
         sireJp: '',
@@ -76,7 +82,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
     const [data, setData] = useState<DepartureReportData>({ ...defaultData, ...initialData });
     const [isGenerating, setIsGenerating] = useState(false);
-    const [aiPrompt, setAiPrompt] = useState('');
+    const [aiNotes, setAiNotes] = useState('');
 
     useEffect(() => {
         if (initialData && Object.keys(initialData).length > 0) {
@@ -94,24 +100,46 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         setData(prev => ({ ...prev, [key]: value }));
     }, [readOnly]);
 
-    const handleGenerateComment = async () => {
-        if (!aiPrompt) return;
+    const formatOwnerName = (name?: string) => {
+        if (!name) return '-';
+        if (language !== 'ja') return name;
+        return name.endsWith('様') ? name : `${name}様`;
+    };
+
+    const formatTrainerName = (jp?: string, en?: string) => {
+        if (language === 'ja') return (jp || en || '-') + ' 様';
+        return en || jp || '-';
+    };
+
+    const handleGenerateFields = async () => {
+        if (!aiNotes) return;
         setIsGenerating(true);
         try {
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
-            const res = await fetch(`${baseUrl}/generate`, {
+            const res = await fetch(`${baseUrl}/generate-departure`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: aiPrompt })
+                body: JSON.stringify({ notes: aiNotes })
             });
             if (!res.ok) {
                 const errorText = await res.text();
                 throw new Error(`Server Error (${res.status}): ${errorText}`);
             }
             const json = await res.json();
-            if (json.en && json.ja) {
-                setData(prev => ({ ...prev, commentEn: json.en, commentJp: json.ja }));
-            }
+            if (!json?.ja || !json?.en) return;
+            setData(prev => ({
+                ...prev,
+                farrierJp: prev.farrierJp || json.ja.farrier || '',
+                farrierEn: prev.farrierEn || json.en.farrier || '',
+                wormingJp: prev.wormingJp || json.ja.worming || '',
+                wormingEn: prev.wormingEn || json.en.worming || '',
+                feedingJp: prev.feedingJp || json.ja.feeding || '',
+                feedingEn: prev.feedingEn || json.en.feeding || '',
+                exerciseJp: prev.exerciseJp || json.ja.exercise || '',
+                exerciseEn: prev.exerciseEn || json.en.exercise || '',
+                commentJp: prev.commentJp || json.ja.comment || '',
+                commentEn: prev.commentEn || json.en.comment || ''
+            }));
         } catch (e) {
             console.error(e);
             alert("AI Generation failed:\n" + (e instanceof Error ? e.message : String(e)));
@@ -157,6 +185,35 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('owner')}</label>
+                        <input
+                            type="text"
+                            value={data.ownerName}
+                            onChange={e => handleChange('ownerName', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('trainer')} (JP)</label>
+                        <input
+                            type="text"
+                            value={data.trainerNameJp}
+                            onChange={e => handleChange('trainerNameJp', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('trainer')} (EN)</label>
+                    <input
+                        type="text"
+                        value={data.trainerNameEn}
+                        onChange={e => handleChange('trainerNameEn', e.target.value)}
+                        className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                    />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -344,18 +401,18 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
-                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? '英日同時生成' : 'EN + JP'}</span>
+                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? 'メモから各項目を自動生成' : 'Generate fields from notes'}</span>
                     </div>
                     <div className="space-y-2">
-                        <input
-                            type="text"
-                            value={aiPrompt}
-                            onChange={(e) => setAiPrompt(e.target.value)}
-                            placeholder={language === 'ja' ? "例：退厩理由、近況、調教内容" : "e.g. reason for departure, recent condition, training"}
+                        <textarea
+                            rows={3}
+                            value={aiNotes}
+                            onChange={(e) => setAiNotes(e.target.value)}
+                            placeholder={language === 'ja' ? "例：退厩理由、近況、装蹄や駆虫のメモ、飼葉/調教内容 など" : "e.g. reason for departure, recent condition, farrier/worming notes, feeding/training"}
                             className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
                         />
                         <button
-                            onClick={handleGenerateComment}
+                            onClick={handleGenerateFields}
                             disabled={isGenerating}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
                         >
@@ -396,6 +453,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     {isJa ? (
                         <section className="departure-section">
                             <div className="text-[15px] leading-7">
+                                <div>馬主：{formatOwnerName(data.ownerName)} / 調教師：{formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
                                 <div>馬名：{data.horseNameJp} {data.sexAgeJp ? `（${data.sexAgeJp}）` : ''}</div>
                                 <div>父：{data.sireJp}　母：{data.damJp}</div>
                                 <div>馬体重：{data.weight}{data.weightDate ? `（${data.weightDate}）` : ''}</div>
@@ -409,6 +467,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     ) : (
                         <section className="departure-section">
                             <div className="text-[15px] leading-7">
+                                <div>Owner: {data.ownerName || '-'} / Trainer: {formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
                                 <div>Name: {data.horseNameEn} {data.sexAgeEn ? `(${data.sexAgeEn})` : ''}</div>
                                 <div>Sire: {data.sireEn} / Dam: {data.damEn}</div>
                                 <div>Weight: {data.weight}{data.weightDate ? ` (${formatDateUK(data.weightDate)})` : ''}</div>

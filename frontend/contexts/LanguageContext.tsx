@@ -204,6 +204,7 @@ const translations: Translations = {
     departureReport: { ja: "退厩レポート", en: "Departure Report" },
     createDepartureReport: { ja: "退厩レポート作成", en: "Create Departure Report" },
     weightDate: { ja: "体重測定日", en: "Weight Date" },
+    sex: { ja: "性別", en: "Sex" },
 
     // Statuses
     status_Draft: { ja: "下書き", en: "Draft" },

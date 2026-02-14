@@ -101,6 +101,66 @@ app.post('/generate', async (req, res) => {
     }
 });
 
+// Departure Report Field Generation Endpoint (Dual Language)
+app.post('/generate-departure', async (req, res) => {
+    const { notes, apiKey: clientApiKey } = req.body;
+
+    const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: "API Key not configured in Environment Variables" });
+    }
+
+    const dynamicGenAI = new GoogleGenerativeAI(apiKey);
+
+    try {
+        const model = dynamicGenAI.getGenerativeModel({
+            model: "gemini-2.5-flash-lite",
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
+        const systemInstruction = `
+        You are a professional racehorse trainer.
+        Based on the provided notes (bullet points or short sentences), generate concise content for a departure report.
+
+        Output valid JSON with exactly this shape and keys:
+        {
+          "ja": {
+            "farrier": "",
+            "worming": "",
+            "feeding": "",
+            "exercise": "",
+            "comment": ""
+          },
+          "en": {
+            "farrier": "",
+            "worming": "",
+            "feeding": "",
+            "exercise": "",
+            "comment": ""
+          }
+        }
+
+        Rules:
+        - Use Japanese for "ja" and English for "en".
+        - If notes do NOT mention a field, return an empty string for that field.
+        - Keep each field concise (1-2 sentences maximum).
+        - English must match the meaning of Japanese.
+        `;
+
+        const fullPrompt = `${systemInstruction}\n\nNotes: ${notes}`;
+
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        const text = response.text();
+
+        const jsonResponse = JSON.parse(text);
+        res.json(jsonResponse);
+    } catch (e) {
+        console.error("Departure Generation Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Name Translation Endpoint
 app.post('/translate-name', async (req, res) => {
     const { name, targetLang } = req.body;

@@ -225,6 +225,7 @@ export type ReportData = {
     trainerLocationEn?: string;
     birthDate?: string;
     age?: number | null;
+    sex?: string;
     outputMode?: 'pdf' | 'print';
     showLogo?: boolean;
     mainPhoto: string;
@@ -317,6 +318,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         trainerLocationEn: '',
         birthDate: '',
         age: null,
+        sex: '',
         outputMode: 'pdf',
         showLogo: true,
         mainPhoto: '',
@@ -343,6 +345,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print' || !showLogo;
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
+    const sexOptions = [
+        { value: 'Colt', label: 'Colt（牡）' },
+        { value: 'Filly', label: 'Filly（牝）' },
+        { value: 'Gelding', label: 'Gelding（セン）' },
+        { value: 'Mare', label: 'Mare（繁殖）' },
+        { value: 'Stallion', label: 'Stallion（種牡馬）' }
+    ];
 
     // --- Cropper State ---
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -362,6 +371,31 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             setData(prev => ({ ...prev, reportDate: new Date().toISOString().slice(0, 7).replace('-', '.') }));
         }
     }, [data.reportDate]);
+
+    useEffect(() => {
+        if (!data.birthDate) return;
+        const year = new Date(data.birthDate).getFullYear();
+        if (Number.isNaN(year)) return;
+        const nextAge = new Date().getFullYear() - year;
+        setData(prev => (prev.age === nextAge ? prev : { ...prev, age: nextAge }));
+    }, [data.birthDate]);
+
+    const formatSexAge = (sex?: string, age?: number | null) => {
+        const map: Record<string, { ja: string; en: string }> = {
+            Colt: { ja: '牡', en: 'Colt' },
+            Filly: { ja: '牝', en: 'Filly' },
+            Gelding: { ja: 'セン', en: 'Gelding' },
+            Mare: { ja: '繁殖', en: 'Mare' },
+            Stallion: { ja: '種牡馬', en: 'Stallion' }
+        };
+        const sexLabel = sex && map[sex] ? map[sex][lang] : '';
+        const ageLabel = age !== null && age !== undefined
+            ? (lang === 'ja' ? `${age}歳` : `${age}yo`)
+            : '';
+        if (!sexLabel && !ageLabel) return '';
+        if (lang === 'ja') return `${sexLabel}${ageLabel}`;
+        return `${sexLabel}${ageLabel ? ` ${ageLabel}` : ''}`.trim();
+    };
 
     const saveOption = (type: 'training' | 'condition', pair: OptionPair) => {
         if (type === 'training') {
@@ -590,6 +624,30 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             onChange={e => setData({ ...data, horseNameJp: e.target.value })}
                                             className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                         />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">{t('birthDate')}</label>
+                                        <input
+                                            type="date"
+                                            value={data.birthDate || ''}
+                                            onChange={e => setData({ ...data, birthDate: e.target.value })}
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">{t('sex')}</label>
+                                        <select
+                                            value={data.sex || ''}
+                                            onChange={(e) => setData({ ...data, sex: e.target.value })}
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        >
+                                            <option value="">--</option>
+                                            {sexOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -982,10 +1040,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             <span className="font-bold mr-1">{t('birthDate')}:</span>
                             {data.birthDate || '-'}
                             <span className="mx-2 text-gray-300">/</span>
-                            <span className="font-bold mr-1">{t('age')}:</span>
-                            {data.age !== null && data.age !== undefined
-                                ? (lang === 'ja' ? `${data.age}歳` : data.age)
-                                : '-'}
+                            <span className="font-bold mr-1">{t('sexAge')}:</span>
+                            {formatSexAge(data.sex, data.age) || '-'}
                         </div>
 
                         {/* Main Photo - Reduced width to save vertical space */}

@@ -21,6 +21,7 @@ type Horse = {
     dam_en?: string;
     updated_at: string;
     birth_date?: string | null;
+    sex?: string | null;
     horse_status?: string | null;
     departure_date?: string | null;
     last_farrier_date?: string | null;
@@ -96,6 +97,7 @@ export default function HorseDetail() {
         dam_en: '',
         owner_id: '',
         birth_date: '',
+        sex: '',
         horse_status: 'Active',
         departure_date: '',
         last_farrier_date: '',
@@ -103,6 +105,14 @@ export default function HorseDetail() {
         last_worming_date: '',
         last_worming_note: ''
     });
+
+    const sexOptions = [
+        { value: 'Colt', label: 'Colt（牡）' },
+        { value: 'Filly', label: 'Filly（牝）' },
+        { value: 'Gelding', label: 'Gelding（セン）' },
+        { value: 'Mare', label: 'Mare（繁殖）' },
+        { value: 'Stallion', label: 'Stallion（種牡馬）' }
+    ];
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -200,6 +210,7 @@ export default function HorseDetail() {
                         dam_en: horseDataItem.dam_en || '',
                         owner_id: horseDataItem.owner_id || '',
                         birth_date: horseDataItem.birth_date || '',
+                        sex: horseDataItem.sex || '',
                         horse_status: horseDataItem.horse_status || 'Active',
                         departure_date: horseDataItem.departure_date || '',
                         last_farrier_date: horseDataItem.last_farrier_date || '',
@@ -277,6 +288,7 @@ export default function HorseDetail() {
                 owner_id: finalOwnerId,
                 trainer_id: finalTrainerId,
                 birth_date: formData.birth_date || null,
+                sex: formData.sex || null,
                 horse_status: formData.horse_status || 'Active',
                 departure_date: formData.departure_date || null,
                 last_farrier_date: formData.last_farrier_date || null,
@@ -518,6 +530,19 @@ export default function HorseDetail() {
                                         <div className="text-xs text-gray-500 mt-1">{t('age')}: {calculateHorseAge(formData.birth_date) || '-'}</div>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sex')}</label>
+                                        <select
+                                            className="w-full border border-gray-300 rounded p-2"
+                                            value={formData.sex}
+                                            onChange={e => setFormData({ ...formData, sex: e.target.value })}
+                                        >
+                                            <option value="">--</option>
+                                            {sexOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="col-span-1 md:col-span-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase">{t('horseStatusLabel')}</label>
                                         <select
                                             className="w-full border border-gray-300 rounded p-2"
@@ -589,6 +614,10 @@ export default function HorseDetail() {
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{t('birthDate')}</span>
                                         {horse.birth_date || '-'} / {t('age')}: {calculateHorseAge(horse.birth_date) || '-'}
+                                    </div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('sex')}</span>
+                                        {horse.sex || '-'}
                                     </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{t('owner')}</span> {horse.clients?.name || t('noOwner')}</div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">

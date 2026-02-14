@@ -69,6 +69,22 @@ export default function ReportEditor() {
         return new Date().getFullYear() - year;
     };
 
+    const formatSexAge = (sex?: string | null, birthDate?: string | null, lang: 'ja' | 'en' = 'ja') => {
+        const map: Record<string, { ja: string; en: string }> = {
+            Colt: { ja: '牡', en: 'Colt' },
+            Filly: { ja: '牝', en: 'Filly' },
+            Gelding: { ja: 'セン', en: 'Gelding' },
+            Mare: { ja: '繁殖', en: 'Mare' },
+            Stallion: { ja: '種牡馬', en: 'Stallion' }
+        };
+        const sexLabel = sex && map[sex] ? map[sex][lang] : '';
+        const age = calculateHorseAge(birthDate);
+        const ageLabel = age !== null ? (lang === 'ja' ? `${age}歳` : `${age}yo`) : '';
+        if (!sexLabel && !ageLabel) return '';
+        if (lang === 'ja') return `${sexLabel}${ageLabel}`;
+        return `${sexLabel}${ageLabel ? ` ${ageLabel}` : ''}`.trim();
+    };
+
     const resolveOutputMode = (clientMode?: string | null, trainerMode?: string | null): 'pdf' | 'print' => {
         const normalize = (mode?: string | null) => (mode === 'print' ? 'print' : 'pdf');
         if (clientMode) return normalize(clientMode);
@@ -146,12 +162,15 @@ export default function ReportEditor() {
                                 reportDate: new Date().toISOString().slice(0, 10),
                                 horseNameJp: horse?.name || '',
                                 horseNameEn: horse?.name_en || '',
-                                sexAgeJp: '',
-                                sexAgeEn: '',
+                                sexAgeJp: formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
+                                sexAgeEn: formatSexAge(horse?.sex, horse?.birth_date, 'en'),
                                 sireJp: horse?.sire || '',
                                 sireEn: horse?.sire_en || '',
                                 damJp: horse?.dam || '',
                                 damEn: horse?.dam_en || '',
+                                ownerName: horse?.clients?.name || '',
+                                trainerNameJp: horse?.trainers?.trainer_name || '',
+                                trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                                 weightDate: latestWeightDate || '',
                                 farrierJp: horse?.last_farrier_note || '',
@@ -184,6 +203,7 @@ export default function ReportEditor() {
                                 trainerLocation: horse?.trainers?.trainer_location || '',
                                 birthDate: horse?.birth_date || '',
                                 age: calculateHorseAge(horse?.birth_date),
+                                sex: horse?.sex || '',
                                 outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                 showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
                                 mainPhoto: horse?.photo_url || '',
@@ -232,12 +252,15 @@ export default function ReportEditor() {
                             reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
                             horseNameJp: metrics.horseNameJp || horse?.name || '',
                             horseNameEn: metrics.horseNameEn || horse?.name_en || '',
-                            sexAgeJp: metrics.sexAgeJp || '',
-                            sexAgeEn: metrics.sexAgeEn || '',
+                            sexAgeJp: metrics.sexAgeJp || formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
+                            sexAgeEn: metrics.sexAgeEn || formatSexAge(horse?.sex, horse?.birth_date, 'en'),
                             sireJp: metrics.sireJp || horse?.sire || '',
                             sireEn: metrics.sireEn || horse?.sire_en || '',
                             damJp: metrics.damJp || horse?.dam || '',
                             damEn: metrics.damEn || horse?.dam_en || '',
+                            ownerName: metrics.ownerName || horse?.clients?.name || '',
+                            trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
+                            trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
                             weight: report.weight ? `${report.weight}kg` : '',
                             weightDate: metrics.weightDate || '',
                             farrierJp: metrics.farrierJp || '',
@@ -275,6 +298,7 @@ export default function ReportEditor() {
                             trainerLocationEn: horse?.trainers?.trainer_location_en || '',
                             birthDate: horse?.birth_date || '',
                             age: calculateHorseAge(horse?.birth_date),
+                            sex: metrics.sex || horse?.sex || '',
                             outputMode: resolvedMode,
                             showLogo: showLogo,
 
@@ -379,6 +403,7 @@ export default function ReportEditor() {
                                             trainerLocation: horse?.trainers?.trainer_location || '',
                                             birthDate: horse?.birth_date || '',
                                             age: calculateHorseAge(horse?.birth_date),
+                                            sex: horse?.sex || '',
                                             outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                             showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
                                             mainPhoto: horse?.photo_url || '',
@@ -439,6 +464,7 @@ export default function ReportEditor() {
                                     trainerLocationEn: horse?.trainers?.trainer_location_en || '',
                                     birthDate: horse?.birth_date || '',
                                     age: calculateHorseAge(horse?.birth_date),
+                                    sex: metrics.sex || horse?.sex || '',
                                     outputMode: resolvedMode,
                                     showLogo: showLogo,
                                     commentJp: report.body || '',
@@ -512,12 +538,15 @@ export default function ReportEditor() {
                 reportDate: new Date().toISOString().slice(0, 10),
                 horseNameJp: horse?.name || '',
                 horseNameEn: horse?.name_en || '',
-                sexAgeJp: '',
-                sexAgeEn: '',
+                sexAgeJp: formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
+                sexAgeEn: formatSexAge(horse?.sex, horse?.birth_date, 'en'),
                 sireJp: horse?.sire || '',
                 sireEn: horse?.sire_en || '',
                 damJp: horse?.dam || '',
                 damEn: horse?.dam_en || '',
+                ownerName: horse?.clients?.name || '',
+                trainerNameJp: horse?.trainers?.trainer_name || '',
+                trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                 weightDate: latestWeightDate || '',
                 farrierJp: horse?.last_farrier_note || '',
@@ -551,6 +580,7 @@ export default function ReportEditor() {
                 trainerLocationEn: horse?.trainers?.trainer_location_en || '',
                 birthDate: horse?.birth_date || '',
                 age: calculateHorseAge(horse?.birth_date),
+                sex: horse?.sex || '',
                 outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                 showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
                 mainPhoto: horse?.photo_url || '',
@@ -625,6 +655,9 @@ export default function ReportEditor() {
                     sireEn: dep.sireEn,
                     damJp: dep.damJp,
                     damEn: dep.damEn,
+                    ownerName: dep.ownerName,
+                    trainerNameJp: dep.trainerNameJp,
+                    trainerNameEn: dep.trainerNameEn,
                     weightDate: dep.weightDate,
                     farrierJp: dep.farrierJp,
                     farrierEn: dep.farrierEn,
@@ -734,6 +767,7 @@ export default function ReportEditor() {
             sireJp: monthly.sireJp,
             damEn: monthly.damEn,
             damJp: monthly.damJp,
+            sex: monthly.sex || '',
             showLogo: monthly.showLogo ?? true,
             horseNameJp: monthly.horseNameJp,
             horseNameEn: monthly.horseNameEn,
@@ -801,6 +835,8 @@ export default function ReportEditor() {
                         dam: monthly.damJp || monthly.dam,
                         sire_en: monthly.sireEn || null,
                         dam_en: monthly.damEn || null,
+                        birth_date: monthly.birthDate || null,
+                        sex: monthly.sex || null,
                         photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
                         updated_at: new Date().toISOString()
                     })

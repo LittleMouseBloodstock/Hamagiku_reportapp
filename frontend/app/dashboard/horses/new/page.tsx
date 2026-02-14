@@ -42,6 +42,14 @@ export default function NewHorsePage() {
         return `${new Date().getFullYear() - year}`;
     };
 
+    const sexOptions = [
+        { value: 'Colt', label: 'Colt（牡）' },
+        { value: 'Filly', label: 'Filly（牝）' },
+        { value: 'Gelding', label: 'Gelding（セン）' },
+        { value: 'Mare', label: 'Mare（繁殖）' },
+        { value: 'Stallion', label: 'Stallion（種牡馬）' }
+    ];
+
     // Form State
     const [formData, setFormData] = useState({
         name: '',
@@ -50,6 +58,7 @@ export default function NewHorsePage() {
         sire: '',
         dam: '',
         birth_date: '',
+        sex: '',
         horse_status: 'Active'
     });
 
@@ -125,6 +134,7 @@ export default function NewHorsePage() {
                 sire: formData.sire,
                 dam: formData.dam,
                 birth_date: formData.birth_date || null,
+                sex: formData.sex || null,
                 horse_status: formData.horse_status || 'Active'
             }, getRestHeaders());
             router.push('/dashboard/horses');
@@ -327,6 +337,19 @@ export default function NewHorsePage() {
                             <p className="mt-1 text-xs text-stone-500">
                                 Age: {calculateHorseAge(formData.birth_date) || '-'}
                             </p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-stone-700 mb-1">{t('sex')}</label>
+                            <select
+                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                value={formData.sex}
+                                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                            >
+                                <option value="">--</option>
+                                {sexOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-stone-700 mb-1">{t('horseStatusLabel')}</label>
