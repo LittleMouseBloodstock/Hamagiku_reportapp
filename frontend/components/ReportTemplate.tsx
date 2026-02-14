@@ -208,6 +208,22 @@ const formatReportMonth = (dateStr: string, lang: 'ja' | 'en') => {
     return `${monthName} ${year}`;
 };
 
+const parseReportMonthLabel = (dateStr: string) => {
+    if (!dateStr) return null;
+    const parts = dateStr.replace(/-/g, '.').split('.');
+    if (parts.length < 2) return null;
+    const month = parseInt(parts[1], 10);
+    if (Number.isNaN(month) || month < 1 || month > 12) return null;
+    return `${month}月`;
+};
+
+const parseWeightValue = (weight: string) => {
+    if (!weight) return 0;
+    const numeric = parseFloat(weight.replace(/[^0-9.]/g, ''));
+    if (Number.isNaN(numeric)) return 0;
+    return numeric;
+};
+
 export type ReportData = {
     reportDate: string;
     horseNameEn: string;
@@ -379,6 +395,21 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         const nextAge = new Date().getFullYear() - year;
         setData(prev => (prev.age === nextAge ? prev : { ...prev, age: nextAge }));
     }, [data.birthDate]);
+
+    useEffect(() => {
+        if (readOnly) return;
+        const label = parseReportMonthLabel(data.reportDate);
+        const weightValue = parseWeightValue(data.weight);
+        if (!label || !weightValue) return;
+        setData(prev => {
+            const existingIndex = prev.weightHistory.findIndex(item => item.label === label);
+            const nextHistory = existingIndex >= 0
+                ? prev.weightHistory.map((item, idx) => idx === existingIndex ? { ...item, value: weightValue } : item)
+                : [...prev.weightHistory, { label, value: weightValue }];
+            if (JSON.stringify(nextHistory) === JSON.stringify(prev.weightHistory)) return prev;
+            return { ...prev, weightHistory: nextHistory };
+        });
+    }, [data.reportDate, data.weight, readOnly]);
 
     const formatSexAge = (sex?: string, age?: number | null) => {
         const map: Record<string, { ja: string; en: string }> = {

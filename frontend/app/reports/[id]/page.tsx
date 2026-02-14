@@ -110,6 +110,36 @@ export default function ReportEditor() {
         }
     };
 
+    const buildWeightHistoryFromWeights = (weights: { measured_at: string; weight: number | null }[]) => {
+        return weights?.map((r) => {
+            const d = new Date(r.measured_at);
+            return {
+                label: `${d.getMonth() + 1}月`,
+                value: r.weight || 0
+            };
+        }).filter((item) => item.value > 0) || [];
+    };
+
+    const mergeWeightHistory = (
+        base: { label: string; value: number }[],
+        override?: { label: string; value: number }[]
+    ) => {
+        const map = new Map<string, number>();
+        base.forEach((item) => {
+            if (item?.label && item.value > 0) map.set(item.label, item.value);
+        });
+        (override || []).forEach((item) => {
+            if (item?.label && item.value > 0) map.set(item.label, item.value);
+        });
+        const result = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
+        return result.sort((a, b) => {
+            const aNum = parseInt(a.label.replace(/\D/g, ''), 10);
+            const bNum = parseInt(b.label.replace(/\D/g, ''), 10);
+            if (Number.isNaN(aNum) || Number.isNaN(bNum)) return 0;
+            return aNum - bNum;
+        });
+    };
+
     useEffect(() => {
         if (!id || !user) return; // Wait for user
         if (!isNew && isDirty) return; // Don't overwrite while editing
@@ -141,21 +171,16 @@ export default function ReportEditor() {
                         const latestWeightEntry = await fetchLatestWeightEntry(paramHorseId);
                         const latestReport = await fetchLatestReport(paramHorseId);
 
-                        const weightHistoryFromWeights = weights?.map((r: { measured_at: string; weight: number | null }) => {
-                            const d = new Date(r.measured_at);
-                            return {
-                                label: `${d.getMonth() + 1}月`,
-                                value: r.weight || 0
-                            };
-                        }).filter((item: { value: number }) => item.value > 0) || [];
+                        const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
                     if (isMounted) {
                         const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
                         const latestWeightDate = latestWeightEntry?.measured_at || '';
                         const latestHistory = latestReport?.metrics_json?.weightHistory;
-                        const weightHistory = Array.isArray(latestHistory) && latestHistory.length > 0
-                            ? latestHistory
-                            : weightHistoryFromWeights;
+                        const weightHistory = mergeWeightHistory(
+                            weightHistoryFromWeights,
+                            Array.isArray(latestHistory) ? latestHistory : []
+                        );
 
                         if (nextReportType === 'departure') {
                             setInitialData({
@@ -206,8 +231,8 @@ export default function ReportEditor() {
                                 sex: horse?.sex || '',
                                 outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                 showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
-                                mainPhoto: horse?.photo_url || '',
-                                originalPhoto: horse?.photo_url || '',
+                                mainPhoto: '',
+                                originalPhoto: '',
                                 statusEn: 'Training', statusJp: '調整中',
                                 weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '',
                                 targetEn: '', targetJp: '',
@@ -362,9 +387,10 @@ export default function ReportEditor() {
 
                             if (paramHorseId) {
                                 if (isMounted) setHorseId(paramHorseId);
-                                const [horseRes, reportsRes] = await Promise.all([
+                                const [horseRes, reportsRes, latestReportRes] = await Promise.all([
                                     fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
-                                    fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${sixMonthsAgoIso}&select=measured_at,weight&order=measured_at.asc`, { headers })
+                                    fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${sixMonthsAgoIso}&select=measured_at,weight&order=measured_at.asc`, { headers }),
+                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=metrics_json,created_at&order=created_at.desc&limit=1`, { headers })
                                 ]);
 
                                 if (horseRes.ok && reportsRes.ok) {
@@ -377,12 +403,13 @@ export default function ReportEditor() {
                                     const weightData = weightRes.ok ? await weightRes.json() : [];
                                     const latestWeight = weightData?.[0]?.weight ?? null;
 
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    const weightHistory = rData.map((r: any) => ({
-                                        label: `${new Date(r.measured_at).getMonth() + 1}月`,
-                                        value: r.weight || 0
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    })).filter((item: any) => item.value > 0) || [];
+                                    const latestReportData = latestReportRes.ok ? await latestReportRes.json() : [];
+                                    const latestHistory = latestReportData?.[0]?.metrics_json?.weightHistory;
+                                    const weightHistoryFromWeights = buildWeightHistoryFromWeights(rData || []);
+                                    const weightHistory = mergeWeightHistory(
+                                        weightHistoryFromWeights,
+                                        Array.isArray(latestHistory) ? latestHistory : []
+                                    );
 
                                     if (isMounted) {
                                         setInitialData({
@@ -406,8 +433,8 @@ export default function ReportEditor() {
                                             sex: horse?.sex || '',
                                             outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                                             showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
-                                            mainPhoto: horse?.photo_url || '',
-                                            originalPhoto: horse?.photo_url || '',
+                                            mainPhoto: '',
+                                            originalPhoto: '',
                                             statusEn: 'Training', statusJp: '調整中',
                                             weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
                                             commentEn: '', commentJp: '',
@@ -518,20 +545,15 @@ export default function ReportEditor() {
         const latestWeightEntry = await fetchLatestWeightEntry(selectedHorseId);
         const latestReport = await fetchLatestReport(selectedHorseId);
 
-        const weightHistoryFromWeights = weights?.map((r: { measured_at: string; weight: number | null }) => {
-            const d = new Date(r.measured_at);
-            return {
-                label: `${d.getMonth() + 1}月`,
-                value: r.weight || 0
-            };
-        }).filter((item: { value: number }) => item.value > 0) || [];
+        const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
         const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
         const latestWeightDate = latestWeightEntry?.measured_at || '';
         const latestHistory = latestReport?.metrics_json?.weightHistory;
-        const weightHistory = Array.isArray(latestHistory) && latestHistory.length > 0
-            ? latestHistory
-            : weightHistoryFromWeights;
+        const weightHistory = mergeWeightHistory(
+            weightHistoryFromWeights,
+            Array.isArray(latestHistory) ? latestHistory : []
+        );
 
         if (reportType === 'departure') {
             setInitialData({
@@ -583,8 +605,8 @@ export default function ReportEditor() {
                 sex: horse?.sex || '',
                 outputMode: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode),
                 showLogo: resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode) !== 'print',
-                mainPhoto: horse?.photo_url || '',
-                originalPhoto: horse?.photo_url || '',
+                mainPhoto: '',
+                originalPhoto: '',
                 statusEn: 'Training', statusJp: '調整中',
                 weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '', targetEn: '', targetJp: '',
                 commentEn: '', commentJp: '',
