@@ -5,7 +5,7 @@ import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { buildRestHeaders, restDelete, restGet } from '@/lib/restClient';
+import { buildRestHeaders, restDelete, restGet, restPatch } from '@/lib/restClient';
 
 export default function HorsesPage() {
     interface Horse {
@@ -25,7 +25,13 @@ export default function HorsesPage() {
     const { user, session } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
-    const [showMode, setShowMode] = useState<'active' | 'retired'>('active');
+    const [showMode, setShowMode] = useState<'active' | 'retired'>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = window.sessionStorage.getItem('horsesShowMode');
+            if (stored === 'retired') return 'retired';
+        }
+        return 'active';
+    });
     const refreshKey = useResumeRefresh();
 
     const calculateHorseAge = (birthDate?: string | null) => {
@@ -47,6 +53,21 @@ export default function HorsesPage() {
         };
         return map[normalized] || map.Other;
     };
+
+    const statusOptions = [
+        { value: 'Active', label: t('horseStatusActive') },
+        { value: 'Resting', label: t('horseStatusResting') },
+        { value: 'Injured', label: t('horseStatusInjured') },
+        { value: 'Retired', label: t('horseStatusRetired') },
+        { value: 'Sold', label: t('horseStatusSold') },
+        { value: 'Other', label: t('horseStatusOther') }
+    ];
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            window.sessionStorage.setItem('horsesShowMode', showMode);
+        }
+    }, [showMode]);
 
     useEffect(() => {
         // Allow refetch on resume even if user is temporarily null
@@ -95,6 +116,50 @@ export default function HorsesPage() {
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             console.error('Delete error:', error);
             alert(`Failed to delete: ${error.message || 'Unknown error'}`);
+        }
+    };
+
+    const updateHorseStatus = async (horse: Horse, nextStatus: string) => {
+        if (!session?.access_token) {
+            alert('Missing access token for REST');
+            return;
+        }
+        const prevStatus = horse.horse_status || 'Active';
+        const prevDeparture = horse.departure_date || null;
+        const shouldRetire = nextStatus === 'Retired';
+        const nextDeparture = shouldRetire ? new Date().toISOString().slice(0, 10) : null;
+
+        setHorses(prev => prev.map((h) => (
+            h.id === horse.id
+                ? { ...h, horse_status: nextStatus, departure_date: nextDeparture }
+                : h
+        )));
+
+        if (shouldRetire) {
+            setShowMode('retired');
+        }
+
+        try {
+            await restPatch(
+                `horses?id=eq.${horse.id}`,
+                {
+                    horse_status: nextStatus,
+                    departure_date: nextDeparture,
+                    updated_at: new Date().toISOString()
+                },
+                buildRestHeaders({ bearerToken: session.access_token })
+            );
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            console.error('Status update error:', error);
+            alert(`Failed to update status: ${error.message || 'Unknown error'}`);
+            setHorses(prev => prev.map((h) => (
+                h.id === horse.id
+                    ? { ...h, horse_status: prevStatus, departure_date: prevDeparture }
+                    : h
+            )));
+            if (shouldRetire) {
+                setShowMode(prevDeparture ? 'retired' : 'active');
+            }
         }
     };
 
@@ -210,14 +275,15 @@ export default function HorsesPage() {
                                                 : '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            {(() => {
-                                                const status = getHorseStatus(horse.horse_status);
-                                                return (
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.className}`}>
-                                                        {status.label}
-                                                    </span>
-                                                );
-                                            })()}
+                                            <select
+                                                value={horse.horse_status || 'Active'}
+                                                onChange={(e) => updateHorseStatus(horse, e.target.value)}
+                                                className="text-xs font-semibold rounded-full px-2 py-1 border border-stone-200 bg-white text-stone-700"
+                                            >
+                                                {statusOptions.map((opt) => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark mr-4">
