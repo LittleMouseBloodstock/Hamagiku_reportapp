@@ -25,7 +25,8 @@ const translations: Translations = {
     // Dashboard Header
     deliverables: { ja: "Deliverables", en: "Deliverables" }, // Kept as English in JP design
     manageReportsDesc: { ja: "多言語レポートの作成と管理をここで行えます。", en: "Manage and track your multilingual client deliverables across all regions." },
-    createReportBtn: { ja: "レポート作成", en: "Create Report" },
+    createReportBtn: { ja: "月次レポート作成", en: "Create Monthly Report" },
+    createMonthlyReport: { ja: "月次レポート作成", en: "Create Monthly Report" },
     pendingReviewLabel: { ja: "レビュー待ち", en: "Pending Review" },
     draftReportsLabel: { ja: "下書き", en: "Draft" },
     approvedReportsLabel: { ja: "承認済み", en: "Approved" },

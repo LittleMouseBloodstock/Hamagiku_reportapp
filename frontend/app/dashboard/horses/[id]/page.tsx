@@ -100,6 +100,13 @@ export default function HorseDetail() {
         return map[sex] ? map[sex][language] : sex;
     };
 
+    const formatDateByLanguage = (value?: string | null) => {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return language === 'ja' ? date.toLocaleDateString('ja-JP') : date.toLocaleDateString('en-CA');
+    };
+
     const [formData, setFormData] = useState({
         name: '',
         name_en: '',
@@ -651,7 +658,7 @@ export default function HorseDetail() {
                                     </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{t('departureDate')}</span>
-                                        {horse.departure_date || '-'}
+                                        {formatDateByLanguage(horse.departure_date)}
                                     </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{t('lastFarrier')}</span>
