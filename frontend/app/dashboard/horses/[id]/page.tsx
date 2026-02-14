@@ -88,6 +88,18 @@ export default function HorseDetail() {
         return `${new Date().getFullYear() - year}`;
     };
 
+    const formatHorseSex = (sex?: string | null) => {
+        if (!sex) return '-';
+        const map: Record<string, { ja: string; en: string }> = {
+            Colt: { ja: '牡', en: 'Colt' },
+            Filly: { ja: '牝', en: 'Filly' },
+            Gelding: { ja: 'セン', en: 'Gelding' },
+            Mare: { ja: '繁殖', en: 'Mare' },
+            Stallion: { ja: '種牡馬', en: 'Stallion' }
+        };
+        return map[sex] ? map[sex][language] : sex;
+    };
+
     const [formData, setFormData] = useState({
         name: '',
         name_en: '',
@@ -380,22 +392,22 @@ export default function HorseDetail() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Name Fields */}
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseNameJp')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('horseNameJp') : 'Horse Name (JP)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseNameEn')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('horseNameEn') : 'Horse Name (EN)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.name_en} onChange={e => setFormData({ ...formData, name_en: e.target.value })} />
                                     </div>
 
                                     {/* Owner Selection Field - COPIED FROM NEW PAGE */}
                                     <div className="col-span-1 md:col-span-2 relative">
-                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><User size={12} /> {t('ownerTransfer')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1"><User size={12} /> {language === 'ja' ? t('ownerTransfer') : 'Owner'}</label>
                                         <div className="relative">
                                             <input
                                                 type="text"
                                                 className="w-full border border-gray-300 rounded p-2 pl-8 focus:ring-2 focus:ring-[#1a3c34] focus:border-transparent outline-none"
-                                                placeholder={t('searchOwnerPlaceholder')}
+                                                placeholder={language === 'ja' ? t('searchOwnerPlaceholder') : 'Search owner...'}
                                                 value={ownerSearch}
                                                 onChange={e => {
                                                     setOwnerSearch(e.target.value);
@@ -425,7 +437,7 @@ export default function HorseDetail() {
                                                     ))
                                                 ) : (
                                                     <div className="px-4 py-2 text-sm text-[#1a3c34] bg-[#1a3c34]/5 font-medium">
-                                                        {t('newOwnerWillBeCreated')} &quot;{ownerSearch}&quot;
+                                                        {language === 'ja' ? t('newOwnerWillBeCreated') : 'New owner will be created:'} &quot;{ownerSearch}&quot;
                                                     </div>
                                                 )}
                                             </div>
@@ -438,14 +450,14 @@ export default function HorseDetail() {
 
                                     {/* Trainer Selection */}
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1">{t('trainer')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase mb-1 flex items-center gap-1">{language === 'ja' ? t('trainer') : 'Trainer'}</label>
                                         <select
                                             className="w-full border border-gray-300 rounded p-2"
                                             value={trainerId}
                                             onChange={(e) => setTrainerId(e.target.value)}
                                             disabled={isNewTrainer}
                                         >
-                                            <option value="">{t('noTrainer')}</option>
+                                            <option value="">{language === 'ja' ? t('noTrainer') : 'No trainer'}</option>
                                             {trainers.map((trainer) => (
                                                 <option key={trainer.id} value={trainer.id}>
                                                     {trainer.trainer_name}
@@ -468,21 +480,21 @@ export default function HorseDetail() {
                                                     if (!isNewTrainer) setTrainerId('');
                                                 }}
                                             >
-                                                {isNewTrainer ? t('useExistingTrainer') : t('addNewTrainer')}
+                                                {language === 'ja' ? (isNewTrainer ? t('useExistingTrainer') : t('addNewTrainer')) : (isNewTrainer ? 'Use existing trainer' : 'Add new trainer')}
                                             </button>
                                         </div>
                                         {isNewTrainer && (
                                             <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerNameJp')}</label>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{language === 'ja' ? t('trainerNameJp') : 'Trainer Name (JP)'}</label>
                                                     <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_name} onChange={e => setNewTrainer({ ...newTrainer, trainer_name: e.target.value })} />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerNameEn')}</label>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{language === 'ja' ? t('trainerNameEn') : 'Trainer Name (EN)'}</label>
                                                     <input className="w-full border border-gray-300 rounded p-2" value={newTrainer.trainer_name_en} onChange={e => setNewTrainer({ ...newTrainer, trainer_name_en: e.target.value })} />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{t('trainerLocation')}</label>
+                                                    <label className="text-[10px] font-bold text-gray-400 uppercase">{language === 'ja' ? t('trainerLocation') : 'Trainer Location'}</label>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <input
                                                             className="w-full border border-gray-300 rounded p-2"
@@ -504,33 +516,33 @@ export default function HorseDetail() {
 
                                     {/* Sire/Dam Fields */}
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sireJp')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('sireJp') : 'Sire (JP)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.sire} onChange={e => setFormData({ ...formData, sire: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sireEn')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('sireEn') : 'Sire (EN)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.sire_en} onChange={e => setFormData({ ...formData, sire_en: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('damJp')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('damJp') : 'Dam (JP)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.dam} onChange={e => setFormData({ ...formData, dam: e.target.value })} />
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('damEn')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('damEn') : 'Dam (EN)'}</label>
                                         <input className="w-full border border-gray-300 rounded p-2" value={formData.dam_en} onChange={e => setFormData({ ...formData, dam_en: e.target.value })} />
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('birthDate')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('birthDate') : 'Birth Date'}</label>
                                         <input
                                             type="date"
                                             className="w-full border border-gray-300 rounded p-2"
                                             value={formData.birth_date}
                                             onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
                                         />
-                                        <div className="text-xs text-gray-500 mt-1">{t('age')}: {calculateHorseAge(formData.birth_date) || '-'}</div>
+                                        <div className="text-xs text-gray-500 mt-1">{language === 'ja' ? t('age') : 'Age'}: {calculateHorseAge(formData.birth_date) || '-'}</div>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('sex')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('sex') : 'Sex'}</label>
                                         <select
                                             className="w-full border border-gray-300 rounded p-2"
                                             value={formData.sex}
@@ -543,7 +555,7 @@ export default function HorseDetail() {
                                         </select>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('horseStatusLabel')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('horseStatusLabel') : 'Status'}</label>
                                         <select
                                             className="w-full border border-gray-300 rounded p-2"
                                             value={formData.horse_status}
@@ -558,7 +570,7 @@ export default function HorseDetail() {
                                         </select>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('departureDate')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('departureDate') : 'Departure Date'}</label>
                                         <input
                                             type="date"
                                             className="w-full border border-gray-300 rounded p-2"
@@ -567,7 +579,7 @@ export default function HorseDetail() {
                                         />
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('lastFarrier')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('lastFarrier') : 'Last Farrier'}</label>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                             <input
                                                 type="date"
@@ -585,7 +597,7 @@ export default function HorseDetail() {
                                         </div>
                                     </div>
                                     <div className="col-span-1 md:col-span-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('lastWorming')}</label>
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('lastWorming') : 'Recent Worming'}</label>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                             <input
                                                 type="date"
@@ -609,19 +621,19 @@ export default function HorseDetail() {
                                 <h1 className="text-3xl font-bold text-[var(--color-primary)] mb-1">{displayName}</h1>
                                 <p className="text-lg text-gray-400 font-serif mb-4">{displaySubName}</p>
                                 <div className="flex gap-6 text-sm text-gray-500 flex-wrap">
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('sire')}</span> {displaySire || '-'}</div>
-                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{t('dam')}</span> {displayDam || '-'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('sire') : 'Sire'}</span> {displaySire || '-'}</div>
+                                    <div><span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('dam') : 'Dam'}</span> {displayDam || '-'}</div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
-                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('birthDate')}</span>
-                                        {horse.birth_date || '-'} / {t('age')}: {calculateHorseAge(horse.birth_date) || '-'}
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('birthDate') : 'Birth Date'}</span>
+                                        {horse.birth_date || '-'} / {language === 'ja' ? t('age') : 'Age'}: {calculateHorseAge(horse.birth_date) || '-'}
                                     </div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
-                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('sex')}</span>
-                                        {horse.sex || '-'}
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('sex') : 'Sex'}</span>
+                                        {formatHorseSex(horse.sex)}
                                     </div>
-                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{t('owner')}</span> {horse.clients?.name || t('noOwner')}</div>
+                                    <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('owner') : 'Owner'}</span> {horse.clients?.name || (language === 'ja' ? t('noOwner') : 'No owner')}</div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
-                                        <span className="font-bold text-gray-300 block text-xs uppercase">{t('trainer')}</span>
+                                        <span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('trainer') : 'Trainer'}</span>
                                         {horse.trainers
                                             ? `${language === 'ja'
                                                 ? horse.trainers.trainer_name
