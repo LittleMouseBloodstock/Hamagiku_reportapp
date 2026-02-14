@@ -101,10 +101,13 @@ export default function ReportEditor() {
         }
     };
 
-    const fetchLatestReport = async (horseId: string) => {
+    const fetchLatestMonthlyReport = async (horseId: string) => {
         try {
-            const data = await restGet(`reports?horse_id=eq.${horseId}&select=weight,metrics_json,created_at&order=created_at.desc&limit=1`);
-            return data?.[0] ?? null;
+            const data = await restGet(`reports?horse_id=eq.${horseId}&select=weight,metrics_json,created_at,title&order=created_at.desc&limit=5`);
+            const monthly = (data || []).find((r: { metrics_json?: { reportType?: string } }) => {
+                return r?.metrics_json?.reportType !== 'departure';
+            });
+            return monthly ?? null;
         } catch {
             return null;
         }
@@ -191,18 +194,19 @@ export default function ReportEditor() {
                         const weights = await restGet(`horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
                         const latestWeightEntry = await fetchLatestWeightEntry(paramHorseId);
-                        const latestReport = await fetchLatestReport(paramHorseId);
+                        const latestMonthlyReport = await fetchLatestMonthlyReport(paramHorseId);
 
                         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
                     if (isMounted) {
-                        const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
+                        const latestWeightValue = latestMonthlyReport?.weight ?? latestWeightEntry?.weight ?? null;
                         const latestWeightDate = latestWeightEntry?.measured_at || '';
-                        const latestHistory = latestReport?.metrics_json?.weightHistory;
+                        const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
+                        const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || latestWeightEntry?.measured_at);
                         const weightHistory = mergeWeightHistory(
                             weightHistoryFromWeights,
                             Array.isArray(latestHistory) ? latestHistory : [],
-                            `${new Date().getMonth() + 1}月`,
+                            latestReportMonth,
                             latestWeightValue
                         );
 
@@ -427,7 +431,7 @@ export default function ReportEditor() {
                                 const [horseRes, reportsRes, latestReportRes] = await Promise.all([
                                     fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
                                     fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${sixMonthsAgoIso}&select=measured_at,weight&order=measured_at.asc`, { headers }),
-                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=metrics_json,created_at&order=created_at.desc&limit=1`, { headers })
+                                    fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=weight,metrics_json,created_at,title&order=created_at.desc&limit=5`, { headers })
                                 ]);
 
                                 if (horseRes.ok && reportsRes.ok) {
@@ -441,13 +445,17 @@ export default function ReportEditor() {
                                     const latestWeight = weightData?.[0]?.weight ?? null;
 
                                     const latestReportData = latestReportRes.ok ? await latestReportRes.json() : [];
-                                    const latestHistory = latestReportData?.[0]?.metrics_json?.weightHistory;
+                                    const latestMonthlyReport = (latestReportData || []).find((r: { metrics_json?: { reportType?: string } }) => {
+                                        return r?.metrics_json?.reportType !== 'departure';
+                                    });
+                                    const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
+                                    const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || null);
                                     const weightHistoryFromWeights = buildWeightHistoryFromWeights(rData || []);
                                     const weightHistory = mergeWeightHistory(
                                         weightHistoryFromWeights,
                                         Array.isArray(latestHistory) ? latestHistory : [],
-                                        `${new Date().getMonth() + 1}月`,
-                                        latestWeight
+                                        latestReportMonth,
+                                        latestMonthlyReport?.weight ?? latestWeight
                                     );
 
                                     if (isMounted) {
@@ -582,17 +590,18 @@ export default function ReportEditor() {
         const weights = await restGet(`horse_weights?horse_id=eq.${selectedHorseId}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
 
         const latestWeightEntry = await fetchLatestWeightEntry(selectedHorseId);
-        const latestReport = await fetchLatestReport(selectedHorseId);
+        const latestMonthlyReport = await fetchLatestMonthlyReport(selectedHorseId);
 
         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
-        const latestWeightValue = latestReport?.weight ?? latestWeightEntry?.weight ?? null;
+        const latestWeightValue = latestMonthlyReport?.weight ?? latestWeightEntry?.weight ?? null;
         const latestWeightDate = latestWeightEntry?.measured_at || '';
-        const latestHistory = latestReport?.metrics_json?.weightHistory;
+        const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
+        const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || latestWeightEntry?.measured_at);
         const weightHistory = mergeWeightHistory(
             weightHistoryFromWeights,
             Array.isArray(latestHistory) ? latestHistory : [],
-            `${new Date().getMonth() + 1}月`,
+            latestReportMonth,
             latestWeightValue
         );
 
