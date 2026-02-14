@@ -62,7 +62,9 @@ export const restPatch = async (path: string, body: unknown, headers?: RestHeade
         const text = await res.text();
         throw new Error(`REST PATCH failed: ${res.status} ${text}`);
     }
-    return res.json();
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
 };
 
 export const restDelete = async (path: string, headers?: RestHeaders) => {
