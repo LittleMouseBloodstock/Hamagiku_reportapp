@@ -52,7 +52,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        top: 5mm !important; /* Move up ~1.5cm when logo is hidden */
+        transform: translateY(-15mm) !important; /* Move up 1.5cm when logo is hidden */
       }`}
 
       /* Print Mode Compression */
