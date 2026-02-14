@@ -113,11 +113,21 @@ export default function ReportEditor() {
         }
     };
 
+    const normalizeMonthLabel = (value?: string | null) => {
+        if (!value) return '';
+        const trimmed = String(value).trim();
+        const numericMatch = trimmed.match(/^(\d{1,2})/);
+        if (!numericMatch) return trimmed;
+        const month = parseInt(numericMatch[1], 10);
+        if (Number.isNaN(month) || month < 1 || month > 12) return trimmed;
+        return `${month}月`;
+    };
+
     const buildWeightHistoryFromWeights = (weights: { measured_at: string; weight: number | null }[]) => {
         return weights?.map((r) => {
             const d = new Date(r.measured_at);
             return {
-                label: `${d.getMonth() + 1}月`,
+                label: normalizeMonthLabel(`${d.getMonth() + 1}月`),
                 value: r.weight || 0
             };
         }).filter((item) => item.value > 0) || [];
@@ -131,13 +141,16 @@ export default function ReportEditor() {
     ) => {
         const map = new Map<string, number>();
         base.forEach((item) => {
-            if (item?.label && item.value > 0) map.set(item.label, item.value);
+            const label = normalizeMonthLabel(item?.label);
+            if (label && item.value > 0) map.set(label, item.value);
         });
         (override || []).forEach((item) => {
-            if (item?.label && item.value > 0) map.set(item.label, item.value);
+            const label = normalizeMonthLabel(item?.label);
+            if (label && item.value > 0) map.set(label, item.value);
         });
         if (reportMonth && latestWeightValue && latestWeightValue > 0) {
-            map.set(reportMonth, latestWeightValue);
+            const label = normalizeMonthLabel(reportMonth);
+            if (label) map.set(label, latestWeightValue);
         }
         const result = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
         return result.sort((a, b) => {

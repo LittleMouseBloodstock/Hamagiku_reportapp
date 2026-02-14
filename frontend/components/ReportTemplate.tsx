@@ -106,12 +106,22 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 );
 
 // Simple Line Chart Component
-const SimpleLineChart = ({ data, color }: { data: { label: string, value: number }[], color: string }) => {
+const SimpleLineChart = ({ data, color, lang }: { data: { label: string, value: number }[], color: string, lang: 'ja' | 'en' }) => {
     const width = 200;
     const height = 100;
     const padding = 20;
 
     if (!data || data.length < 2) return null;
+
+    const formatLabel = (label: string) => {
+        if (lang === 'ja') return label;
+        const match = label.match(/(\d{1,2})/);
+        if (!match) return label;
+        const month = parseInt(match[1], 10);
+        if (Number.isNaN(month) || month < 1 || month > 12) return label;
+        const date = new Date(2000, month - 1, 1);
+        return date.toLocaleString('en-US', { month: 'short' });
+    };
 
     const maxVal = Math.max(...data.map(d => d.value));
     const minVal = Math.min(...data.map(d => d.value));
@@ -146,7 +156,7 @@ const SimpleLineChart = ({ data, color }: { data: { label: string, value: number
                 return (
                     <g key={i}>
                         <circle cx={x} cy={y} r="3" fill="white" stroke={color} strokeWidth="2" />
-                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{d.label}</text>
+                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatLabel(d.label)}</text>
                         <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="12" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
                     </g>
                 );
@@ -1131,7 +1141,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     {t('weightHistory')}
                                 </span>
                                 <div className="h-[90px] w-full">
-                                    <SimpleLineChart data={data.weightHistory} color="#1a3c34" />
+                                    <SimpleLineChart data={data.weightHistory} color="#1a3c34" lang={lang} />
                                 </div>
                             </div>
                         </div>
