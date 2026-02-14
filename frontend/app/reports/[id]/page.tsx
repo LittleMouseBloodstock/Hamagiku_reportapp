@@ -122,7 +122,9 @@ export default function ReportEditor() {
 
     const mergeWeightHistory = (
         base: { label: string; value: number }[],
-        override?: { label: string; value: number }[]
+        override?: { label: string; value: number }[],
+        reportMonth?: string,
+        latestWeightValue?: number | null
     ) => {
         const map = new Map<string, number>();
         base.forEach((item) => {
@@ -131,6 +133,9 @@ export default function ReportEditor() {
         (override || []).forEach((item) => {
             if (item?.label && item.value > 0) map.set(item.label, item.value);
         });
+        if (reportMonth && latestWeightValue && latestWeightValue > 0) {
+            map.set(reportMonth, latestWeightValue);
+        }
         const result = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
         return result.sort((a, b) => {
             const aNum = parseInt(a.label.replace(/\D/g, ''), 10);
@@ -179,7 +184,9 @@ export default function ReportEditor() {
                         const latestHistory = latestReport?.metrics_json?.weightHistory;
                         const weightHistory = mergeWeightHistory(
                             weightHistoryFromWeights,
-                            Array.isArray(latestHistory) ? latestHistory : []
+                            Array.isArray(latestHistory) ? latestHistory : [],
+                            `${new Date().getMonth() + 1}月`,
+                            latestWeightValue
                         );
 
                         if (nextReportType === 'departure') {
@@ -408,7 +415,9 @@ export default function ReportEditor() {
                                     const weightHistoryFromWeights = buildWeightHistoryFromWeights(rData || []);
                                     const weightHistory = mergeWeightHistory(
                                         weightHistoryFromWeights,
-                                        Array.isArray(latestHistory) ? latestHistory : []
+                                        Array.isArray(latestHistory) ? latestHistory : [],
+                                        `${new Date().getMonth() + 1}月`,
+                                        latestWeight
                                     );
 
                                     if (isMounted) {
@@ -552,7 +561,9 @@ export default function ReportEditor() {
         const latestHistory = latestReport?.metrics_json?.weightHistory;
         const weightHistory = mergeWeightHistory(
             weightHistoryFromWeights,
-            Array.isArray(latestHistory) ? latestHistory : []
+            Array.isArray(latestHistory) ? latestHistory : [],
+            `${new Date().getMonth() + 1}月`,
+            latestWeightValue
         );
 
         if (reportType === 'departure') {
