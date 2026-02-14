@@ -75,6 +75,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     };
 
     const [data, setData] = useState<DepartureReportData>({ ...defaultData, ...initialData });
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
 
     useEffect(() => {
         if (initialData && Object.keys(initialData).length > 0) {
@@ -91,6 +93,32 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         if (readOnly) return;
         setData(prev => ({ ...prev, [key]: value }));
     }, [readOnly]);
+
+    const handleGenerateComment = async () => {
+        if (!aiPrompt) return;
+        setIsGenerating(true);
+        try {
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
+            const res = await fetch(`${baseUrl}/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: aiPrompt })
+            });
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Server Error (${res.status}): ${errorText}`);
+            }
+            const json = await res.json();
+            if (json.en && json.ja) {
+                setData(prev => ({ ...prev, commentEn: json.en, commentJp: json.ja }));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("AI Generation failed:\n" + (e instanceof Error ? e.message : String(e)));
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     return (
         <div className="departure-root flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
@@ -330,6 +358,27 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         onChange={e => handleChange('commentEn', e.target.value)}
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
+                </div>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
+                    </div>
+                    <div className="space-y-2">
+                        <input
+                            type="text"
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            placeholder={language === 'ja' ? "例：退厩理由、近況、調教内容" : "e.g. reason for departure, recent condition, training"}
+                            className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+                        />
+                        <button
+                            onClick={handleGenerateComment}
+                            disabled={isGenerating}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
+                        >
+                            <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
