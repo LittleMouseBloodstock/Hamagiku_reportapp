@@ -145,6 +145,23 @@ export default function ReportEditor() {
         });
     };
 
+    const getMonthLabel = (value?: string | null) => {
+        if (value) {
+            const parts = value.replace(/-/g, '.').split('.');
+            if (parts.length >= 2) {
+                const month = parseInt(parts[1], 10);
+                if (!Number.isNaN(month) && month >= 1 && month <= 12) {
+                    return `${month}月`;
+                }
+            }
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) {
+                return `${date.getMonth() + 1}月`;
+            }
+        }
+        return `${new Date().getMonth() + 1}月`;
+    };
+
     useEffect(() => {
         if (!id || !user) return; // Wait for user
         if (!isNew && isDirty) return; // Don't overwrite while editing
@@ -269,6 +286,11 @@ export default function ReportEditor() {
                 // Fetch Horse Data
                 const horseArr = await restGet(`horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
                 const horse = horseArr?.[0];
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                const sixMonthsAgoIso = sixMonthsAgo.toISOString();
+                const weights = await restGet(`horse_weights?horse_id=eq.${report.horse_id}&measured_at=gte.${encodeURIComponent(sixMonthsAgoIso)}&select=measured_at,weight&order=measured_at.asc`);
+                const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
                 if (isMounted) {
                     setHorseId(report.horse_id);
@@ -310,6 +332,14 @@ export default function ReportEditor() {
                         });
                     } else {
                         const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                        const reportMonthLabel = getMonthLabel(report.title || report.created_at);
+                        const baseHistory = Array.isArray(metrics.weightHistory) ? metrics.weightHistory : [];
+                        const mergedHistory = mergeWeightHistory(
+                            weightHistoryFromWeights,
+                            baseHistory,
+                            reportMonthLabel,
+                            report.weight ?? null
+                        );
                         const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                         setInitialData({
                             reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
@@ -345,10 +375,10 @@ export default function ReportEditor() {
                             targetJp: report.target || '',
                             targetEn: metrics.targetEn || '',
 
-                            weightHistory: metrics.weightHistory || [],
+                            weightHistory: mergedHistory,
 
-                            mainPhoto: report.main_photo_url || horse?.photo_url || '',
-                            originalPhoto: report.main_photo_url || horse?.photo_url || '',
+                            mainPhoto: report.main_photo_url || '',
+                            originalPhoto: report.main_photo_url || '',
                             logo: null
                         });
                     }
