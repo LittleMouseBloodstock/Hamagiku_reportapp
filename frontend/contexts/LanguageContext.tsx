@@ -188,7 +188,7 @@ const translations: Translations = {
     horseStatusActive: { ja: "在厩中", en: "Active" },
     horseStatusResting: { ja: "休養中", en: "Resting" },
     horseStatusInjured: { ja: "怪我", en: "Injured" },
-    horseStatusRetired: { ja: "引退", en: "Retired" },
+    horseStatusRetired: { ja: "退厩", en: "Departed" },
     horseStatusSold: { ja: "売却", en: "Sold" },
     horseStatusOther: { ja: "その他", en: "Other" },
     activeHorsesLabel: { ja: "在厩馬", en: "Active Horses" },
