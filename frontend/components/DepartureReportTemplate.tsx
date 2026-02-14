@@ -341,27 +341,10 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
-                    <textarea
-                        rows={3}
-                        value={data.commentJp}
-                        onChange={e => handleChange('commentJp', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
-                    <textarea
-                        rows={3}
-                        value={data.commentEn}
-                        onChange={e => handleChange('commentEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
+                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? '英日同時生成' : 'EN + JP'}</span>
                     </div>
                     <div className="space-y-2">
                         <input
@@ -379,6 +362,24 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
                         </button>
                     </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
+                    <textarea
+                        rows={3}
+                        value={data.commentJp}
+                        onChange={e => handleChange('commentJp', e.target.value)}
+                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
+                    <textarea
+                        rows={3}
+                        value={data.commentEn}
+                        onChange={e => handleChange('commentEn', e.target.value)}
+                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                    />
                 </div>
             </div>
 
