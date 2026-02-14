@@ -149,8 +149,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     };
 
     return (
-        <div className="departure-root flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
-            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 pb-24 space-y-6 no-print">
+        <div className="departure-root flex flex-col md:flex-row min-h-screen h-screen bg-gray-100 overflow-hidden font-sans">
+            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 pb-40 space-y-6 no-print">
                 <div>
                     <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('departureReport')}</h2>
                     <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? '退厩レポート用の入力欄' : 'Fields for departure report.'}</p>
@@ -441,10 +441,10 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
             </div>
 
-            <div className="departure-preview-wrap flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden">
+            <div className="departure-preview-wrap flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
-                    className="departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] p-8 text-gray-900 font-sans"
+                    className="departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] p-8 text-gray-900 font-sans mb-8"
                 >
                     <div className="flex justify-between items-end border-b border-gray-300 pb-3 mb-4">
                         <div className="text-xl font-bold text-[#1a3c34]">{t('departureReport')}</div>
