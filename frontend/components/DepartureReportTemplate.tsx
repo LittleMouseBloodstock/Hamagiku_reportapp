@@ -47,6 +47,7 @@ const formatDateUK = (dateStr: string) => {
 
 export default function DepartureReportTemplate({ initialData, onDataChange, readOnly = false }: DepartureReportTemplateProps) {
     const { language, t } = useLanguage();
+    const isJa = language === 'ja';
     const defaultData: DepartureReportData = {
         reportDate: new Date().toISOString().slice(0, 10),
         horseNameJp: '',
@@ -92,8 +93,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     }, [readOnly]);
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
-            <div className="w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 space-y-6">
+        <div className="departure-root flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
+            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 space-y-6 no-print">
                 <div>
                     <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('departureReport')}</h2>
                     <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? '退厩レポート用の入力欄' : 'Fields for departure report.'}</p>
@@ -332,45 +333,81 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden">
+            <div className="departure-preview-wrap flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
-                    className="bg-white shadow-2xl w-[210mm] min-h-[297mm] p-8 text-gray-900 font-sans"
+                    className="departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] p-8 text-gray-900 font-sans"
                 >
                     <div className="flex justify-between items-end border-b border-gray-300 pb-3 mb-4">
                         <div className="text-xl font-bold text-[#1a3c34]">{t('departureReport')}</div>
                         <div className="text-sm text-gray-500">{data.reportDate || '-'}</div>
                     </div>
 
-                    <section className="mb-6">
-                        <div className="text-sm font-bold text-gray-500 mb-2">JP</div>
-                        <div className="text-[15px] leading-7">
-                            <div>馬名：{data.horseNameJp} {data.sexAgeJp ? `（${data.sexAgeJp}）` : ''}</div>
-                            <div>父：{data.sireJp}　母：{data.damJp}</div>
-                            <div>馬体重：{data.weight}{data.weightDate ? `（${data.weightDate}）` : ''}</div>
-                            <div>{t('lastFarrier')}：{data.farrierJp}{data.farrierDate ? `　${data.farrierDate}` : ''}</div>
-                            <div>{t('lastWorming')}：{data.wormingJp}{data.wormingDate ? `　${data.wormingDate}` : ''}</div>
-                            <div>{t('feeding')}：{data.feedingJp}</div>
-                            <div>{t('exercise')}：{data.exerciseJp}</div>
-                            {data.commentJp ? <div>コメント：{data.commentJp}</div> : null}
-                        </div>
-                    </section>
-
-                    <section>
-                        <div className="text-sm font-bold text-gray-500 mb-2">EN</div>
-                        <div className="text-[15px] leading-7">
-                            <div>Name: {data.horseNameEn} {data.sexAgeEn ? `(${data.sexAgeEn})` : ''}</div>
-                            <div>Sire: {data.sireEn} / Dam: {data.damEn}</div>
-                            <div>Weight: {data.weight}{data.weightDate ? ` (${formatDateUK(data.weightDate)})` : ''}</div>
-                            <div>Farrier: {data.farrierEn}{data.farrierDate ? ` ${formatDateUK(data.farrierDate)}` : ''}</div>
-                            <div>Recent Worming: {data.wormingEn}{data.wormingDate ? ` ${formatDateUK(data.wormingDate)}` : ''}</div>
-                            <div>Feeding: {data.feedingEn}</div>
-                            <div>Exercise Routine: {data.exerciseEn}</div>
-                            {data.commentEn ? <div>Comment: {data.commentEn}</div> : null}
-                        </div>
-                    </section>
+                    {isJa ? (
+                        <section className="departure-section">
+                            <div className="text-[15px] leading-7">
+                                <div>馬名：{data.horseNameJp} {data.sexAgeJp ? `（${data.sexAgeJp}）` : ''}</div>
+                                <div>父：{data.sireJp}　母：{data.damJp}</div>
+                                <div>馬体重：{data.weight}{data.weightDate ? `（${data.weightDate}）` : ''}</div>
+                                <div>{t('lastFarrier')}：{data.farrierJp}{data.farrierDate ? `　${data.farrierDate}` : ''}</div>
+                                <div>{t('lastWorming')}：{data.wormingJp}{data.wormingDate ? `　${data.wormingDate}` : ''}</div>
+                                <div>{t('feeding')}：{data.feedingJp}</div>
+                                <div>{t('exercise')}：{data.exerciseJp}</div>
+                                {data.commentJp ? <div>コメント：{data.commentJp}</div> : null}
+                            </div>
+                        </section>
+                    ) : (
+                        <section className="departure-section">
+                            <div className="text-[15px] leading-7">
+                                <div>Name: {data.horseNameEn} {data.sexAgeEn ? `(${data.sexAgeEn})` : ''}</div>
+                                <div>Sire: {data.sireEn} / Dam: {data.damEn}</div>
+                                <div>Weight: {data.weight}{data.weightDate ? ` (${formatDateUK(data.weightDate)})` : ''}</div>
+                                <div>Farrier: {data.farrierEn}{data.farrierDate ? ` ${formatDateUK(data.farrierDate)}` : ''}</div>
+                                <div>Recent Worming: {data.wormingEn}{data.wormingDate ? ` ${formatDateUK(data.wormingDate)}` : ''}</div>
+                                <div>Feeding: {data.feedingEn}</div>
+                                <div>Exercise Routine: {data.exerciseEn}</div>
+                                {data.commentEn ? <div>Comment: {data.commentEn}</div> : null}
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
+            <style jsx global>{`
+                @media print {
+                    @page { size: A4; margin: 10mm; }
+                    html, body, #__next {
+                        height: auto !important;
+                        overflow: visible !important;
+                        background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .no-print { display: none !important; }
+                    .departure-root {
+                        background: white !important;
+                        height: auto !important;
+                    }
+                    .departure-preview-wrap {
+                        background: white !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
+                    }
+                    .departure-preview {
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 210mm !important;
+                        height: 297mm !important;
+                        margin: 0 !important;
+                        padding: 16mm 14mm 12mm 14mm !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        overflow: hidden !important;
+                    }
+                    .departure-preview .text-xl { font-size: 18px !important; }
+                    .departure-preview .departure-section { font-size: 14px !important; line-height: 1.6 !important; }
+                }
+            `}</style>
         </div>
     );
 }
