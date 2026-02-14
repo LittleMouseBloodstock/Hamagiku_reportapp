@@ -184,7 +184,7 @@ const translations: Translations = {
     sortByName: { ja: "並び替え: 馬名", en: "Sort: Name" },
     sortByTrainer: { ja: "並び替え: 調教師", en: "Sort: Trainer" },
     horseStatusLabel: { ja: "ステータス", en: "Status" },
-    horseStatusActive: { ja: "稼働中", en: "Active" },
+    horseStatusActive: { ja: "在厩中", en: "Active" },
     horseStatusResting: { ja: "休養中", en: "Resting" },
     horseStatusInjured: { ja: "怪我", en: "Injured" },
     horseStatusRetired: { ja: "引退", en: "Retired" },
