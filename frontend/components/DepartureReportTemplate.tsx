@@ -150,10 +150,33 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
     return (
         <div className="departure-root flex flex-col md:flex-row h-screen bg-gray-100 overflow-hidden font-sans">
-            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 space-y-6 no-print">
+            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-y-auto p-6 pb-24 space-y-6 no-print">
                 <div>
                     <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('departureReport')}</h2>
                     <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? '退厩レポート用の入力欄' : 'Fields for departure report.'}</p>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
+                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? 'メモから各項目を自動生成' : 'Generate fields from notes'}</span>
+                    </div>
+                    <div className="space-y-2">
+                        <textarea
+                            rows={3}
+                            value={aiNotes}
+                            onChange={(e) => setAiNotes(e.target.value)}
+                            placeholder={language === 'ja' ? "例：退厩理由、近況、装蹄や駆虫のメモ、飼葉/調教内容 など" : "e.g. reason for departure, recent condition, farrier/worming notes, feeding/training"}
+                            className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+                        />
+                        <button
+                            onClick={handleGenerateFields}
+                            disabled={isGenerating}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
+                        >
+                            <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="space-y-3">
@@ -398,28 +421,6 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     />
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
-                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? 'メモから各項目を自動生成' : 'Generate fields from notes'}</span>
-                    </div>
-                    <div className="space-y-2">
-                        <textarea
-                            rows={3}
-                            value={aiNotes}
-                            onChange={(e) => setAiNotes(e.target.value)}
-                            placeholder={language === 'ja' ? "例：退厩理由、近況、装蹄や駆虫のメモ、飼葉/調教内容 など" : "e.g. reason for departure, recent condition, farrier/worming notes, feeding/training"}
-                            className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
-                        />
-                        <button
-                            onClick={handleGenerateFields}
-                            disabled={isGenerating}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
-                        >
-                            <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
-                        </button>
-                    </div>
-                </div>
                 <div>
                     <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
                     <textarea
