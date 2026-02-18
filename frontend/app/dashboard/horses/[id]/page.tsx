@@ -32,6 +32,7 @@ type Horse = {
     clients: { id: string, name: string } | null;
     trainer_id?: string | null;
     trainers?: { id: string; trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; trainer_location_en?: string | null; } | null;
+    broodmare_flag?: boolean | null;
 };
 
 type Report = {
@@ -66,6 +67,10 @@ export default function HorseDetail() {
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [editMode, setEditMode] = useState(false);
+    const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
+    const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
+    const [rules, setRules] = useState<Array<{ rule_name: string; days_after: number[] }>>([]);
+    const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
 
     // Form & Owner State
     const [clients, setClients] = useState<Client[]>([]);
@@ -122,7 +127,8 @@ export default function HorseDetail() {
         last_farrier_date: '',
         last_farrier_note: '',
         last_worming_date: '',
-        last_worming_note: ''
+        last_worming_note: '',
+        broodmare_flag: false
     });
 
     const sexOptions = [
@@ -235,7 +241,8 @@ export default function HorseDetail() {
                         last_farrier_date: horseDataItem.last_farrier_date || '',
                         last_farrier_note: horseDataItem.last_farrier_note || '',
                         last_worming_date: horseDataItem.last_worming_date || '',
-                        last_worming_note: horseDataItem.last_worming_note || ''
+                        last_worming_note: horseDataItem.last_worming_note || '',
+                        broodmare_flag: !!horseDataItem.broodmare_flag
                     });
                     setTrainerId(horseDataItem.trainer_id || '');
                     if (horseDataItem.clients) setOwnerSearch(horseDataItem.clients.name);
@@ -259,6 +266,36 @@ export default function HorseDetail() {
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, user?.id, session?.access_token, refreshKey]);
+
+    useEffect(() => {
+        if (!session?.access_token || !id) return;
+        let mounted = true;
+        const fetchReproData = async () => {
+            const [rulesData, coverData, scanData] = await Promise.all([
+                restGet('repro_followup_rules?select=rule_name,days_after&order=rule_name.asc'),
+                restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`),
+                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`)
+            ]);
+            if (!mounted) return;
+            let nextRules = (rulesData || []) as Array<{ rule_name: string; days_after: number[] }>;
+            if (nextRules.length === 0) {
+                const created = await restPost('repro_followup_rules', {
+                    rule_name: 'default',
+                    days_after: [15, 17, 28, 40],
+                    enabled: true
+                });
+                nextRules = created || [{ rule_name: 'default', days_after: [15, 17, 28, 40] }];
+            }
+            setRules(nextRules);
+            setCovers(coverData || []);
+            setScans(scanData || []);
+        };
+        fetchReproData().catch((error) => {
+            console.warn('Failed to load repro data', error);
+        });
+        return () => { mounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, session?.access_token]);
 
     const handleUpdateHorse = async () => {
         try {
@@ -314,6 +351,7 @@ export default function HorseDetail() {
                 last_farrier_note: formData.last_farrier_note || null,
                 last_worming_date: formData.last_worming_date || null,
                 last_worming_note: formData.last_worming_note || null,
+                broodmare_flag: formData.broodmare_flag || false,
                 updated_at: new Date().toISOString()
             });
 
@@ -339,6 +377,43 @@ export default function HorseDetail() {
 
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert('Failed to update: ' + error.message);
+        }
+    };
+
+    const handleCreateCover = async () => {
+        if (!newCover.cover_date) {
+            alert('Cover date is required');
+            return;
+        }
+        try {
+            await restPost('rpc/repro_create_cover', {
+                horse_id: id,
+                cover_date: newCover.cover_date,
+                stallion_name: newCover.stallion_name || null,
+                note: newCover.note || null,
+                p_rule_name: newCover.rule_name || 'default'
+            });
+            const [coverData, scanData] = await Promise.all([
+                restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`),
+                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`)
+            ]);
+            setCovers(coverData || []);
+            setScans(scanData || []);
+            setNewCover({ cover_date: '', stallion_name: '', note: '', rule_name: newCover.rule_name || 'default' });
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
+        }
+    };
+
+    const updateScan = async (scanId: string, patch: Partial<{ actual_date: string | null; result: string | null; note: string | null }>) => {
+        try {
+            await restPatch(`repro_scans?id=eq.${scanId}`, {
+                ...patch,
+                updated_at: new Date().toISOString()
+            });
+            setScans((prev) => prev.map((scan) => (scan.id === scanId ? { ...scan, ...patch } : scan)));
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to update scan: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -376,6 +451,7 @@ export default function HorseDetail() {
     // Fallback for sire/dam if only one exists
     const displaySire = language === 'ja' ? horse.sire : (horse.sire_en || horse.sire);
     const displayDam = language === 'ja' ? horse.dam : (horse.dam_en || horse.dam);
+    const isBroodmare = horse.sex === 'Mare' || (horse.sex === 'Filly' && horse.broodmare_flag);
 
     return (
         <div className="flex-1 overflow-y-auto bg-gray-50 pb-20 font-sans">
@@ -571,6 +647,19 @@ export default function HorseDetail() {
                                             ))}
                                         </select>
                                     </div>
+                                    {formData.sex === 'Filly' && (
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="text-xs font-bold text-gray-400 uppercase">{t('broodmareFlag')}</label>
+                                            <label className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!formData.broodmare_flag}
+                                                    onChange={(e) => setFormData({ ...formData, broodmare_flag: e.target.checked })}
+                                                />
+                                                {t('broodmareFlag')}
+                                            </label>
+                                        </div>
+                                    )}
                                     <div className="col-span-1 md:col-span-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase">{language === 'ja' ? t('horseStatusLabel') : 'Status'}</label>
                                         <select
@@ -658,6 +747,12 @@ export default function HorseDetail() {
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('sex') : 'Sex'}</span>
                                         {formatHorseSex(horse.sex)}
                                     </div>
+                                    {horse.sex === 'Filly' && horse.broodmare_flag ? (
+                                        <div className="bg-amber-50 px-3 py-1 rounded border border-amber-200 text-amber-700">
+                                            <span className="font-bold text-gray-300 block text-xs uppercase">{t('broodmareFlag')}</span>
+                                            {t('broodmareFlag')}
+                                        </div>
+                                    ) : null}
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100"><span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('owner') : 'Owner'}</span> {horse.clients?.name || (language === 'ja' ? t('noOwner') : 'No owner')}</div>
                                     <div className="bg-gray-50 px-3 py-1 rounded border border-gray-100">
                                         <span className="font-bold text-gray-300 block text-xs uppercase">{language === 'ja' ? t('trainer') : 'Trainer'}</span>
@@ -718,6 +813,124 @@ export default function HorseDetail() {
                         )}
                     </div>
                 </div>
+
+                {isBroodmare && (
+                    <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">{t('scanSchedule')}</h2>
+                            <span className="text-xs text-gray-400">{t('reproManagement')}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
+                                <input
+                                    type="date"
+                                    className="w-full border border-gray-300 rounded p-2"
+                                    value={newCover.cover_date}
+                                    onChange={(e) => setNewCover({ ...newCover, cover_date: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('stallionName')}</label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-gray-300 rounded p-2"
+                                    value={newCover.stallion_name}
+                                    onChange={(e) => setNewCover({ ...newCover, stallion_name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('ruleDaysAfter')}</label>
+                                <select
+                                    className="w-full border border-gray-300 rounded p-2"
+                                    value={newCover.rule_name}
+                                    onChange={(e) => setNewCover({ ...newCover, rule_name: e.target.value })}
+                                >
+                                    {rules.map((rule) => (
+                                        <option key={rule.rule_name} value={rule.rule_name}>
+                                            {rule.rule_name} ({rule.days_after.join(',')})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Note</label>
+                                <input
+                                    type="text"
+                                    className="w-full border border-gray-300 rounded p-2"
+                                    value={newCover.note}
+                                    onChange={(e) => setNewCover({ ...newCover, note: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end mb-6">
+                            <button
+                                onClick={handleCreateCover}
+                                className="bg-[var(--color-primary)] hover:brightness-110 text-white px-4 py-2 rounded-full text-sm font-bold"
+                            >
+                                {t('addCover')}
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-xs font-bold text-gray-400 uppercase mb-2">{t('coverDate')}</div>
+                                <div className="space-y-2">
+                                    {covers.length === 0 ? (
+                                        <div className="text-sm text-gray-400">-</div>
+                                    ) : (
+                                        covers.map((cover) => (
+                                            <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                                <div className="font-semibold">{cover.cover_date}</div>
+                                                <div>{cover.stallion_name || '-'}</div>
+                                                {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-bold text-gray-400 uppercase mb-2">{t('scanSchedule')}</div>
+                                <div className="space-y-2">
+                                    {scans.length === 0 ? (
+                                        <div className="text-sm text-gray-400">-</div>
+                                    ) : (
+                                        scans.map((scan) => (
+                                            <div key={scan.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                                <div className="font-semibold">{scan.scheduled_date}</div>
+                                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                                    <input
+                                                        type="date"
+                                                        className="w-full border border-gray-300 rounded p-1 text-xs"
+                                                        value={scan.actual_date || ''}
+                                                        onChange={(e) => updateScan(scan.id, { actual_date: e.target.value || null })}
+                                                    />
+                                                    <select
+                                                        className="w-full border border-gray-300 rounded p-1 text-xs"
+                                                        value={scan.result || ''}
+                                                        onChange={(e) => updateScan(scan.id, { result: e.target.value || null })}
+                                                    >
+                                                        <option value="">--</option>
+                                                        <option value="pregnant">Pregnant</option>
+                                                        <option value="empty">Empty</option>
+                                                        <option value="uncertain">Uncertain</option>
+                                                    </select>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    className="mt-2 w-full border border-gray-300 rounded p-1 text-xs"
+                                                    placeholder="note"
+                                                    value={scan.note || ''}
+                                                    onChange={(e) => updateScan(scan.id, { note: e.target.value || null })}
+                                                />
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Reports List */}
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">{language === 'ja' ? 'レポート履歴' : 'Report History'}</h2>

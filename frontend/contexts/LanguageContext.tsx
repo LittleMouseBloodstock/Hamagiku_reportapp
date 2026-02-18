@@ -258,6 +258,23 @@ const translations: Translations = {
     reproInterventions: { ja: "処置", en: "Interventions" },
     reproNote: { ja: "備考", en: "Note" },
     reproFollowBanner: { ja: "フォロー対象", en: "Follow-up" },
+    reproSettings: { ja: "繁殖設定", en: "Repro Settings" },
+    broodmareFlag: { ja: "繁殖候補 (Filly)", en: "Broodmare (Filly)" },
+    coverDate: { ja: "種付け日", en: "Cover Date" },
+    stallionName: { ja: "種牡馬名", en: "Stallion" },
+    scanSchedule: { ja: "検査予定", en: "Scan Schedule" },
+    scanResult: { ja: "結果", en: "Result" },
+    scanActualDate: { ja: "実施日", en: "Actual Date" },
+    addCover: { ja: "種付け追加", en: "Add Cover" },
+    ruleDaysAfter: { ja: "日数（カンマ区切り）", en: "Days After (comma)" },
+    saveRule: { ja: "設定保存", en: "Save Rule" },
+    latestUpdates: { ja: "最新更新", en: "Latest Updates" },
+    latestReproCheck: { ja: "最新繁殖チェック", en: "Latest Repro Check" },
+    latestCover: { ja: "最新種付け", en: "Latest Cover" },
+    latestScan: { ja: "最新スキャン", en: "Latest Scan" },
+    openReproCalendar: { ja: "繁殖カレンダー", en: "Repro Calendar" },
+    openReproList: { ja: "繁殖一覧", en: "Repro List" },
+    openReproNotifications: { ja: "繁殖通知", en: "Repro Notifications" },
 };
 
 interface LanguageContextType {

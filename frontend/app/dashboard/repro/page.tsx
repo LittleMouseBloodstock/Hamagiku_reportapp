@@ -44,7 +44,8 @@ export default function ReproHomePage() {
 
         const fetchMares = async () => {
             if (!session?.access_token) return;
-            const data = await restGet('horses?select=id,name,name_en,sex&sex=eq.Mare&order=name', getRestHeaders());
+            const orFilter = encodeURIComponent('(sex.eq.Mare,and(sex.eq.Filly,broodmare_flag.eq.true))');
+            const data = await restGet(`horses?select=id,name,name_en,sex,broodmare_flag&or=${orFilter}&order=name`, getRestHeaders());
             if (mounted) setMares(data || []);
         };
 
@@ -107,6 +108,12 @@ export default function ReproHomePage() {
                         className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-stone-600 rounded-lg hover:text-stone-800 transition-all"
                     >
                         {t('reproNotifications')}
+                    </Link>
+                    <Link
+                        href="/dashboard/repro/settings"
+                        className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-stone-600 rounded-lg hover:text-stone-800 transition-all"
+                    >
+                        {t('reproSettings')}
                     </Link>
                     <Link
                         href="/dashboard/repro/checks/new"

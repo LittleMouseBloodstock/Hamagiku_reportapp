@@ -48,6 +48,9 @@ export default function Dashboard() {
         draftReports: 0,
         approvedReports: 0
     });
+    const [latestRepro, setLatestRepro] = useState<{ horseName?: string; performedAt?: string } | null>(null);
+    const [latestCover, setLatestCover] = useState<{ horseName?: string; coverDate?: string } | null>(null);
+    const [latestScan, setLatestScan] = useState<{ horseName?: string; scheduledDate?: string; result?: string | null } | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -64,11 +67,14 @@ export default function Dashboard() {
 
                 const headers = getRestHeaders();
                 const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
-                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount] = await Promise.all([
+                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount, reproCheckRes, coverRes, scanRes] = await Promise.all([
                     restCount('reports?select=*', headers),
                     restCount('horses?select=*&departure_date=is.null', headers),
                     restCount('horses?select=*&departure_date=not.is.null', headers),
-                    restCount('clients?select=*', headers)
+                    restCount('clients?select=*', headers),
+                    restGet('repro_checks?select=performed_at,horse_id,horses(name,name_en)&order=performed_at.desc&limit=1', headers).catch(() => []),
+                    restGet('repro_covers?select=cover_date,horse_id,horses(name,name_en)&order=cover_date.desc&limit=1', headers).catch(() => []),
+                    restGet('repro_scans?select=scheduled_date,result,horse_id,horses(name,name_en)&order=scheduled_date.desc&limit=1', headers).catch(() => [])
                 ]);
 
                 const typedData = (data || []) as ReportRow[];
@@ -117,6 +123,22 @@ export default function Dashboard() {
                         };
                     }) || [];
                     setReports(formatted);
+                    const latestCheck = (reproCheckRes as Array<{ performed_at: string; horses?: { name: string; name_en: string } }>)[0];
+                    const latestCoverRow = (coverRes as Array<{ cover_date: string; horses?: { name: string; name_en: string } }>)[0];
+                    const latestScanRow = (scanRes as Array<{ scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>)[0];
+                    setLatestRepro(latestCheck ? {
+                        horseName: language === 'ja' ? latestCheck.horses?.name : latestCheck.horses?.name_en || latestCheck.horses?.name,
+                        performedAt: latestCheck.performed_at
+                    } : null);
+                    setLatestCover(latestCoverRow ? {
+                        horseName: language === 'ja' ? latestCoverRow.horses?.name : latestCoverRow.horses?.name_en || latestCoverRow.horses?.name,
+                        coverDate: latestCoverRow.cover_date
+                    } : null);
+                    setLatestScan(latestScanRow ? {
+                        horseName: language === 'ja' ? latestScanRow.horses?.name : latestScanRow.horses?.name_en || latestScanRow.horses?.name,
+                        scheduledDate: latestScanRow.scheduled_date,
+                        result: latestScanRow.result
+                    } : null);
                 }
             } catch (err: unknown) {
                 const msg = String((err as Error)?.message || '');
@@ -241,6 +263,40 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-stone-500 text-sm font-medium font-sans">{t('approvedReportsLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.approvedReports}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestReproCheck')}</div>
+                        <div className="text-sm text-stone-700 font-semibold">{latestRepro?.horseName || '-'}</div>
+                        <div className="text-xs text-stone-500">{latestRepro?.performedAt ? new Date(latestRepro.performedAt).toLocaleString(language === 'ja' ? 'ja-JP' : 'en-GB') : '-'}</div>
+                        <div className="mt-3">
+                            <Link href="/dashboard/repro" className="text-sm text-[#1a3c34] hover:underline">
+                                {t('openReproList')}
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestCover')}</div>
+                        <div className="text-sm text-stone-700 font-semibold">{latestCover?.horseName || '-'}</div>
+                        <div className="text-xs text-stone-500">{latestCover?.coverDate || '-'}</div>
+                        <div className="mt-3">
+                            <Link href="/dashboard/repro/calendar" className="text-sm text-[#1a3c34] hover:underline">
+                                {t('openReproCalendar')}
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestScan')}</div>
+                        <div className="text-sm text-stone-700 font-semibold">{latestScan?.horseName || '-'}</div>
+                        <div className="text-xs text-stone-500">{latestScan?.scheduledDate || '-'}</div>
+                        <div className="text-xs text-stone-500">{latestScan?.result || '-'}</div>
+                        <div className="mt-3">
+                            <Link href="/dashboard/repro/notifications" className="text-sm text-[#1a3c34] hover:underline">
+                                {t('openReproNotifications')}
+                            </Link>
+                        </div>
                     </div>
                 </div>
 

@@ -57,6 +57,8 @@ export default function ReproCalendarPage() {
 
     const [mares, setMares] = useState<Mare[]>([]);
     const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
+    const [covers, setCovers] = useState<{ id: string; horse_id: string; cover_date: string; stallion_name?: string | null }[]>([]);
+    const [scans, setScans] = useState<{ id: string; horse_id: string; scheduled_date: string; result?: string | null }[]>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -66,7 +68,8 @@ export default function ReproCalendarPage() {
         };
         const fetchMares = async () => {
             if (!session?.access_token) return;
-            const data = await restGet('horses?select=id,name,name_en&sex=eq.Mare&order=name', getRestHeaders());
+            const orFilter = encodeURIComponent('(sex.eq.Mare,and(sex.eq.Filly,broodmare_flag.eq.true))');
+            const data = await restGet(`horses?select=id,name,name_en,broodmare_flag&or=${orFilter}&order=name`, getRestHeaders());
             if (mounted) setMares(data || []);
         };
         fetchMares().catch(() => setMares([]));
@@ -88,7 +91,27 @@ export default function ReproCalendarPage() {
             );
             if (mounted) setSnapshots(data || []);
         };
+        const fetchCovers = async () => {
+            if (!session?.access_token || mares.length === 0) return;
+            const ids = mares.map((m) => m.id).join(',');
+            const data = await restGet(
+                `repro_covers?select=id,horse_id,cover_date,stallion_name&horse_id=in.(${ids})`,
+                getRestHeaders()
+            );
+            if (mounted) setCovers(data || []);
+        };
+        const fetchScans = async () => {
+            if (!session?.access_token || mares.length === 0) return;
+            const ids = mares.map((m) => m.id).join(',');
+            const data = await restGet(
+                `repro_scans?select=id,horse_id,scheduled_date,result&horse_id=in.(${ids})`,
+                getRestHeaders()
+            );
+            if (mounted) setScans(data || []);
+        };
         fetchSnapshots().catch(() => setSnapshots([]));
+        fetchCovers().catch(() => setCovers([]));
+        fetchScans().catch(() => setScans([]));
         return () => { mounted = false; };
     }, [mares, session?.access_token]);
 
@@ -122,8 +145,31 @@ export default function ReproCalendarPage() {
             if (!itemsByDate[row.date]) itemsByDate[row.date] = [];
             itemsByDate[row.date].push(item);
         });
+        covers.forEach((cover) => {
+            const item: CalendarItem = {
+                horseId: cover.horse_id,
+                horseName: mareNameMap[cover.horse_id] || cover.horse_id,
+                performedAt: `${cover.cover_date}T00:00:00Z`,
+                summary: cover.stallion_name ? `Cover: ${cover.stallion_name}` : 'Cover',
+                interventions: []
+            };
+            if (!itemsByDate[cover.cover_date]) itemsByDate[cover.cover_date] = [];
+            itemsByDate[cover.cover_date].push(item);
+        });
+        scans.forEach((scan) => {
+            const label = scan.result ? `Scan (${scan.result})` : 'Scan';
+            const item: CalendarItem = {
+                horseId: scan.horse_id,
+                horseName: mareNameMap[scan.horse_id] || scan.horse_id,
+                performedAt: `${scan.scheduled_date}T00:00:00Z`,
+                summary: label,
+                interventions: []
+            };
+            if (!itemsByDate[scan.scheduled_date]) itemsByDate[scan.scheduled_date] = [];
+            itemsByDate[scan.scheduled_date].push(item);
+        });
         return itemsByDate;
-    }, [snapshots, mareNameMap, language]);
+    }, [snapshots, covers, scans, mareNameMap, language]);
 
     const datesWithChecks = useMemo(() => new Set(Object.keys(calendarItems)), [calendarItems]);
 

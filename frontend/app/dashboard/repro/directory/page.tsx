@@ -41,7 +41,8 @@ export default function ReproDirectoryPage() {
     };
     const fetchMares = async () => {
       if (!session?.access_token) return;
-      const data = await restGet("horses?select=id,name,name_en&sex=eq.Mare&order=name", getRestHeaders());
+      const orFilter = encodeURIComponent('(sex.eq.Mare,and(sex.eq.Filly,broodmare_flag.eq.true))');
+      const data = await restGet(`horses?select=id,name,name_en,broodmare_flag&or=${orFilter}&order=name`, getRestHeaders());
       if (mounted) setMares(data || []);
     };
     fetchMares().catch(() => setMares([]));

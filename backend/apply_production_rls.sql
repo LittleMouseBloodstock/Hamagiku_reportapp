@@ -9,6 +9,9 @@ ALTER TABLE repro_findings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE repro_daily_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE repro_follow_up_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_drafts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repro_followup_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repro_covers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repro_scans ENABLE ROW LEVEL SECURITY;
 
 -- 2. Clean up existing policies (Reset)
 DROP POLICY IF EXISTS "Enable read access for authenticated users" ON reports;
@@ -44,6 +47,9 @@ DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_findings;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_daily_snapshots;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_follow_up_tasks;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON report_drafts;
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_followup_rules;
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_covers;
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON repro_scans;
 
 
 -- 3. Apply Permissive Policies for Authenticated Users
@@ -71,3 +77,6 @@ CREATE POLICY "Enable all for authenticated users" ON repro_findings FOR ALL TO 
 CREATE POLICY "Enable all for authenticated users" ON repro_daily_snapshots FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all for authenticated users" ON repro_follow_up_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all for authenticated users" ON report_drafts FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for authenticated users" ON repro_followup_rules FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for authenticated users" ON repro_covers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all for authenticated users" ON repro_scans FOR ALL TO authenticated USING (true) WITH CHECK (true);

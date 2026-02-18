@@ -110,6 +110,12 @@ export default function ReproTimelinePage() {
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
                     <Link
+                        href="/dashboard/repro"
+                        className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-stone-600 rounded-lg hover:text-stone-800 transition-all"
+                    >
+                        {t('reproManagement')}
+                    </Link>
+                    <Link
                         href={`/dashboard/repro/checks/new?horse_id=${id}`}
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"
                     >
