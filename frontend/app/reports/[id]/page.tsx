@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 export const runtime = 'edge';
 import { supabase } from '@/lib/supabase';
-import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
@@ -15,7 +14,6 @@ export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
     const isNew = id === 'new';
-    const refreshKey = useResumeRefresh();
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -23,6 +21,9 @@ export default function ReportEditor() {
     const [reviewStatus, setReviewStatus] = useState<string>('draft');
     const [isDirty, setIsDirty] = useState(false);
     const [reportType, setReportType] = useState<'monthly' | 'departure'>('monthly');
+    const [draftPromptedKey, setDraftPromptedKey] = useState<string | null>(null);
+    const [autosaveStatus, setAutosaveStatus] = useState<string>('');
+    const [autosaveStamp, setAutosaveStamp] = useState<number>(0);
 
     // Initial Data for Template
     const [initialData, setInitialData] = useState<Partial<ReportData | DepartureReportData>>({});
@@ -34,6 +35,9 @@ export default function ReportEditor() {
 
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | DepartureReportData | null>(null);
+    const autosaveTimerRef = useRef<number | null>(null);
+    const remoteAutosaveTimerRef = useRef<number | null>(null);
+    const lastRemoteSaveRef = useRef<number>(0);
 
     const { user, session } = useAuth(); // Add useAuth
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -49,6 +53,71 @@ export default function ReportEditor() {
             'Content-Type': 'application/json',
             'Prefer': 'return=representation'
         };
+    };
+
+    const draftKey = useMemo(() => {
+        const safeId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : 'unknown';
+        const horsePart = horseId || 'no-horse';
+        return `report-draft:${safeId}:${horsePart}:${reportType}`;
+    }, [id, horseId, reportType]);
+
+    const getDraftHeaders = () => {
+        if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation,resolution=merge-duplicates'
+        };
+    };
+
+    const fetchRemoteDraft = async () => {
+        if (!session?.access_token) return null;
+        if (!horseId && id === 'new') return null;
+        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`, {
+            headers: getDraftHeaders()
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.[0] ?? null;
+    };
+
+    const saveRemoteDraft = async () => {
+        if (!session?.access_token) return;
+        if (!reportDataRef.current) return;
+        if (!horseId && id === 'new') return;
+        const payload = {
+            draft_key: draftKey,
+            report_id: id !== 'new' ? id : null,
+            horse_id: horseId || null,
+            report_type: reportType,
+            data: reportDataRef.current,
+            updated_at: new Date().toISOString()
+        };
+        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts`, {
+            method: 'POST',
+            headers: getDraftHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            console.warn('Remote draft save failed:', text);
+        } else {
+            lastRemoteSaveRef.current = Date.now();
+            setAutosaveStatus('Saved to server');
+            setAutosaveStamp(Date.now());
+        }
+    };
+
+    const deleteRemoteDraft = async () => {
+        if (!session?.access_token) return;
+        if (!draftKey) return;
+        await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`, {
+            method: 'DELETE',
+            headers: getDraftHeaders()
+        });
     };
 
     const restGet = async (path: string) => {
@@ -180,7 +249,7 @@ export default function ReportEditor() {
 
     useEffect(() => {
         if (!id || !user) return; // Wait for user
-        if (!isNew && isDirty) return; // Don't overwrite while editing
+        if (isDirty) return; // Don't overwrite while editing
 
         let isMounted = true;
         const fetchReportData = async (retryCount = 0) => {
@@ -583,7 +652,54 @@ export default function ReportEditor() {
         fetchReportData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, isNew, user?.id, session?.access_token, refreshKey]);
+    }, [id, isNew, user?.id, session?.access_token, isDirty]);
+
+    useEffect(() => {
+        if (loading) return;
+        if (draftPromptedKey === draftKey) return;
+        if (typeof window === 'undefined') return;
+
+        const localRaw = window.localStorage.getItem(draftKey);
+        let localDraft: { updatedAt?: string; reportType?: 'monthly' | 'departure'; data?: ReportData | DepartureReportData } | null = null;
+        if (localRaw) {
+            try {
+                localDraft = JSON.parse(localRaw);
+            } catch (err) {
+                console.warn('Failed to parse local draft data', err);
+            }
+        }
+
+        const load = async () => {
+            const remoteDraft = await fetchRemoteDraft();
+            const localTime = localDraft?.updatedAt ? new Date(localDraft.updatedAt).getTime() : 0;
+            const remoteTime = remoteDraft?.updated_at ? new Date(remoteDraft.updated_at).getTime() : 0;
+            const useRemote = remoteTime > localTime;
+
+            const chosen = useRemote ? remoteDraft : localDraft;
+            const chosenData = useRemote ? remoteDraft?.data : localDraft?.data;
+            const chosenType = useRemote ? remoteDraft?.report_type : localDraft?.reportType;
+            const chosenUpdated = useRemote ? remoteDraft?.updated_at : localDraft?.updatedAt;
+
+            const hasData = chosenData && Object.keys(chosenData).length > 0;
+            if (!hasData) {
+                setDraftPromptedKey(draftKey);
+                return;
+            }
+
+            const label = chosenUpdated ? new Date(chosenUpdated).toLocaleString() : 'recent';
+            if (window.confirm(`Unsaved draft found (${label}). Restore?`)) {
+                if (chosenType === 'departure' || chosenType === 'monthly') {
+                    setReportType(chosenType);
+                }
+                setInitialData(chosenData || {});
+                reportDataRef.current = chosenData || null;
+                setIsDirty(true);
+            }
+            setDraftPromptedKey(draftKey);
+        };
+
+        load().catch(() => setDraftPromptedKey(draftKey));
+    }, [draftKey, draftPromptedKey, loading]);
 
     const handleSelectHorse = async (selectedHorseId: string) => {
         setHorseId(selectedHorseId);
@@ -683,6 +799,59 @@ export default function ReportEditor() {
         reportDataRef.current = data;
         setIsDirty(true);
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (!reportDataRef.current) return;
+
+        if (autosaveTimerRef.current) {
+            window.clearTimeout(autosaveTimerRef.current);
+        }
+
+        autosaveTimerRef.current = window.setTimeout(() => {
+            try {
+                const payload = {
+                    updatedAt: new Date().toISOString(),
+                    reportType,
+                    data: reportDataRef.current
+                };
+                window.localStorage.setItem(draftKey, JSON.stringify(payload));
+                setAutosaveStatus('Saved locally');
+                setAutosaveStamp(Date.now());
+            } catch (err) {
+                console.warn('Failed to store draft', err);
+            }
+            const now = Date.now();
+            if (now - lastRemoteSaveRef.current >= 30_000) {
+                void saveRemoteDraft();
+            }
+        }, 800);
+
+        return () => {
+            if (autosaveTimerRef.current) {
+                window.clearTimeout(autosaveTimerRef.current);
+            }
+        };
+    }, [draftKey, reportType, isDirty]);
+
+    useEffect(() => {
+        if (!session?.access_token) return;
+        if (remoteAutosaveTimerRef.current) {
+            window.clearInterval(remoteAutosaveTimerRef.current);
+        }
+        remoteAutosaveTimerRef.current = window.setInterval(() => {
+            if (!reportDataRef.current) return;
+            if (!isDirty) return;
+            void saveRemoteDraft();
+        }, 30_000);
+
+        return () => {
+            if (remoteAutosaveTimerRef.current) {
+                window.clearInterval(remoteAutosaveTimerRef.current);
+                remoteAutosaveTimerRef.current = null;
+            }
+        };
+    }, [session?.access_token, isDirty, draftKey]);
 
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
@@ -803,6 +972,12 @@ export default function ReportEditor() {
                 setLastSaved(new Date());
                 setIsDirty(false);
                 setSaving(false);
+                if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem(draftKey);
+                }
+                void deleteRemoteDraft();
+                setAutosaveStatus('Saved');
+                setAutosaveStamp(Date.now());
                 if (isNew && newReportId) {
                     router.replace(`/reports/${newReportId}`);
                 }
@@ -934,6 +1109,12 @@ export default function ReportEditor() {
         setSaving(false);
         setLastSaved(new Date());
         setIsDirty(false);
+        if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(draftKey);
+        }
+        void deleteRemoteDraft();
+        setAutosaveStatus('Saved');
+        setAutosaveStamp(Date.now());
 
             if (isNew && newReportId) {
                 router.replace(`/reports/${newReportId}`);
@@ -1018,6 +1199,11 @@ export default function ReportEditor() {
                     <div className="flex flex-col">
                         <span className="font-bold text-sm">{isNew ? 'New Report' : 'Report Editor'}</span>
                         {lastSaved && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Check size={8} /> Saved {lastSaved.toLocaleTimeString()}</span>}
+                        {autosaveStatus && (
+                            <span className="text-[10px] text-gray-400">
+                                {autosaveStatus} {autosaveStamp ? `· ${new Date(autosaveStamp).toLocaleTimeString()}` : ''}
+                            </span>
+                        )}
                     </div>
                     <div className="sm:hidden">
                         <LanguageToggle />

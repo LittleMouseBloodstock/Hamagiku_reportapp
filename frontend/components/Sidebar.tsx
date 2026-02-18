@@ -43,6 +43,10 @@ export default function Sidebar() {
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">format_list_bulleted</span>
                     <span className="hidden lg:block text-sm font-medium">{t('horses') || 'Horses'}</span>
                 </Link>
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/repro">
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">monitor_heart</span>
+                    <span className="hidden lg:block text-sm font-medium">{t('reproManagement') || 'Repro Management'}</span>
+                </Link>
                 <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/clients">
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">group</span>
                     <span className="hidden lg:block text-sm font-medium">{t('clients') || 'Clients'}</span>

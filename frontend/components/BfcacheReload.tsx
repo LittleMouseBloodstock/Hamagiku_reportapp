@@ -6,19 +6,14 @@ export default function BfcacheReload() {
     useEffect(() => {
         const handlePageShow = (event: PageTransitionEvent) => {
             if (event.persisted) {
-                window.location.reload();
-            }
-        };
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                window.location.reload();
+                // Avoid forced reloads which can wipe in-progress form edits.
+                // Data refresh is handled by per-page fetch logic and resume hooks.
+                console.warn('bfcache restore detected: skipping hard reload to preserve form state');
             }
         };
         window.addEventListener('pageshow', handlePageShow);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
             window.removeEventListener('pageshow', handlePageShow);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
