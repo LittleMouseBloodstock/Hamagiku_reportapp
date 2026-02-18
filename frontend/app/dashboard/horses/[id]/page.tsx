@@ -378,7 +378,7 @@ export default function HorseDetail() {
     const displayDam = language === 'ja' ? horse.dam : (horse.dam_en || horse.dam);
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20 font-sans">
+        <div className="flex-1 overflow-y-auto bg-gray-50 pb-20 font-sans">
             {/* Nav */}
             <div className="bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between">
                 <Link href="/dashboard/horses" className="text-gray-500 hover:text-gray-800 flex items-center gap-1 text-sm font-bold">
