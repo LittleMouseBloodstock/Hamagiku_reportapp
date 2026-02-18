@@ -9,6 +9,8 @@ import { buildRestHeaders, restGet } from '@/lib/restClient';
 import { formatShortDate, toAmPmLabel } from '@/lib/reproDate';
 import { labelMaps, shortLabel, uterusShort } from '@/lib/reproLabels';
 
+export const runtime = 'edge';
+
 type SnapshotRow = {
     date: string;
     latest_repro_check_id: string;
