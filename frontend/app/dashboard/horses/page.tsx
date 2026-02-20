@@ -166,7 +166,7 @@ export default function HorsesPage() {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
-                <div className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                <div className="text-xl font-bold text-[#1a3c34] flex items-center gap-2 font-display">
                     <span className="material-symbols-outlined">format_list_bulleted</span>
                     {t('horses') || 'Horses'}
                 </div>

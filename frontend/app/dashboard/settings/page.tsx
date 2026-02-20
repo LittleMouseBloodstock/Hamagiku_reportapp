@@ -89,7 +89,10 @@ export default function SettingsPage() {
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-[#1a3c34]">{t('settingsTitle')}</h1>
+                    <div className="text-xl font-bold text-[#1a3c34] flex items-center gap-2 font-display">
+                        <span className="material-symbols-outlined">settings</span>
+                        <h1>{t('settingsTitle')}</h1>
+                    </div>
                     <p className="text-stone-500 mt-2">{t('settingsDesc')}</p>
                 </div>
 
