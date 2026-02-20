@@ -236,16 +236,22 @@ export default function Dashboard() {
         : '';
     const selectedEvents = [
         ...coverEvents.filter((c) => c.cover_date === selectedDateStr).map((c) => ({
+            type: 'cover' as const,
+            id: c.id,
             label: t('coverDate'),
             title: language === 'ja' ? c.horses?.name || '-' : c.horses?.name_en || c.horses?.name || '-',
             meta: c.cover_date
         })),
         ...scanEvents.filter((s) => s.scheduled_date === selectedDateStr).map((s) => ({
+            type: 'scan' as const,
+            id: s.id,
             label: t('scanSchedule'),
             title: language === 'ja' ? s.horses?.name || '-' : s.horses?.name_en || s.horses?.name || '-',
             meta: s.result || s.scheduled_date
         })),
         ...memoEvents.filter((m) => m.event_date === selectedDateStr).map((m) => ({
+            type: 'memo' as const,
+            id: m.id,
             label: t('memoEvent'),
             title: m.title,
             meta: m.note || ''
@@ -511,10 +517,25 @@ export default function Dashboard() {
                             ) : (
                                 <div className="space-y-2">
                                     {selectedEvents.slice(0, 4).map((item, idx) => (
-                                        <div key={`${item.label}-${idx}`} className="text-xs text-stone-600">
-                                            <span className="font-semibold text-stone-700">{item.label}</span> · {item.title}
+                                        <button
+                                            key={`${item.label}-${item.id || idx}`}
+                                            type="button"
+                                            onClick={() => {
+                                                if (item.type === 'memo') {
+                                                    const memo = memoEvents.find((m) => m.id === item.id);
+                                                    if (memo) handleEditMemo(memo);
+                                                }
+                                            }}
+                                            className={`text-left w-full rounded-md px-2 py-1 ${item.type === 'memo' ? 'hover:bg-stone-100' : ''}`}
+                                        >
+                                            <div className="text-xs text-stone-600">
+                                                <span className="font-semibold text-stone-700">{item.label}</span> · {item.title}
+                                            </div>
                                             {item.meta ? <div className="text-[10px] text-stone-400">{item.meta}</div> : null}
-                                        </div>
+                                            {item.type === 'memo' ? (
+                                                <div className="text-[10px] text-[#1a3c34] mt-1">{t('memoEdit')}</div>
+                                            ) : null}
+                                        </button>
                                     ))}
                                 </div>
                             )}
