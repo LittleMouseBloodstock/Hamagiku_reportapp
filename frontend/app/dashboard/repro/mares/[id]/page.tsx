@@ -51,6 +51,7 @@ export default function ReproTimelinePage() {
     const [rows, setRows] = useState<SnapshotRow[]>([]);
     const [detail, setDetail] = useState<ReproCheckDetail | null>(null);
     const [horseName, setHorseName] = useState<string>('');
+    const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '' });
     const [vetCheck, setVetCheck] = useState({ check_date: '', note: '' });
     const [vetChecks, setVetChecks] = useState<Array<{ id: string; check_date: string; note?: string | null }>>([]);
 
@@ -141,6 +142,26 @@ export default function ReproTimelinePage() {
         }
     };
 
+    const handleCreateCover = async () => {
+        if (!newCover.cover_date) {
+            alert('Cover date is required');
+            return;
+        }
+        try {
+            const headers = buildRestHeaders({ bearerToken: session?.access_token });
+            await restPost('rpc/repro_create_cover', {
+                horse_id: id,
+                cover_date: newCover.cover_date,
+                stallion_name: newCover.stallion_name || null,
+                note: newCover.note || null,
+                p_rule_name: 'default'
+            }, headers);
+            setNewCover({ cover_date: '', stallion_name: '', note: '' });
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-[#FDFCF8] border-b border-stone-200 gap-3 sm:gap-0">
@@ -167,6 +188,47 @@ export default function ReproTimelinePage() {
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
                 <div className="mb-4 text-stone-600 text-sm">{horseName}</div>
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 mb-6">
+                    <div className="text-xs text-stone-400 uppercase mb-3">{t('coverDate')}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
+                            <input
+                                type="date"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.cover_date}
+                                onChange={(e) => setNewCover({ ...newCover, cover_date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('stallionName')}</label>
+                            <input
+                                type="text"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.stallion_name}
+                                onChange={(e) => setNewCover({ ...newCover, stallion_name: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">Note</label>
+                            <input
+                                type="text"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.note}
+                                onChange={(e) => setNewCover({ ...newCover, note: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-3">
+                        <button
+                            onClick={handleCreateCover}
+                            className="bg-[#1a3c34] hover:bg-[#122b25] text-white px-4 py-2 rounded-full text-sm font-bold"
+                        >
+                            {t('addCover')}
+                        </button>
+                    </div>
+                </div>
+
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 mb-6">
                     <div className="text-xs text-stone-400 uppercase mb-3">{t('vetCheck')}</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
