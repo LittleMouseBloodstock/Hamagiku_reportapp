@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image';
 import Sidebar from '@/components/Sidebar';
 import BottomBar from '@/components/BottomBar';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
@@ -28,16 +29,28 @@ export default function DashboardLayout({
     return (
         <div className="flex h-screen w-full bg-background-light text-stone-850 font-sans antialiased overflow-hidden relative">
             <Sidebar />
-            <button
-                type="button"
-                onClick={() => setMobileMenuOpen(true)}
-                className="lg:hidden fixed top-4 left-4 z-40 bg-white/90 border border-stone-200 rounded-lg p-2 shadow-sm"
-                aria-label="Open menu"
-            >
-                <span className="material-symbols-outlined text-stone-700">menu</span>
-            </button>
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-12 bg-[#FDFCF8] border-b border-stone-200 flex items-center justify-between px-3">
+                <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="bg-white/90 border border-stone-200 rounded-lg p-1.5 shadow-sm"
+                    aria-label="Open menu"
+                >
+                    <span className="material-symbols-outlined text-stone-700">menu</span>
+                </button>
+                <div className="relative h-7 w-28">
+                    <Image
+                        src="/HamagikuLogoSVG.svg"
+                        alt="Hamagiku Farm"
+                        fill
+                        className="object-contain"
+                        priority
+                    />
+                </div>
+                <div className="w-8" />
+            </div>
             <MobileMenuDrawer open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-            <main className="flex-1 flex flex-col h-full overflow-hidden relative pb-20 lg:pb-0">
+            <main className="flex-1 flex flex-col h-full overflow-hidden relative pb-20 lg:pb-0 pt-12 lg:pt-0">
                 {children}
             </main>
             <BottomBar />
