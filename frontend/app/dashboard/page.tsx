@@ -58,8 +58,8 @@ export default function Dashboard() {
     const [memoNote, setMemoNote] = useState('');
     const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
     const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
-    const [coverEvents, setCoverEvents] = useState<Array<{ id: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
-    const [scanEvents, setScanEvents] = useState<Array<{ id: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>>([]);
+    const [coverEvents, setCoverEvents] = useState<Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
+    const [scanEvents, setScanEvents] = useState<Array<{ id?: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>>([]);
 
     const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfWeek = (year: number, month: number) => new Date(year, month, 1).getDay();
