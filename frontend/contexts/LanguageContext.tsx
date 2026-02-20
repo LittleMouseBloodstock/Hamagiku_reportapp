@@ -287,6 +287,13 @@ const translations: Translations = {
     memoSaveError: { ja: "予定の保存に失敗しました: ", en: "Failed to save event: " },
     noEventsToday: { ja: "本日の予定はありません", en: "No events today" },
     scrollHorizontal: { ja: "左右にスクロール", en: "Scroll sideways" },
+    memoEdit: { ja: "修正", en: "Edit" },
+    memoDelete: { ja: "削除", en: "Delete" },
+    memoUpdate: { ja: "更新", en: "Update" },
+    memoCancel: { ja: "キャンセル", en: "Cancel" },
+    memoEmpty: { ja: "この日のメモ予定はありません", en: "No memo events for this day" },
+    memoDeleteConfirm: { ja: "この予定を削除しますか？", en: "Delete this event?" },
+    memoDeleteError: { ja: "予定の削除に失敗しました: ", en: "Failed to delete event: " },
 };
 
 interface LanguageContextType {

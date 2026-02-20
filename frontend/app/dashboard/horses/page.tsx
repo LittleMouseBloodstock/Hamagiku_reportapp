@@ -170,11 +170,11 @@ export default function HorsesPage() {
                     <span className="material-symbols-outlined">format_list_bulleted</span>
                     {t('horses') || 'Horses'}
                 </div>
-                <div className="flex items-center gap-4 self-end sm:self-auto">
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto self-end sm:self-auto">
                     <select
                         value={showMode}
                         onChange={(e) => setShowMode(e.target.value as 'active' | 'retired')}
-                        className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
+                        className="w-full sm:w-auto text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
                     >
                         <option value="active">{t('showActiveOnly')}</option>
                         <option value="retired">{t('showRetiredOnly')}</option>
@@ -182,12 +182,12 @@ export default function HorsesPage() {
                     <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value as 'name' | 'trainer')}
-                        className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
+                        className="w-full sm:w-auto text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
                     >
                         <option value="name">{t('sortByName')}</option>
                         <option value="trainer">{t('sortByTrainer')}</option>
                     </select>
-                    <Link href="/dashboard/horses/new" className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark transition-all">
+                    <Link href="/dashboard/horses/new" className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 sm:px-4 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark transition-all">
                         <span className="material-symbols-outlined text-sm">add</span>
                         <span className="text-sm font-medium">{t('addHorse')}</span>
                     </Link>

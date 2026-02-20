@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildRestHeaders, restGet } from '@/lib/restClient';
+import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
 import { formatShortDate, toAmPmLabel } from '@/lib/reproDate';
 import { labelMaps, shortLabel, uterusShort } from '@/lib/reproLabels';
 
@@ -51,6 +51,10 @@ export default function ReproTimelinePage() {
     const [rows, setRows] = useState<SnapshotRow[]>([]);
     const [detail, setDetail] = useState<ReproCheckDetail | null>(null);
     const [horseName, setHorseName] = useState<string>('');
+    const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
+    const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
+    const [rules, setRules] = useState<Array<{ rule_name: string; days_after: number[] }>>([]);
+    const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
 
     useEffect(() => {
         let mounted = true;
@@ -88,6 +92,37 @@ export default function ReproTimelinePage() {
         return () => { mounted = false; };
     }, [id, session?.access_token]);
 
+    useEffect(() => {
+        if (!session?.access_token || !id) return;
+        let mounted = true;
+        const getRestHeaders = () => {
+            if (!session?.access_token) throw new Error('Missing access token for REST');
+            return buildRestHeaders({ bearerToken: session.access_token });
+        };
+        const fetchCoverData = async () => {
+            const [rulesData, coverData, scanData] = await Promise.all([
+                restGet('repro_followup_rules?select=rule_name,days_after&order=rule_name.asc', getRestHeaders()),
+                restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, getRestHeaders()),
+                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, getRestHeaders())
+            ]);
+            if (!mounted) return;
+            let nextRules = (rulesData || []) as Array<{ rule_name: string; days_after: number[] }>;
+            if (nextRules.length === 0) {
+                const created = await restPost('repro_followup_rules', {
+                    rule_name: 'default',
+                    days_after: [15, 17, 28, 40],
+                    enabled: true
+                }, getRestHeaders());
+                nextRules = created || [{ rule_name: 'default', days_after: [15, 17, 28, 40] }];
+            }
+            setRules(nextRules);
+            setCovers(coverData || []);
+            setScans(scanData || []);
+        };
+        fetchCoverData().catch((error) => console.warn('Failed to load cover data', error));
+        return () => { mounted = false; };
+    }, [id, session?.access_token]);
+
     const openDetail = async (checkId: string) => {
         const getRestHeaders = () => {
             if (!session?.access_token) throw new Error('Missing access token for REST');
@@ -99,6 +134,32 @@ export default function ReproTimelinePage() {
         );
         const row = data && data[0];
         setDetail(row || null);
+    };
+
+    const handleCreateCover = async () => {
+        if (!newCover.cover_date) {
+            alert('Cover date is required');
+            return;
+        }
+        try {
+            const headers = buildRestHeaders({ bearerToken: session?.access_token });
+            await restPost('rpc/repro_create_cover', {
+                horse_id: id,
+                cover_date: newCover.cover_date,
+                stallion_name: newCover.stallion_name || null,
+                note: newCover.note || null,
+                p_rule_name: newCover.rule_name || 'default'
+            }, headers);
+            const [coverData, scanData] = await Promise.all([
+                restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, headers),
+                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, headers)
+            ]);
+            setCovers(coverData || []);
+            setScans(scanData || []);
+            setNewCover({ cover_date: '', stallion_name: '', note: '', rule_name: newCover.rule_name || 'default' });
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
+        }
     };
 
     return (
@@ -127,6 +188,93 @@ export default function ReproTimelinePage() {
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
                 <div className="mb-4 text-stone-600 text-sm">{horseName}</div>
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 mb-6">
+                    <div className="text-xs text-stone-400 uppercase mb-3">{t('scanSchedule')}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
+                            <input
+                                type="date"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.cover_date}
+                                onChange={(e) => setNewCover({ ...newCover, cover_date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('stallionName')}</label>
+                            <input
+                                type="text"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.stallion_name}
+                                onChange={(e) => setNewCover({ ...newCover, stallion_name: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('ruleDaysAfter')}</label>
+                            <select
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.rule_name}
+                                onChange={(e) => setNewCover({ ...newCover, rule_name: e.target.value })}
+                            >
+                                {rules.map((rule) => (
+                                    <option key={rule.rule_name} value={rule.rule_name}>
+                                        {rule.rule_name} ({rule.days_after.join(',')})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-gray-400 uppercase">Note</label>
+                            <input
+                                type="text"
+                                className="mt-2 w-full border border-gray-300 rounded p-2"
+                                value={newCover.note}
+                                onChange={(e) => setNewCover({ ...newCover, note: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end mb-6">
+                        <button
+                            onClick={handleCreateCover}
+                            className="bg-[#1a3c34] hover:bg-[#122b25] text-white px-4 py-2 rounded-full text-sm font-bold"
+                        >
+                            {t('addCover')}
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">{t('coverDate')}</div>
+                            <div className="space-y-2">
+                                {covers.length === 0 ? (
+                                    <div className="text-sm text-gray-400">-</div>
+                                ) : (
+                                    covers.map((cover) => (
+                                        <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                            <div className="font-semibold">{cover.cover_date}</div>
+                                            <div>{cover.stallion_name || '-'}</div>
+                                            {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-xs font-bold text-gray-400 uppercase mb-2">{t('scanSchedule')}</div>
+                            <div className="space-y-2">
+                                {scans.length === 0 ? (
+                                    <div className="text-sm text-gray-400">-</div>
+                                ) : (
+                                    scans.map((scan) => (
+                                        <div key={scan.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                            <div className="font-semibold">{scan.scheduled_date}</div>
+                                            {scan.result ? <div className="text-xs text-gray-400">{scan.result}</div> : null}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">

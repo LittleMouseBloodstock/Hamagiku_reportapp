@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
-import { buildRestHeaders, restCount, restDelete, restGet, restPost } from '@/lib/restClient';
+import { buildRestHeaders, restCount, restDelete, restGet, restPost, restPatch } from '@/lib/restClient';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
@@ -56,6 +56,7 @@ export default function Dashboard() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(today);
     const [memoTitle, setMemoTitle] = useState('');
     const [memoNote, setMemoNote] = useState('');
+    const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
     const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
     const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
     const [coverEvents, setCoverEvents] = useState<Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
@@ -251,7 +252,7 @@ export default function Dashboard() {
         }))
     ];
 
-    const handleAddMemo = async () => {
+    const handleSaveMemo = async () => {
         if (!memoDate || memoTitle.trim().length === 0) return;
         try {
             if (!session?.access_token) {
@@ -263,14 +264,47 @@ export default function Dashboard() {
                 title: memoTitle.trim(),
                 note: memoNote.trim().length > 0 ? memoNote.trim() : null
             };
-            const res = await restPost('repro_memo_events', payload, headers);
-            const created = (res && res[0]) ? res[0] : payload;
-            setMemoEvents((prev) => [...prev, created]);
+            if (editingMemoId) {
+                await restPatch(`repro_memo_events?id=eq.${editingMemoId}`, payload, headers);
+                setMemoEvents((prev) => prev.map((item) => (item.id === editingMemoId ? { ...item, ...payload } : item)));
+            } else {
+                const res = await restPost('repro_memo_events', payload, headers);
+                const created = (res && res[0]) ? res[0] : { ...payload, id: `temp-${Date.now()}` };
+                setMemoEvents((prev) => [...prev, created]);
+            }
             setMemoTitle('');
             setMemoNote('');
+            setEditingMemoId(null);
         } catch (error) {
             console.error('Failed to add memo event:', error);
             alert(t('memoSaveError') + (error as Error).message);
+        }
+    };
+
+    const handleEditMemo = (memo: { id: string; event_date: string; title: string; note?: string | null }) => {
+        setEditingMemoId(memo.id);
+        setMemoDate(memo.event_date);
+        setMemoTitle(memo.title);
+        setMemoNote(memo.note || '');
+    };
+
+    const handleDeleteMemo = async (memoId: string) => {
+        if (!session?.access_token) {
+            alert(t('memoSaveError'));
+            return;
+        }
+        if (!window.confirm(t('memoDeleteConfirm'))) return;
+        try {
+            await restDelete(`repro_memo_events?id=eq.${memoId}`, buildRestHeaders({ bearerToken: session.access_token }));
+            setMemoEvents((prev) => prev.filter((item) => item.id !== memoId));
+            if (editingMemoId === memoId) {
+                setEditingMemoId(null);
+                setMemoTitle('');
+                setMemoNote('');
+            }
+        } catch (error) {
+            console.error('Failed to delete memo:', error);
+            alert(t('memoDeleteError') + (error as Error).message);
         }
     };
 
@@ -366,11 +400,54 @@ export default function Dashboard() {
                             </div>
                             <button
                                 type="button"
-                                onClick={handleAddMemo}
+                                onClick={handleSaveMemo}
                                 className="w-full rounded-lg bg-[#1a3c34] text-white text-sm py-2"
                             >
-                                {t('addMemo')}
+                                {editingMemoId ? t('memoUpdate') : t('addMemo')}
                             </button>
+                            {editingMemoId ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingMemoId(null);
+                                        setMemoTitle('');
+                                        setMemoNote('');
+                                    }}
+                                    className="w-full rounded-lg border border-stone-200 text-stone-600 text-sm py-2"
+                                >
+                                    {t('memoCancel')}
+                                </button>
+                            ) : null}
+                        </div>
+                        <div className="mt-4 space-y-2">
+                            {memoEvents.filter((m) => m.event_date === memoDate).length === 0 ? (
+                                <div className="text-xs text-stone-400">{t('memoEmpty')}</div>
+                            ) : (
+                                memoEvents
+                                    .filter((m) => m.event_date === memoDate)
+                                    .map((memo) => (
+                                        <div key={memo.id} className="border border-stone-200 rounded-lg p-3 text-xs text-stone-600">
+                                            <div className="font-semibold text-stone-800">{memo.title}</div>
+                                            {memo.note ? <div className="text-stone-500 mt-1">{memo.note}</div> : null}
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEditMemo(memo)}
+                                                    className="text-[#1a3c34] hover:underline"
+                                                >
+                                                    {t('memoEdit')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteMemo(memo.id)}
+                                                    className="text-red-500 hover:underline"
+                                                >
+                                                    {t('memoDelete')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                            )}
                         </div>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">

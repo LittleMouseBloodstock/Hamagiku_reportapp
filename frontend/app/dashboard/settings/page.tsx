@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { buildRestHeaders, restDelete, restGet, restPost } from '@/lib/restClient';
+import { buildRestHeaders, restDelete, restGet, restPost, restPatch } from '@/lib/restClient';
 
 interface AllowedUser {
     id: string;
@@ -22,6 +22,9 @@ export default function SettingsPage() {
     const [newUserEmail, setNewUserEmail] = useState('');
     const [adding, setAdding] = useState(false);
     const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null);
+    const [ruleName, setRuleName] = useState('default');
+    const [daysAfter, setDaysAfter] = useState('15,17,28,40');
+    const [ruleId, setRuleId] = useState<string | null>(null);
 
     const getRestHeaders = () => {
         if (!session?.access_token) {
@@ -47,6 +50,51 @@ export default function SettingsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        const fetchRule = async () => {
+            if (!session?.access_token) return;
+            const data = await restGet(`repro_followup_rules?select=id,rule_name,days_after&rule_name=eq.${ruleName}`, getRestHeaders());
+            const row = data?.[0];
+            if (!mounted) return;
+            if (row) {
+                setRuleId(row.id);
+                setDaysAfter((row.days_after || []).join(','));
+            } else {
+                setRuleId(null);
+            }
+        };
+        fetchRule().catch(() => null);
+        return () => { mounted = false; };
+    }, [ruleName, session?.access_token, refreshKey]);
+
+    const saveRule = async () => {
+        if (!session?.access_token) return;
+        const days = daysAfter
+            .split(',')
+            .map((v) => parseInt(v.trim(), 10))
+            .filter((v) => !Number.isNaN(v) && v > 0);
+        if (days.length === 0) {
+            alert('Days after is required');
+            return;
+        }
+        const headers = buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
+        if (ruleId) {
+            await restPatch(`repro_followup_rules?id=eq.${ruleId}`, {
+                days_after: days,
+                updated_at: new Date().toISOString()
+            }, headers);
+        } else {
+            const created = await restPost('repro_followup_rules', {
+                rule_name: ruleName,
+                days_after: days,
+                enabled: true
+            }, headers);
+            setRuleId(created?.[0]?.id || null);
+        }
+        alert('Saved');
     };
 
     const handleAddUser = async (e: React.FormEvent) => {
@@ -170,6 +218,43 @@ export default function SettingsPage() {
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                    <div className="p-6 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center">
+                        <div>
+                            <h2 className="text-lg font-bold text-[#1a3c34]">{t('reproSettings')}</h2>
+                            <p className="text-sm text-stone-500">{t('scanSchedule')}</p>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Rule</label>
+                                <input
+                                    className="w-full border-gray-300 rounded-lg text-sm px-4 py-2.5 focus:ring-2 focus:ring-[#1a3c34] focus:border-transparent outline-none"
+                                    value={ruleName}
+                                    onChange={(e) => setRuleName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">{t('ruleDaysAfter')}</label>
+                                <input
+                                    className="w-full border-gray-300 rounded-lg text-sm px-4 py-2.5 focus:ring-2 focus:ring-[#1a3c34] focus:border-transparent outline-none"
+                                    value={daysAfter}
+                                    onChange={(e) => setDaysAfter(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <button
+                                onClick={saveRule}
+                                className="bg-[#1a3c34] hover:bg-[#122b25] text-white font-bold py-2.5 px-6 rounded-lg transition-colors shadow-sm"
+                            >
+                                {t('saveRule')}
+                            </button>
                         </div>
                     </div>
                 </div>
