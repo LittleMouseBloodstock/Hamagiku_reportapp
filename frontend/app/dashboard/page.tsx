@@ -431,26 +431,6 @@ export default function Dashboard() {
                                 </button>
                             ) : null}
                         </div>
-                        <div className="mt-4 space-y-2">
-                            {memoEvents.filter((m) => m.event_date === memoDate).length === 0 ? (
-                                <div className="text-xs text-stone-400">{t('memoEmpty')}</div>
-                            ) : (
-                                memoEvents
-                                    .filter((m) => m.event_date === memoDate)
-                                    .map((memo) => (
-                                        <button
-                                            key={memo.id}
-                                            type="button"
-                                            onClick={() => handleEditMemo(memo)}
-                                            className="w-full text-left border border-stone-200 rounded-lg p-3 text-xs text-stone-600 hover:bg-stone-50"
-                                        >
-                                            <div className="font-semibold text-stone-800">{memo.title}</div>
-                                            {memo.note ? <div className="text-stone-500 mt-1">{memo.note}</div> : null}
-                                            <div className="mt-2 text-[10px] text-[#1a3c34]">{t('memoEdit')}</div>
-                                        </button>
-                                    ))
-                            )}
-                        </div>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
                         <div className="flex items-center justify-between mb-3">
