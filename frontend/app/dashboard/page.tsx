@@ -343,7 +343,7 @@ export default function Dashboard() {
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
                                 />
                             </div>
                             <div>
