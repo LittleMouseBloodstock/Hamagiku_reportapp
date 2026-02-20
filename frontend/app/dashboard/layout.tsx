@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Sidebar from '@/components/Sidebar';
 import BottomBar from '@/components/BottomBar';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
+import LanguageToggle from '@/components/LanguageToggle';
 
 export default function DashboardLayout({
     children,
@@ -47,7 +48,9 @@ export default function DashboardLayout({
                         priority
                     />
                 </div>
-                <div className="w-8" />
+                <div className="scale-90 origin-right">
+                    <LanguageToggle />
+                </div>
             </div>
             <MobileMenuDrawer open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
             <main className="flex-1 flex flex-col h-full overflow-hidden relative pb-20 lg:pb-0 pt-12 lg:pt-0">
