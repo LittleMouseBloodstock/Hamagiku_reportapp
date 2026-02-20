@@ -83,7 +83,9 @@ export default function ReproTimelinePage() {
             `repro_checks?select=id,performed_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc`,
             headers
         );
-        if (!mounted || mounted.current) setRows(data || []);
+        if (!mounted || mounted.current) {
+            setTimeout(() => setRows(data || []), 0);
+        }
     };
 
     useEffect(() => {
