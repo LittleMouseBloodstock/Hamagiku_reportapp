@@ -227,7 +227,7 @@ export default function ReproCalendarPage() {
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
                     <Link
-                        href="/dashboard/repro"
+                        href="/dashboard"
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-white text-stone-600 rounded-lg shadow-sm hover:text-stone-800 transition-all ring-1 ring-stone-200"
                     >
                         <span className="material-symbols-outlined text-sm">arrow_back</span>
