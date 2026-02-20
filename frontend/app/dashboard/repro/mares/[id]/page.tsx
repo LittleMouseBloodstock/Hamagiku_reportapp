@@ -54,6 +54,7 @@ export default function ReproTimelinePage() {
     const [detailNote, setDetailNote] = useState('');
     const [horseName, setHorseName] = useState<string>('');
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '' });
+    const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
     const [vetCheck, setVetCheck] = useState({ check_date: '', note: '' });
     const [vetChecks, setVetChecks] = useState<Array<{ id: string; check_date: string; note?: string | null }>>([]);
 
@@ -99,11 +100,13 @@ export default function ReproTimelinePage() {
             return buildRestHeaders({ bearerToken: session.access_token });
         };
         const fetchCoverData = async () => {
-            const [vetData] = await Promise.all([
-                restGet(`repro_vet_checks?select=id,check_date,note&horse_id=eq.${id}&order=check_date.desc`, getRestHeaders())
+            const [vetData, coverData] = await Promise.all([
+                restGet(`repro_vet_checks?select=id,check_date,note&horse_id=eq.${id}&order=check_date.desc`, getRestHeaders()),
+                restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, getRestHeaders())
             ]);
             if (!mounted) return;
             setVetChecks(vetData || []);
+            setCovers(coverData || []);
         };
         fetchCoverData().catch((error) => console.warn('Failed to load cover data', error));
         return () => { mounted = false; };
@@ -189,6 +192,8 @@ export default function ReproTimelinePage() {
                 note: newCover.note || null,
                 p_rule_name: 'default'
             }, headers);
+            const coverData = await restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, headers);
+            setCovers(coverData || []);
             setNewCover({ cover_date: '', stallion_name: '', note: '' });
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
@@ -289,6 +294,19 @@ export default function ReproTimelinePage() {
                         >
                             {t('addCover')}
                         </button>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                        {covers.length === 0 ? (
+                            <div className="text-sm text-gray-400">-</div>
+                        ) : (
+                            covers.map((cover) => (
+                                <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                    <div className="font-semibold">{cover.cover_date}</div>
+                                    <div>{cover.stallion_name || '-'}</div>
+                                    {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
