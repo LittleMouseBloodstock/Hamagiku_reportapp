@@ -260,7 +260,20 @@ export default function ReproTimelinePage() {
                 <div className="mb-4 text-stone-600 text-sm">{horseName}</div>
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 mb-6">
                     <div className="text-xs text-stone-400 uppercase mb-3">{t('coverDate')}</div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-2 mb-4">
+                        {covers.length === 0 ? (
+                            <div className="text-sm text-gray-400">-</div>
+                        ) : (
+                            covers.map((cover) => (
+                                <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                    <div className="font-semibold">{cover.cover_date}</div>
+                                    <div>{cover.stallion_name || '-'}</div>
+                                    {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <div className="border-t border-stone-200 pt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                             <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
                             <input
@@ -296,19 +309,6 @@ export default function ReproTimelinePage() {
                         >
                             {t('addCover')}
                         </button>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                        {covers.length === 0 ? (
-                            <div className="text-sm text-gray-400">-</div>
-                        ) : (
-                            covers.map((cover) => (
-                                <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
-                                    <div className="font-semibold">{cover.cover_date}</div>
-                                    <div>{cover.stallion_name || '-'}</div>
-                                    {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
-                                </div>
-                            ))
-                        )}
                     </div>
                 </div>
 
