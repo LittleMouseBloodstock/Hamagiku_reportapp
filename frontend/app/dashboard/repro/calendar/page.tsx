@@ -35,6 +35,10 @@ type CalendarItem = {
     type?: 'memo' | 'cover' | 'scan' | 'check';
     memoId?: string;
     memoNote?: string | null;
+    coverId?: string;
+    scanId?: string;
+    stallionName?: string | null;
+    scanResult?: string | null;
 };
 
 function getDaysInMonth(year: number, month: number) {
@@ -68,6 +72,13 @@ export default function ReproCalendarPage() {
     const [memoDate, setMemoDate] = useState('');
     const [memoTitle, setMemoTitle] = useState('');
     const [memoNote, setMemoNote] = useState('');
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editType, setEditType] = useState<'cover' | 'scan' | null>(null);
+    const [editId, setEditId] = useState<string | null>(null);
+    const [editDate, setEditDate] = useState('');
+    const [editNote, setEditNote] = useState('');
+    const [editStallion, setEditStallion] = useState('');
+    const [editResult, setEditResult] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -123,6 +134,9 @@ export default function ReproCalendarPage() {
             const data = await restGet(`repro_memo_events?select=id,event_date,title,note&order=event_date.asc`, getRestHeaders());
             if (mounted) setMemoEvents(data || []);
         };
+        const refreshAll = async () => {
+            await Promise.all([fetchSnapshots(), fetchCovers(), fetchScans(), fetchMemos()]);
+        };
         fetchSnapshots().catch(() => setSnapshots([]));
         fetchCovers().catch(() => setCovers([]));
         fetchScans().catch(() => setScans([]));
@@ -167,7 +181,9 @@ export default function ReproCalendarPage() {
                 performedAt: `${cover.cover_date}T00:00:00Z`,
                 summary: cover.stallion_name ? `Cover: ${cover.stallion_name}` : 'Cover',
                 interventions: [],
-                type: 'cover'
+                type: 'cover',
+                coverId: cover.id,
+                stallionName: cover.stallion_name || null
             };
             if (!itemsByDate[cover.cover_date]) itemsByDate[cover.cover_date] = [];
             itemsByDate[cover.cover_date].push(item);
@@ -180,7 +196,9 @@ export default function ReproCalendarPage() {
                 performedAt: `${scan.scheduled_date}T00:00:00Z`,
                 summary: label,
                 interventions: [],
-                type: 'scan'
+                type: 'scan',
+                scanId: scan.id,
+                scanResult: scan.result || null
             };
             if (!itemsByDate[scan.scheduled_date]) itemsByDate[scan.scheduled_date] = [];
             itemsByDate[scan.scheduled_date].push(item);
@@ -257,6 +275,74 @@ export default function ReproCalendarPage() {
         setMemoTitle(item.horseName);
         setMemoNote(item.memoNote || '');
         setMemoModalOpen(true);
+    };
+
+    const openEdit = (item: CalendarItem) => {
+        if (item.type === 'cover' && item.coverId) {
+            setEditType('cover');
+            setEditId(item.coverId);
+            setEditDate(item.performedAt.slice(0, 10));
+            setEditStallion(item.stallionName || '');
+            setEditNote('');
+            setEditModalOpen(true);
+        }
+        if (item.type === 'scan' && item.scanId) {
+            setEditType('scan');
+            setEditId(item.scanId);
+            setEditDate(item.performedAt.slice(0, 10));
+            setEditResult(item.scanResult || '');
+            setEditNote('');
+            setEditModalOpen(true);
+        }
+    };
+
+    const refreshCalendar = async () => {
+        if (!session?.access_token) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        const ids = mares.map((m) => m.id).join(',');
+        const [coverData, scanData, memoData] = await Promise.all([
+            restGet(`repro_covers?select=id,horse_id,cover_date,stallion_name&horse_id=in.(${ids})`, headers),
+            restGet(`repro_scans?select=id,horse_id,scheduled_date,result&horse_id=in.(${ids})`, headers),
+            restGet(`repro_memo_events?select=id,event_date,title,note&order=event_date.asc`, headers)
+        ]);
+        setCovers(coverData || []);
+        setScans(scanData || []);
+        setMemoEvents(memoData || []);
+    };
+
+    const saveEdit = async () => {
+        if (!session?.access_token || !editId || !editType) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        if (editType === 'cover') {
+            await restPatch(`repro_covers?id=eq.${editId}`, {
+                cover_date: editDate,
+                stallion_name: editStallion || null,
+                note: editNote || null,
+                updated_at: new Date().toISOString()
+            }, headers);
+        } else if (editType === 'scan') {
+            await restPatch(`repro_scans?id=eq.${editId}`, {
+                scheduled_date: editDate,
+                result: editResult || null,
+                note: editNote || null,
+                updated_at: new Date().toISOString()
+            }, headers);
+        }
+        await refreshCalendar();
+        setEditModalOpen(false);
+    };
+
+    const deleteEdit = async () => {
+        if (!session?.access_token || !editId || !editType) return;
+        if (!window.confirm(t('memoDeleteConfirm'))) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        if (editType === 'cover') {
+            await restDelete(`repro_covers?id=eq.${editId}`, headers);
+        } else if (editType === 'scan') {
+            await restDelete(`repro_scans?id=eq.${editId}`, headers);
+        }
+        await refreshCalendar();
+        setEditModalOpen(false);
     };
 
     const saveMemo = async () => {
@@ -391,6 +477,14 @@ export default function ReproCalendarPage() {
                                             >
                                                 {t('memoEdit')}
                                             </button>
+                                        ) : item.type === 'cover' || item.type === 'scan' ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => openEdit(item)}
+                                                className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 text-stone-600"
+                                            >
+                                                {t('memoEdit')}
+                                            </button>
                                         ) : (
                                             <>
                                                 <Link
@@ -459,6 +553,70 @@ export default function ReproCalendarPage() {
                             <button
                                 type="button"
                                 onClick={deleteMemo}
+                                className="w-full rounded-lg border border-stone-200 text-red-600 text-sm py-2"
+                            >
+                                {t('memoDelete')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+            {editModalOpen ? (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50" onClick={() => setEditModalOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-4" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-semibold text-stone-700">{editType === 'cover' ? t('coverDate') : t('scanSchedule')}</div>
+                            <button className="text-stone-400 hover:text-stone-600" onClick={() => setEditModalOpen(false)}>
+                                {t('reproClose')}
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-stone-500">{editType === 'cover' ? t('coverDate') : t('scanSchedule')}</label>
+                                <input
+                                    type="date"
+                                    value={editDate}
+                                    onChange={(e) => setEditDate(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            {editType === 'cover' ? (
+                                <div>
+                                    <label className="text-xs text-stone-500">{t('stallionName')}</label>
+                                    <input
+                                        value={editStallion}
+                                        onChange={(e) => setEditStallion(e.target.value)}
+                                        className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="text-xs text-stone-500">{t('scanResult')}</label>
+                                    <input
+                                        value={editResult}
+                                        onChange={(e) => setEditResult(e.target.value)}
+                                        className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="text-xs text-stone-500">{t('reproNote')}</label>
+                                <textarea
+                                    value={editNote}
+                                    onChange={(e) => setEditNote(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-20 resize-none"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={saveEdit}
+                                className="w-full rounded-lg bg-[#1a3c34] text-white text-sm py-2"
+                            >
+                                {t('memoUpdate')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={deleteEdit}
                                 className="w-full rounded-lg border border-stone-200 text-red-600 text-sm py-2"
                             >
                                 {t('memoDelete')}
