@@ -275,6 +275,17 @@ const translations: Translations = {
     openReproCalendar: { ja: "繁殖カレンダー", en: "Repro Calendar" },
     openReproList: { ja: "繁殖一覧", en: "Repro List" },
     openReproNotifications: { ja: "繁殖通知", en: "Repro Notifications" },
+    todaySchedule: { ja: "今日の予定", en: "Today Schedule" },
+    calendar: { ja: "カレンダー", en: "Calendar" },
+    memoEvent: { ja: "メモ予定", en: "Memo Event" },
+    addMemo: { ja: "予定追加", en: "Add Event" },
+    memoDate: { ja: "日付", en: "Date" },
+    memoTitle: { ja: "タイトル", en: "Title" },
+    memoNote: { ja: "メモ", en: "Note" },
+    memoTitlePlaceholder: { ja: "例: 診療立ち会い", en: "e.g. vet appointment" },
+    memoNotePlaceholder: { ja: "自由入力", en: "Free note" },
+    memoSaveError: { ja: "予定の保存に失敗しました: ", en: "Failed to save event: " },
+    noEventsToday: { ja: "本日の予定はありません", en: "No events today" },
 };
 
 interface LanguageContextType {

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
-import { buildRestHeaders, restCount, restDelete, restGet } from '@/lib/restClient';
+import { buildRestHeaders, restCount, restDelete, restGet, restPost } from '@/lib/restClient';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
@@ -23,6 +23,7 @@ export default function Dashboard() {
         languages: string[];
         horses?: { name: string; name_en: string; };
         horse_id?: string;
+        reportType?: 'monthly' | 'departure';
     }
 
     type ReportRow = {
@@ -48,9 +49,24 @@ export default function Dashboard() {
         draftReports: 0,
         approvedReports: 0
     });
-    const [latestRepro, setLatestRepro] = useState<{ horseName?: string; performedAt?: string } | null>(null);
-    const [latestCover, setLatestCover] = useState<{ horseName?: string; coverDate?: string } | null>(null);
-    const [latestScan, setLatestScan] = useState<{ horseName?: string; scheduledDate?: string; result?: string | null } | null>(null);
+    const [todaySchedule, setTodaySchedule] = useState<Array<{ label: string; horseName: string; time?: string }>>([]);
+    const today = new Date();
+    const [viewYear, setViewYear] = useState(today.getFullYear());
+    const [viewMonth, setViewMonth] = useState(today.getMonth());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(today);
+    const [memoTitle, setMemoTitle] = useState('');
+    const [memoNote, setMemoNote] = useState('');
+    const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
+    const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
+    const [coverEvents, setCoverEvents] = useState<Array<{ id: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
+    const [scanEvents, setScanEvents] = useState<Array<{ id: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>>([]);
+
+    const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+    const getFirstDayOfWeek = (year: number, month: number) => new Date(year, month, 1).getDay();
+    const formatMonthYear = (date: Date): string => {
+        const locale = language === 'ja' ? 'ja-JP' : 'en-US';
+        return date.toLocaleDateString(locale, { year: 'numeric', month: 'long' });
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -67,14 +83,20 @@ export default function Dashboard() {
 
                 const headers = getRestHeaders();
                 const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
-                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount, reproCheckRes, coverRes, scanRes] = await Promise.all([
+                const today = new Date();
+                const todayStr = today.toISOString().slice(0, 10);
+                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount, memoRes, allCovers, allScans] = await Promise.all([
                     restCount('reports?select=*', headers),
                     restCount('horses?select=*&departure_date=is.null', headers),
                     restCount('horses?select=*&departure_date=not.is.null', headers),
                     restCount('clients?select=*', headers),
-                    restGet('repro_checks?select=performed_at,horse_id,horses(name,name_en)&order=performed_at.desc&limit=1', headers).catch(() => []),
-                    restGet('repro_covers?select=cover_date,horse_id,horses(name,name_en)&order=cover_date.desc&limit=1', headers).catch(() => []),
-                    restGet('repro_scans?select=scheduled_date,result,horse_id,horses(name,name_en)&order=scheduled_date.desc&limit=1', headers).catch(() => [])
+                    restGet('repro_memo_events?select=id,event_date,title,note&order=event_date.asc', headers).catch(() => []),
+                    restGet('repro_covers?select=id,horse_id,cover_date,horses(name,name_en)&order=cover_date.desc', headers).catch(() => []),
+                    restGet('repro_scans?select=id,horse_id,scheduled_date,result,horses(name,name_en)&order=scheduled_date.desc', headers).catch(() => [])
+                ]);
+                const [todayCovers, todayScans] = await Promise.all([
+                    restGet(`repro_covers?select=cover_date,horse_id,horses(name,name_en)&cover_date=eq.${todayStr}`, headers).catch(() => []),
+                    restGet(`repro_scans?select=scheduled_date,horse_id,horses(name,name_en)&scheduled_date=eq.${todayStr}`, headers).catch(() => [])
                 ]);
 
                 const typedData = (data || []) as ReportRow[];
@@ -110,6 +132,7 @@ export default function Dashboard() {
                         if (r.metrics_json?.commentEn) langs.push('EN');
                         if (langs.length === 0) langs.push('JP');
                         const statusRaw = r.review_status || r.status_training || 'draft';
+                        const reportType = r.metrics_json?.reportType === 'departure' || r.status_training === 'Departed' ? 'departure' : 'monthly';
 
                         return {
                             id: r.id,
@@ -119,26 +142,39 @@ export default function Dashboard() {
                             status: statusRaw,
                             languages: langs,
                             horses: r.horses,
-                            horse_id: r.horse_id
+                            horse_id: r.horse_id,
+                            reportType
                         };
                     }) || [];
                     setReports(formatted);
-                    const latestCheck = (reproCheckRes as Array<{ performed_at: string; horses?: { name: string; name_en: string } }>)[0];
-                    const latestCoverRow = (coverRes as Array<{ cover_date: string; horses?: { name: string; name_en: string } }>)[0];
-                    const latestScanRow = (scanRes as Array<{ scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>)[0];
-                    setLatestRepro(latestCheck ? {
-                        horseName: language === 'ja' ? latestCheck.horses?.name : latestCheck.horses?.name_en || latestCheck.horses?.name,
-                        performedAt: latestCheck.performed_at
-                    } : null);
-                    setLatestCover(latestCoverRow ? {
-                        horseName: language === 'ja' ? latestCoverRow.horses?.name : latestCoverRow.horses?.name_en || latestCoverRow.horses?.name,
-                        coverDate: latestCoverRow.cover_date
-                    } : null);
-                    setLatestScan(latestScanRow ? {
-                        horseName: language === 'ja' ? latestScanRow.horses?.name : latestScanRow.horses?.name_en || latestScanRow.horses?.name,
-                        scheduledDate: latestScanRow.scheduled_date,
-                        result: latestScanRow.result
-                    } : null);
+                    setMemoEvents((memoRes as Array<{ id: string; event_date: string; title: string; note?: string | null }>) || []);
+                    setCoverEvents((allCovers as Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>) || []);
+                    setScanEvents((allScans as Array<{ id?: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>) || []);
+                    const scheduleItems: Array<{ label: string; horseName: string; time?: string }> = [];
+                    (todayCovers as Array<{ cover_date: string; horses?: { name: string; name_en: string } }>).forEach((item) => {
+                        scheduleItems.push({
+                            label: t('latestCover'),
+                            horseName: language === 'ja' ? item.horses?.name || '' : item.horses?.name_en || item.horses?.name || '',
+                            time: item.cover_date
+                        });
+                    });
+                    (todayScans as Array<{ scheduled_date: string; horses?: { name: string; name_en: string } }>).forEach((item) => {
+                        scheduleItems.push({
+                            label: t('latestScan'),
+                            horseName: language === 'ja' ? item.horses?.name || '' : item.horses?.name_en || item.horses?.name || '',
+                            time: item.scheduled_date
+                        });
+                    });
+                    (memoRes as Array<{ event_date: string; title: string }>).forEach((item) => {
+                        if (item.event_date === todayStr) {
+                            scheduleItems.push({
+                                label: t('memoEvent'),
+                                horseName: item.title,
+                                time: item.event_date
+                            });
+                        }
+                    });
+                    setTodaySchedule(scheduleItems);
                 }
             } catch (err: unknown) {
                 const msg = String((err as Error)?.message || '');
@@ -180,6 +216,81 @@ export default function Dashboard() {
         }
     };
 
+    const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+    const firstDay = getFirstDayOfWeek(viewYear, viewMonth);
+    const calendarCells: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i += 1) calendarCells.push(null);
+    for (let d = 1; d <= daysInMonth; d += 1) calendarCells.push(d);
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const datesWithEvents = new Set<string>([
+        ...coverEvents.map((c) => c.cover_date),
+        ...scanEvents.map((s) => s.scheduled_date),
+        ...memoEvents.map((m) => m.event_date)
+    ]);
+    const selectedDateStr = selectedDate
+        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+        : '';
+    const selectedEvents = [
+        ...coverEvents.filter((c) => c.cover_date === selectedDateStr).map((c) => ({
+            label: t('coverDate'),
+            title: language === 'ja' ? c.horses?.name || '-' : c.horses?.name_en || c.horses?.name || '-',
+            meta: c.cover_date
+        })),
+        ...scanEvents.filter((s) => s.scheduled_date === selectedDateStr).map((s) => ({
+            label: t('scanSchedule'),
+            title: language === 'ja' ? s.horses?.name || '-' : s.horses?.name_en || s.horses?.name || '-',
+            meta: s.result || s.scheduled_date
+        })),
+        ...memoEvents.filter((m) => m.event_date === selectedDateStr).map((m) => ({
+            label: t('memoEvent'),
+            title: m.title,
+            meta: m.note || ''
+        }))
+    ];
+
+    const handleAddMemo = async () => {
+        if (!memoDate || memoTitle.trim().length === 0) return;
+        try {
+            if (!session?.access_token) {
+                throw new Error('Missing access token for REST');
+            }
+            const headers = buildRestHeaders({ bearerToken: session.access_token });
+            const payload = {
+                event_date: memoDate,
+                title: memoTitle.trim(),
+                note: memoNote.trim().length > 0 ? memoNote.trim() : null
+            };
+            const res = await restPost('repro_memo_events', payload, headers);
+            const created = (res && res[0]) ? res[0] : payload;
+            setMemoEvents((prev) => [...prev, created]);
+            setMemoTitle('');
+            setMemoNote('');
+        } catch (error) {
+            console.error('Failed to add memo event:', error);
+            alert(t('memoSaveError') + (error as Error).message);
+        }
+    };
+
+    const goPrev = () => {
+        if (viewMonth === 0) {
+            setViewMonth(11);
+            setViewYear(viewYear - 1);
+        } else {
+            setViewMonth(viewMonth - 1);
+        }
+        setSelectedDate(null);
+    };
+
+    const goNext = () => {
+        if (viewMonth === 11) {
+            setViewMonth(0);
+            setViewYear(viewYear + 1);
+        } else {
+            setViewMonth(viewMonth + 1);
+        }
+        setSelectedDate(null);
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-[#FDFCF8] border-b border-stone-200 gap-3 sm:gap-0">
@@ -199,17 +310,138 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">description</span>
+                {/* Today + Calendar */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="text-xs text-stone-400 uppercase mb-2">{t('todaySchedule')}</div>
+                        {todaySchedule.length === 0 ? (
+                            <div className="text-sm text-stone-500">{t('noEventsToday')}</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {todaySchedule.slice(0, 6).map((item, idx) => (
+                                    <div key={`${item.label}-${idx}`} className="text-sm text-stone-600">
+                                        <span className="font-semibold text-stone-700">{item.label}</span> · {item.horseName} <span className="text-xs text-stone-400">{item.time}</span>
+                                    </div>
+                                ))}
                             </div>
+                        )}
+                        <div className="mt-3">
+                            <Link href="/dashboard/repro/calendar" className="text-sm text-[#1a3c34] hover:underline">
+                                {t('openReproCalendar')}
+                            </Link>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Total Reports</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.totalReports}</p>
                     </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="text-xs text-stone-400 uppercase mb-2">{t('memoEvent')}</div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoDate')}</label>
+                                <input
+                                    type="date"
+                                    value={memoDate}
+                                    onChange={(e) => setMemoDate(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoTitle')}</label>
+                                <input
+                                    value={memoTitle}
+                                    onChange={(e) => setMemoTitle(e.target.value)}
+                                    placeholder={t('memoTitlePlaceholder')}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoNote')}</label>
+                                <textarea
+                                    value={memoNote}
+                                    onChange={(e) => setMemoNote(e.target.value)}
+                                    placeholder={t('memoNotePlaceholder')}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-20 resize-none"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAddMemo}
+                                className="w-full rounded-lg bg-[#1a3c34] text-white text-sm py-2"
+                            >
+                                {t('addMemo')}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <button className="text-stone-500 hover:text-stone-700" onClick={goPrev} aria-label={t('reproPrevMonth')}>
+                                {'<'}
+                            </button>
+                            <div className="text-sm font-semibold text-stone-700">
+                                {formatMonthYear(new Date(viewYear, viewMonth))}
+                            </div>
+                            <button className="text-stone-500 hover:text-stone-700" onClick={goNext} aria-label={t('reproNextMonth')}>
+                                {'>'}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-7 text-[10px] text-stone-500 mb-2">
+                            {[t('sun'), t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat')].map((label) => (
+                                <div key={label} className="text-center">{label}</div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1">
+                            {calendarCells.map((day, idx) => {
+                                if (day === null) {
+                                    return <div key={`empty-${idx}`} className="h-9" />;
+                                }
+                                const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                const hasEvents = datesWithEvents.has(dateStr);
+                                const isToday = dateStr === todayStr;
+                                const isSelected =
+                                    selectedDate &&
+                                    selectedDate.getFullYear() === viewYear &&
+                                    selectedDate.getMonth() === viewMonth &&
+                                    selectedDate.getDate() === day;
+                                return (
+                                    <button
+                                        key={dateStr}
+                                        type="button"
+                                        className={`h-9 rounded-lg text-[11px] border ${isSelected ? 'bg-stone-800 text-white border-stone-800' : 'border-stone-200 text-stone-700'} ${isToday ? 'ring-2 ring-amber-300' : ''}`}
+                                        onClick={() => {
+                                            setSelectedDate(new Date(viewYear, viewMonth, day));
+                                            setMemoDate(dateStr);
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-center gap-1">
+                                            <span>{day}</span>
+                                            {hasEvents ? <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" /> : null}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-3">
+                            <div className="text-xs text-stone-500 mb-2">
+                                {selectedDate
+                                    ? selectedDate.toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                                    : '-'}
+                            </div>
+                            {selectedEvents.length === 0 ? (
+                                <div className="text-xs text-stone-500">{t('reproNoEventsDay')}</div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {selectedEvents.slice(0, 4).map((item, idx) => (
+                                        <div key={`${item.label}-${idx}`} className="text-xs text-stone-600">
+                                            <span className="font-semibold text-stone-700">{item.label}</span> · {item.title}
+                                            {item.meta ? <div className="text-[10px] text-stone-400">{item.meta}</div> : null}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Compact Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
@@ -218,15 +450,6 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-stone-500 text-sm font-medium font-sans">{t('activeHorsesLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.activeHorses}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">archive</span>
-                            </div>
-                        </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('retiredHorsesLabel')}</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.retiredHorses}</p>
                     </div>
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
@@ -266,40 +489,6 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
-                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestReproCheck')}</div>
-                        <div className="text-sm text-stone-700 font-semibold">{latestRepro?.horseName || '-'}</div>
-                        <div className="text-xs text-stone-500">{latestRepro?.performedAt ? new Date(latestRepro.performedAt).toLocaleString(language === 'ja' ? 'ja-JP' : 'en-GB') : '-'}</div>
-                        <div className="mt-3">
-                            <Link href="/dashboard/repro" className="text-sm text-[#1a3c34] hover:underline">
-                                {t('openReproList')}
-                            </Link>
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
-                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestCover')}</div>
-                        <div className="text-sm text-stone-700 font-semibold">{latestCover?.horseName || '-'}</div>
-                        <div className="text-xs text-stone-500">{latestCover?.coverDate || '-'}</div>
-                        <div className="mt-3">
-                            <Link href="/dashboard/repro/calendar" className="text-sm text-[#1a3c34] hover:underline">
-                                {t('openReproCalendar')}
-                            </Link>
-                        </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
-                        <div className="text-xs text-stone-400 uppercase mb-2">{t('latestScan')}</div>
-                        <div className="text-sm text-stone-700 font-semibold">{latestScan?.horseName || '-'}</div>
-                        <div className="text-xs text-stone-500">{latestScan?.scheduledDate || '-'}</div>
-                        <div className="text-xs text-stone-500">{latestScan?.result || '-'}</div>
-                        <div className="mt-3">
-                            <Link href="/dashboard/repro/notifications" className="text-sm text-[#1a3c34] hover:underline">
-                                {t('openReproNotifications')}
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
                     <div className="p-6 border-b border-stone-200 flex justify-between items-center">
                         <h2 className="text-lg font-bold text-stone-800">{t('recentReports') || 'Recent Reports'}</h2>
@@ -313,6 +502,7 @@ export default function Dashboard() {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('horseName')}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('reportTitle')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('date')}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('status')}</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">{t('actions')}</th>
@@ -331,6 +521,11 @@ export default function Dashboard() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                                             {report.title}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.reportType === 'departure' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                {report.reportType === 'departure' ? 'Departure' : 'Monthly'}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                                             {/* Date */}
@@ -379,7 +574,7 @@ export default function Dashboard() {
                                 ))}
                                 {reports.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-stone-500 text-sm">
+                                        <td colSpan={6} className="px-6 py-8 text-center text-stone-500 text-sm">
                                             No recent reports found
                                         </td>
                                     </tr>
