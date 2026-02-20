@@ -286,6 +286,7 @@ const translations: Translations = {
     memoNotePlaceholder: { ja: "自由入力", en: "Free note" },
     memoSaveError: { ja: "予定の保存に失敗しました: ", en: "Failed to save event: " },
     noEventsToday: { ja: "本日の予定はありません", en: "No events today" },
+    scrollHorizontal: { ja: "左右にスクロール", en: "Scroll sideways" },
 };
 
 interface LanguageContextType {

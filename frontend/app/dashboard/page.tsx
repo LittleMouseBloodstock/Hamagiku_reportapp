@@ -493,13 +493,15 @@ export default function Dashboard() {
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-                    <div className="p-6 border-b border-stone-200 flex justify-between items-center">
+                    <div className="p-6 border-b border-stone-200 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <h2 className="text-lg font-bold text-stone-800">{t('recentReports') || 'Recent Reports'}</h2>
-                        <button className="text-stone-400 hover:text-stone-600">
-                            <span className="material-symbols-outlined">more_horiz</span>
-                        </button>
+                        <div className="flex items-center gap-2 text-xs text-stone-500 sm:hidden">
+                            <span className="material-symbols-outlined text-base">swipe</span>
+                            <span>{t('scrollHorizontal')}</span>
+                        </div>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
+                        <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-white to-transparent sm:hidden" />
                         <table className="w-full">
                             <thead className="bg-stone-50">
                                 <tr>
