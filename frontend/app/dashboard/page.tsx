@@ -33,7 +33,7 @@ export default function Dashboard() {
         review_status?: string | null;
         status_training?: string | null;
         body?: string | null;
-        metrics_json?: { commentEn?: string | null };
+        metrics_json?: { commentEn?: string | null; reportType?: string | null };
         horses?: { name: string; name_en: string; };
         horse_id?: string;
     };
