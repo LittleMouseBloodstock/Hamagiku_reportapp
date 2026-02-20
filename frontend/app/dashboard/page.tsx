@@ -266,12 +266,14 @@ export default function Dashboard() {
             };
             if (editingMemoId) {
                 await restPatch(`repro_memo_events?id=eq.${editingMemoId}`, payload, headers);
-                setMemoEvents((prev) => prev.map((item) => (item.id === editingMemoId ? { ...item, ...payload } : item)));
             } else {
                 const res = await restPost('repro_memo_events', payload, headers);
-                const created = (res && res[0]) ? res[0] : { ...payload, id: `temp-${Date.now()}` };
-                setMemoEvents((prev) => [...prev, created]);
+                if (!res || !res[0]) {
+                    console.warn('Memo POST returned empty, refetching.');
+                }
             }
+            const latest = await restGet('repro_memo_events?select=id,event_date,title,note&order=event_date.asc', headers);
+            setMemoEvents(latest || []);
             setMemoTitle('');
             setMemoNote('');
             setEditingMemoId(null);
