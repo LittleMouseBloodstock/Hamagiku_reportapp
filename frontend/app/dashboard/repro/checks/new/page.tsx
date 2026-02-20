@@ -60,6 +60,9 @@ export default function ReproCheckNewPage() {
         induction: false,
         ovulation: false
     });
+    const [coverDate, setCoverDate] = useState(new Date().toISOString().slice(0, 10));
+    const [stallionName, setStallionName] = useState('');
+    const [coverNote, setCoverNote] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -188,6 +191,16 @@ export default function ReproCheckNewPage() {
         }
         const headers = buildRestHeaders({ bearerToken: session.access_token });
         await restPost('rpc/repro_create_check', payload, headers);
+        if (interventionList.includes('mating')) {
+            const coverDateValue = coverDate || new Date(performedAt).toISOString().slice(0, 10);
+            await restPost('rpc/repro_create_cover', {
+                horse_id: horseId,
+                cover_date: coverDateValue,
+                stallion_name: stallionName || null,
+                note: coverNote || null,
+                p_rule_name: 'default'
+            }, headers);
+        }
         router.push(`/dashboard/repro/mares/${horseId}`);
     };
 
@@ -258,6 +271,41 @@ export default function ReproCheckNewPage() {
                             />
                         </div>
                     </div>
+
+                    {interventions.mating ? (
+                        <div className="border-t border-stone-100 pt-4 mt-4">
+                            <div className="text-xs uppercase text-stone-400 mb-2">{t('coverRecord')}</div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-xs text-stone-500">{t('coverDate')}</label>
+                                    <input
+                                        className="mt-2 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                                        type="date"
+                                        value={coverDate}
+                                        onChange={(event) => setCoverDate(event.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-stone-500">{t('stallionName')}</label>
+                                    <input
+                                        className="mt-2 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                                        type="text"
+                                        value={stallionName}
+                                        onChange={(event) => setStallionName(event.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-stone-500">{t('reproNote')}</label>
+                                    <input
+                                        className="mt-2 w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                                        type="text"
+                                        value={coverNote}
+                                        onChange={(event) => setCoverNote(event.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
 
                     <div className="border-t border-stone-100 pt-4 mt-4">
                         <div className="text-xs uppercase text-stone-400 mb-2">{t('reproOvary')}</div>

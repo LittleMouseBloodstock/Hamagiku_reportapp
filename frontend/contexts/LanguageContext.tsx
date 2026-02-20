@@ -297,6 +297,7 @@ const translations: Translations = {
     vetCheck: { ja: "獣医チェック", en: "Vet Check" },
     vetCheckDate: { ja: "実施日", en: "Check Date" },
     addVetCheck: { ja: "獣医チェック追加", en: "Add Vet Check" },
+    coverRecord: { ja: "種付け記録", en: "Cover Record" },
 };
 
 interface LanguageContextType {
