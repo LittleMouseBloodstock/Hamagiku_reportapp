@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildRestHeaders, restGet } from '@/lib/restClient';
+import { buildRestHeaders, restGet, restPatch, restDelete } from '@/lib/restClient';
 import { labelMaps, shortLabel, uterusShort } from '@/lib/reproLabels';
 import { toAmPmLabel } from '@/lib/reproDate';
 
@@ -32,6 +32,9 @@ type CalendarItem = {
     performedAt: string;
     summary: string;
     interventions: string[];
+    type?: 'memo' | 'cover' | 'scan' | 'check';
+    memoId?: string;
+    memoNote?: string | null;
 };
 
 function getDaysInMonth(year: number, month: number) {
@@ -59,6 +62,12 @@ export default function ReproCalendarPage() {
     const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
     const [covers, setCovers] = useState<{ id: string; horse_id: string; cover_date: string; stallion_name?: string | null }[]>([]);
     const [scans, setScans] = useState<{ id: string; horse_id: string; scheduled_date: string; result?: string | null }[]>([]);
+    const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
+    const [memoModalOpen, setMemoModalOpen] = useState(false);
+    const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+    const [memoDate, setMemoDate] = useState('');
+    const [memoTitle, setMemoTitle] = useState('');
+    const [memoNote, setMemoNote] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -109,9 +118,15 @@ export default function ReproCalendarPage() {
             );
             if (mounted) setScans(data || []);
         };
+        const fetchMemos = async () => {
+            if (!session?.access_token) return;
+            const data = await restGet(`repro_memo_events?select=id,event_date,title,note&order=event_date.asc`, getRestHeaders());
+            if (mounted) setMemoEvents(data || []);
+        };
         fetchSnapshots().catch(() => setSnapshots([]));
         fetchCovers().catch(() => setCovers([]));
         fetchScans().catch(() => setScans([]));
+        fetchMemos().catch(() => setMemoEvents([]));
         return () => { mounted = false; };
     }, [mares, session?.access_token]);
 
@@ -151,7 +166,8 @@ export default function ReproCalendarPage() {
                 horseName: mareNameMap[cover.horse_id] || cover.horse_id,
                 performedAt: `${cover.cover_date}T00:00:00Z`,
                 summary: cover.stallion_name ? `Cover: ${cover.stallion_name}` : 'Cover',
-                interventions: []
+                interventions: [],
+                type: 'cover'
             };
             if (!itemsByDate[cover.cover_date]) itemsByDate[cover.cover_date] = [];
             itemsByDate[cover.cover_date].push(item);
@@ -163,13 +179,28 @@ export default function ReproCalendarPage() {
                 horseName: mareNameMap[scan.horse_id] || scan.horse_id,
                 performedAt: `${scan.scheduled_date}T00:00:00Z`,
                 summary: label,
-                interventions: []
+                interventions: [],
+                type: 'scan'
             };
             if (!itemsByDate[scan.scheduled_date]) itemsByDate[scan.scheduled_date] = [];
             itemsByDate[scan.scheduled_date].push(item);
         });
+        memoEvents.forEach((memo) => {
+            const item: CalendarItem = {
+                horseId: 'memo',
+                horseName: memo.title,
+                performedAt: `${memo.event_date}T00:00:00Z`,
+                summary: memo.note || '',
+                interventions: [],
+                type: 'memo',
+                memoId: memo.id,
+                memoNote: memo.note
+            };
+            if (!itemsByDate[memo.event_date]) itemsByDate[memo.event_date] = [];
+            itemsByDate[memo.event_date].push(item);
+        });
         return itemsByDate;
-    }, [snapshots, covers, scans, mareNameMap, language]);
+    }, [snapshots, covers, scans, memoEvents, mareNameMap, language]);
 
     const datesWithChecks = useMemo(() => new Set(Object.keys(calendarItems)), [calendarItems]);
 
@@ -216,6 +247,40 @@ export default function ReproCalendarPage() {
             setViewMonth(viewMonth + 1);
         }
         setSelectedDate(null);
+    };
+
+    const openMemo = (item: CalendarItem) => {
+        if (!item.memoId) return;
+        const dateStr = item.performedAt.slice(0, 10);
+        setEditingMemoId(item.memoId);
+        setMemoDate(dateStr);
+        setMemoTitle(item.horseName);
+        setMemoNote(item.memoNote || '');
+        setMemoModalOpen(true);
+    };
+
+    const saveMemo = async () => {
+        if (!editingMemoId || !session?.access_token) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        await restPatch(`repro_memo_events?id=eq.${editingMemoId}`, {
+            event_date: memoDate,
+            title: memoTitle,
+            note: memoNote || null,
+            updated_at: new Date().toISOString()
+        }, headers);
+        const data = await restGet(`repro_memo_events?select=id,event_date,title,note&order=event_date.asc`, headers);
+        setMemoEvents(data || []);
+        setMemoModalOpen(false);
+    };
+
+    const deleteMemo = async () => {
+        if (!editingMemoId || !session?.access_token) return;
+        if (!window.confirm(t('memoDeleteConfirm'))) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        await restDelete(`repro_memo_events?id=eq.${editingMemoId}`, headers);
+        const data = await restGet(`repro_memo_events?select=id,event_date,title,note&order=event_date.asc`, headers);
+        setMemoEvents(data || []);
+        setMemoModalOpen(false);
     };
 
     return (
@@ -318,18 +383,30 @@ export default function ReproCalendarPage() {
                                         </div>
                                     ) : null}
                                     <div className="mt-3 flex items-center gap-2">
-                                        <Link
-                                            href={`/dashboard/repro/mares/${item.horseId}`}
-                                            className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 text-stone-600"
-                                        >
-                                            {t('reproTimeline')}
-                                        </Link>
-                                        <Link
-                                            href={`/dashboard/repro/checks/new?horse_id=${item.horseId}`}
-                                            className="px-3 py-1.5 text-xs rounded-lg bg-[#1a3c34] text-white"
-                                        >
-                                            {t('reproNewCheck')}
-                                        </Link>
+                                        {item.type === 'memo' ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => openMemo(item)}
+                                                className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 text-stone-600"
+                                            >
+                                                {t('memoEdit')}
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <Link
+                                                    href={`/dashboard/repro/mares/${item.horseId}`}
+                                                    className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 text-stone-600"
+                                                >
+                                                    {t('reproTimeline')}
+                                                </Link>
+                                                <Link
+                                                    href={`/dashboard/repro/checks/new?horse_id=${item.horseId}`}
+                                                    className="px-3 py-1.5 text-xs rounded-lg bg-[#1a3c34] text-white"
+                                                >
+                                                    {t('reproNewCheck')}
+                                                </Link>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -337,6 +414,59 @@ export default function ReproCalendarPage() {
                     )}
                 </div>
             </main>
+            {memoModalOpen ? (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50" onClick={() => setMemoModalOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-4" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-semibold text-stone-700">{t('memoEvent')}</div>
+                            <button className="text-stone-400 hover:text-stone-600" onClick={() => setMemoModalOpen(false)}>
+                                {t('reproClose')}
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoDate')}</label>
+                                <input
+                                    type="date"
+                                    value={memoDate}
+                                    onChange={(e) => setMemoDate(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoTitle')}</label>
+                                <input
+                                    value={memoTitle}
+                                    onChange={(e) => setMemoTitle(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoNote')}</label>
+                                <textarea
+                                    value={memoNote}
+                                    onChange={(e) => setMemoNote(e.target.value)}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-24 resize-none"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={saveMemo}
+                                className="w-full rounded-lg bg-[#1a3c34] text-white text-sm py-2"
+                            >
+                                {t('memoUpdate')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={deleteMemo}
+                                className="w-full rounded-lg border border-stone-200 text-red-600 text-sm py-2"
+                            >
+                                {t('memoDelete')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
