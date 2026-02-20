@@ -132,7 +132,10 @@ export default function Dashboard() {
                         if (r.metrics_json?.commentEn) langs.push('EN');
                         if (langs.length === 0) langs.push('JP');
                         const statusRaw = r.review_status || r.status_training || 'draft';
-                        const reportType = r.metrics_json?.reportType === 'departure' || r.status_training === 'Departed' ? 'departure' : 'monthly';
+                        const reportType: DashboardReport['reportType'] =
+                            r.metrics_json?.reportType === 'departure' || r.status_training === 'Departed'
+                                ? 'departure'
+                                : 'monthly';
 
                         return {
                             id: r.id,
