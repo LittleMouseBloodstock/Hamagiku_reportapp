@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
+import { buildRestHeaders, restGet, restPost, restPatch, restDelete } from '@/lib/restClient';
 import { formatShortDate, toAmPmLabel } from '@/lib/reproDate';
 import { labelMaps, shortLabel, uterusShort } from '@/lib/reproLabels';
 
@@ -50,6 +50,8 @@ export default function ReproTimelinePage() {
     const { session } = useAuth();
     const [rows, setRows] = useState<CheckRow[]>([]);
     const [detail, setDetail] = useState<ReproCheckDetail | null>(null);
+    const [detailPerformedAt, setDetailPerformedAt] = useState('');
+    const [detailNote, setDetailNote] = useState('');
     const [horseName, setHorseName] = useState<string>('');
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '' });
     const [vetCheck, setVetCheck] = useState({ check_date: '', note: '' });
@@ -73,22 +75,20 @@ export default function ReproTimelinePage() {
         return () => { mounted = false; };
     }, [id, language, session?.access_token]);
 
+    const fetchTimeline = async (mounted?: { current: boolean }) => {
+        if (!session?.access_token || !id) return;
+        const headers = buildRestHeaders({ bearerToken: session.access_token });
+        const data = await restGet(
+            `repro_checks?select=id,performed_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc`,
+            headers
+        );
+        if (!mounted || mounted.current) setRows(data || []);
+    };
+
     useEffect(() => {
-        let mounted = true;
-        const getRestHeaders = () => {
-            if (!session?.access_token) throw new Error('Missing access token for REST');
-            return buildRestHeaders({ bearerToken: session.access_token });
-        };
-        const fetchTimeline = async () => {
-            if (!session?.access_token || !id) return;
-            const data = await restGet(
-                `repro_checks?select=id,performed_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc`,
-                getRestHeaders()
-            );
-            if (mounted) setRows(data || []);
-        };
-        fetchTimeline().catch(() => setRows([]));
-        return () => { mounted = false; };
+        const mounted = { current: true };
+        fetchTimeline(mounted).catch(() => setRows([]));
+        return () => { mounted.current = false; };
     }, [id, session?.access_token]);
 
     useEffect(() => {
@@ -120,6 +120,39 @@ export default function ReproTimelinePage() {
         );
         const row = data && data[0];
         setDetail(row || null);
+        if (row) {
+            const local = new Date(row.performed_at).toISOString().slice(0, 16);
+            setDetailPerformedAt(local);
+            setDetailNote(row.note_text || '');
+        }
+    };
+
+    const saveDetail = async () => {
+        if (!detail || !session?.access_token) return;
+        try {
+            const headers = buildRestHeaders({ bearerToken: session.access_token });
+            await restPatch(`repro_checks?id=eq.${detail.id}`, {
+                performed_at: new Date(detailPerformedAt).toISOString(),
+                note_text: detailNote || null,
+                updated_at: new Date().toISOString()
+            }, headers);
+            setDetail((prev) => (prev ? { ...prev, performed_at: new Date(detailPerformedAt).toISOString(), note_text: detailNote || null } : prev));
+            await fetchTimeline();
+        } catch (error) {
+            alert('Failed to update record');
+        }
+    };
+
+    const deleteDetail = async () => {
+        if (!detail || !session?.access_token) return;
+        if (!window.confirm(t('memoDeleteConfirm'))) return;
+        try {
+            await restDelete(`repro_checks?id=eq.${detail.id}`, buildRestHeaders({ bearerToken: session.access_token }));
+            setDetail(null);
+            await fetchTimeline();
+        } catch (error) {
+            alert('Failed to delete record');
+        }
     };
 
     const handleAddVetCheck = async () => {
@@ -365,8 +398,25 @@ export default function ReproTimelinePage() {
                                 {t('reproClose')}
                             </button>
                         </div>
-                        <div className="text-sm text-stone-500 mb-4">
-                            {formatShortDate(detail.performed_at)} {toAmPmLabel(detail.performed_at)}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label className="block text-xs text-stone-500 mb-1">{t('reproPerformedAt')}</label>
+                                <input
+                                    type="datetime-local"
+                                    value={detailPerformedAt}
+                                    onChange={(e) => setDetailPerformedAt(e.target.value)}
+                                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-stone-500 mb-1">{t('reproNote')}</label>
+                                <input
+                                    type="text"
+                                    value={detailNote}
+                                    onChange={(e) => setDetailNote(e.target.value)}
+                                    className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm"
+                                />
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {(detail.repro_findings || []).map((finding) => (
@@ -389,6 +439,22 @@ export default function ReproTimelinePage() {
                                 <span className="font-semibold text-stone-700">{t('reproNote')}:</span> {detail.note_text}
                             </div>
                         ) : null}
+                        <div className="mt-4 flex items-center justify-between">
+                            <button
+                                type="button"
+                                onClick={deleteDetail}
+                                className="text-red-600 hover:underline text-sm"
+                            >
+                                {t('memoDelete')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={saveDetail}
+                                className="bg-[#1a3c34] hover:bg-[#122b25] text-white px-4 py-2 rounded-full text-sm font-bold"
+                            >
+                                {t('memoUpdate')}
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : null}
