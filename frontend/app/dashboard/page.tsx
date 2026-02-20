@@ -417,19 +417,6 @@ export default function Dashboard() {
                             >
                                 {editingMemoId ? t('memoUpdate') : t('addMemo')}
                             </button>
-                            {editingMemoId ? (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEditingMemoId(null);
-                                        setMemoTitle('');
-                                        setMemoNote('');
-                                    }}
-                                    className="w-full rounded-lg border border-stone-200 text-stone-600 text-sm py-2"
-                                >
-                                    {t('memoCancel')}
-                                </button>
-                            ) : null}
                         </div>
                     </div>
                     <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
