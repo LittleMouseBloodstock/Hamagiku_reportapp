@@ -18,11 +18,11 @@ export default function Sidebar() {
     }, []);
 
     if (!mounted) {
-        return <div className="w-64 h-screen bg-[#FDFCF8] border-r border-stone-200" />;
+        return <div className="hidden lg:block w-64 h-screen bg-[#FDFCF8] border-r border-stone-200" />;
     }
 
     return (
-        <aside className="w-20 lg:w-64 shrink-0 flex flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
+        <aside className="hidden lg:flex w-64 shrink-0 flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
             <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
                 <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
                     <Image
