@@ -39,9 +39,12 @@ export const restGet = async (path: string, headers?: RestHeaders) => {
 
 export const restPost = async (path: string, body: unknown, headers?: RestHeaders) => {
     const { supabaseUrl } = getSupabaseRestEnv();
+    const finalHeaders = headers
+        ? { ...headers, Prefer: headers.Prefer || 'return=representation' }
+        : buildRestHeaders({ prefer: 'return=representation' });
     const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
         method: 'POST',
-        headers: headers || buildRestHeaders({ prefer: 'return=representation' }),
+        headers: finalHeaders,
         body: JSON.stringify(body)
     });
     if (!res.ok) {
