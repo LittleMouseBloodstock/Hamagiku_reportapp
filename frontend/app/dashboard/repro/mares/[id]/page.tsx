@@ -11,18 +11,18 @@ import { labelMaps, shortLabel, uterusShort } from '@/lib/reproLabels';
 
 export const runtime = 'edge';
 
-type SnapshotRow = {
-    date: string;
-    latest_repro_check_id: string;
-    latest_performed_at: string;
-    max_follicle_mm_r?: number | null;
-    max_follicle_mm_l?: number | null;
-    follicle_feel_r?: string | null;
-    follicle_feel_l?: string | null;
-    cervix_state?: string | null;
-    uterus_flags?: { edema?: boolean; fluid?: boolean } | null;
-    uterus_tone?: string | null;
+type CheckRow = {
+    id: string;
+    performed_at: string;
     interventions?: string[] | null;
+    repro_findings?: Array<{
+        organ: string;
+        side: string;
+        finding_type: string;
+        size_mm?: number | null;
+        value?: string | null;
+        palpation_tags?: string[] | null;
+    }>;
 };
 
 type ReproCheckDetail = {
@@ -48,7 +48,7 @@ export default function ReproTimelinePage() {
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     const { language, t } = useLanguage();
     const { session } = useAuth();
-    const [rows, setRows] = useState<SnapshotRow[]>([]);
+    const [rows, setRows] = useState<CheckRow[]>([]);
     const [detail, setDetail] = useState<ReproCheckDetail | null>(null);
     const [horseName, setHorseName] = useState<string>('');
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '' });
@@ -82,7 +82,7 @@ export default function ReproTimelinePage() {
         const fetchTimeline = async () => {
             if (!session?.access_token || !id) return;
             const data = await restGet(
-                `repro_daily_snapshots?select=date,latest_repro_check_id,latest_performed_at,max_follicle_mm_r,max_follicle_mm_l,follicle_feel_r,follicle_feel_l,cervix_state,uterus_flags,uterus_tone,interventions&horse_id=eq.${id}&order=date.desc,latest_performed_at.desc`,
+                `repro_checks?select=id,performed_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc`,
                 getRestHeaders()
             );
             if (mounted) setRows(data || []);
@@ -160,6 +160,36 @@ export default function ReproTimelinePage() {
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
         }
+    };
+
+    const summarizeCheck = (row: CheckRow) => {
+        const findings = row.repro_findings || [];
+        const maxR = findings
+            .filter((f) => f.finding_type === 'follicle' && f.side === 'R' && f.size_mm != null)
+            .map((f) => f.size_mm as number)
+            .sort((a, b) => b - a)[0];
+        const maxL = findings
+            .filter((f) => f.finding_type === 'follicle' && f.side === 'L' && f.size_mm != null)
+            .map((f) => f.size_mm as number)
+            .sort((a, b) => b - a)[0];
+        const feelR = findings.find((f) => f.finding_type === 'follicle' && f.side === 'R' && f.palpation_tags?.length)?.palpation_tags?.[0];
+        const feelL = findings.find((f) => f.finding_type === 'follicle' && f.side === 'L' && f.palpation_tags?.length)?.palpation_tags?.[0];
+        const cervix = findings.find((f) => f.finding_type === 'cervix_laxity')?.value || null;
+        const uterusTone = findings.find((f) => f.finding_type === 'uterine_tone')?.value || null;
+        const uterusFlags = {
+            edema: findings.some((f) => f.finding_type === 'uterine_edema'),
+            fluid: findings.some((f) => f.finding_type === 'fluid_retention')
+        };
+        return {
+            maxR,
+            maxL,
+            feelR,
+            feelL,
+            cervix,
+            uterusTone,
+            uterusFlags,
+            interventions: row.interventions || []
+        };
     };
 
     return (
@@ -288,28 +318,31 @@ export default function ReproTimelinePage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
-                                {rows.map((row) => (
+                                {rows.map((row) => {
+                                    const summary = summarizeCheck(row);
+                                    return (
                                     <tr
-                                        key={`${row.date}-${row.latest_repro_check_id}`}
-                                        onClick={() => openDetail(row.latest_repro_check_id)}
+                                        key={row.id}
+                                        onClick={() => openDetail(row.id)}
                                         className="hover:bg-stone-50 transition-colors cursor-pointer"
                                     >
                                         <td className="px-4 py-3">
-                                            {formatShortDate(row.date)} {toAmPmLabel(row.latest_performed_at)}
+                                            {formatShortDate(row.performed_at)} {toAmPmLabel(row.performed_at)}
                                         </td>
-                                        <td className="px-4 py-3">{row.max_follicle_mm_r ?? '-'}</td>
-                                        <td className="px-4 py-3">{shortLabel(labelMaps.palpation, language, row.follicle_feel_r)}</td>
-                                        <td className="px-4 py-3">{row.max_follicle_mm_l ?? '-'}</td>
-                                        <td className="px-4 py-3">{shortLabel(labelMaps.palpation, language, row.follicle_feel_l)}</td>
-                                        <td className="px-4 py-3">{shortLabel(labelMaps.cervix, language, row.cervix_state)}</td>
-                                        <td className="px-4 py-3">{uterusShort(language, row.uterus_flags || {}, row.uterus_tone)}</td>
+                                        <td className="px-4 py-3">{summary.maxR ?? '-'}</td>
+                                        <td className="px-4 py-3">{shortLabel(labelMaps.palpation, language, summary.feelR)}</td>
+                                        <td className="px-4 py-3">{summary.maxL ?? '-'}</td>
+                                        <td className="px-4 py-3">{shortLabel(labelMaps.palpation, language, summary.feelL)}</td>
+                                        <td className="px-4 py-3">{shortLabel(labelMaps.cervix, language, summary.cervix)}</td>
+                                        <td className="px-4 py-3">{uterusShort(language, summary.uterusFlags || {}, summary.uterusTone)}</td>
                                         <td className="px-4 py-3">
-                                            {row.interventions && row.interventions.length > 0
-                                                ? row.interventions.map((code) => shortLabel(labelMaps.interventions, language, code)).join(' ')
+                                            {summary.interventions && summary.interventions.length > 0
+                                                ? summary.interventions.map((code) => shortLabel(labelMaps.interventions, language, code)).join(' ')
                                                 : '-'}
                                         </td>
                                     </tr>
-                                ))}
+                                );
+                                })}
                                 {rows.length === 0 && (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-8 text-center text-stone-500">
