@@ -39,6 +39,7 @@ export default function Dashboard() {
     };
 
     const [reports, setReports] = useState<DashboardReport[]>([]);
+    const [reportFilter, setReportFilter] = useState<'all' | 'pending' | 'draft' | 'approved'>('all');
     // Hardcoded stats for demo (replace with real data later)
     const [stats, setStats] = useState({
         totalReports: 0,
@@ -524,7 +525,11 @@ export default function Dashboard() {
                         <h3 className="text-stone-500 text-sm font-medium font-sans">Clients</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.clients}</p>
                     </div>
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                    <button
+                        type="button"
+                        onClick={() => setReportFilter('pending')}
+                        className={`text-left bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 hover:border-[#1a3c34]/40 ${reportFilter === 'pending' ? 'ring-2 ring-[#1a3c34]/40' : ''}`}
+                    >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
                                 <span className="material-symbols-outlined text-[#1a3c34]">schedule</span>
@@ -532,8 +537,12 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-stone-500 text-sm font-medium font-sans">{t('pendingReviewLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.pendingReview}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setReportFilter('draft')}
+                        className={`text-left bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 hover:border-[#1a3c34]/40 ${reportFilter === 'draft' ? 'ring-2 ring-[#1a3c34]/40' : ''}`}
+                    >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
                                 <span className="material-symbols-outlined text-[#1a3c34]">edit_note</span>
@@ -541,8 +550,12 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-stone-500 text-sm font-medium font-sans">{t('draftReportsLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.draftReports}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setReportFilter('approved')}
+                        className={`text-left bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 hover:border-[#1a3c34]/40 ${reportFilter === 'approved' ? 'ring-2 ring-[#1a3c34]/40' : ''}`}
+                    >
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
                                 <span className="material-symbols-outlined text-[#1a3c34]">verified</span>
@@ -550,12 +563,24 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-stone-500 text-sm font-medium font-sans">{t('approvedReportsLabel')}</h3>
                         <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.approvedReports}</p>
-                    </div>
+                    </button>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
                     <div className="p-6 border-b border-stone-200 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 className="text-lg font-bold text-stone-800">{t('recentReports') || 'Recent Reports'}</h2>
+                        <h2 className="text-lg font-bold text-stone-800">
+                            {t('recentReports') || 'Recent Reports'}
+                            {reportFilter !== 'all' ? <span className="ml-2 text-xs text-stone-500">({t(`filter_${reportFilter}`)})</span> : null}
+                        </h2>
+                        {reportFilter !== 'all' ? (
+                            <button
+                                type="button"
+                                onClick={() => setReportFilter('all')}
+                                className="text-xs text-[#1a3c34] underline"
+                            >
+                                {t('clearFilter')}
+                            </button>
+                        ) : null}
                         <div className="flex items-center gap-2 text-xs text-stone-500 sm:hidden">
                             <span className="material-symbols-outlined text-base">swipe</span>
                             <span>{t('scrollHorizontal')}</span>
@@ -575,7 +600,18 @@ export default function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
-                                {reports.map((report) => (
+                                {reports
+                                    .filter((report) => {
+                                        if (reportFilter === 'all') return true;
+                                        const status = (report.status || '').toLowerCase();
+                                        if (reportFilter === 'pending') {
+                                            return report.status === 'pending_jp_check' || report.status === 'pending_en_check';
+                                        }
+                                        if (reportFilter === 'draft') return status === 'draft';
+                                        if (reportFilter === 'approved') return status === 'approved';
+                                        return true;
+                                    })
+                                    .map((report) => (
                                     <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(`/reports/${report.id}`)}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
@@ -638,7 +674,16 @@ export default function Dashboard() {
                                         </td>
                                     </tr>
                                 ))}
-                                {reports.length === 0 && (
+                                {reports.filter((report) => {
+                                    if (reportFilter === 'all') return true;
+                                    const status = (report.status || '').toLowerCase();
+                                    if (reportFilter === 'pending') {
+                                        return report.status === 'pending_jp_check' || report.status === 'pending_en_check';
+                                    }
+                                    if (reportFilter === 'draft') return status === 'draft';
+                                    if (reportFilter === 'approved') return status === 'approved';
+                                    return true;
+                                }).length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-8 text-center text-stone-500 text-sm">
                                             No recent reports found

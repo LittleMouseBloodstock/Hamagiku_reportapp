@@ -298,6 +298,10 @@ const translations: Translations = {
     vetCheckDate: { ja: "実施日", en: "Check Date" },
     addVetCheck: { ja: "獣医チェック追加", en: "Add Vet Check" },
     coverRecord: { ja: "種付け記録", en: "Cover Record" },
+    clearFilter: { ja: "解除", en: "Clear" },
+    filter_pending: { ja: "レビュー待ち", en: "Pending" },
+    filter_draft: { ja: "下書き", en: "Draft" },
+    filter_approved: { ja: "承認済み", en: "Approved" },
 };
 
 interface LanguageContextType {
