@@ -48,7 +48,9 @@ export const restPost = async (path: string, body: unknown, headers?: RestHeader
         const text = await res.text();
         throw new Error(`REST POST failed: ${res.status} ${text}`);
     }
-    return res.json();
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
 };
 
 export const restPatch = async (path: string, body: unknown, headers?: RestHeaders) => {
