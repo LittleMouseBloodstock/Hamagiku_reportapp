@@ -307,8 +307,10 @@ export default function Dashboard() {
         }
         if (!window.confirm(t('memoDeleteConfirm'))) return;
         try {
-            await restDelete(`repro_memo_events?id=eq.${memoId}`, buildRestHeaders({ bearerToken: session.access_token }));
-            setMemoEvents((prev) => prev.filter((item) => item.id !== memoId));
+            const headers = buildRestHeaders({ bearerToken: session.access_token });
+            await restDelete(`repro_memo_events?id=eq.${memoId}`, headers);
+            const latest = await restGet('repro_memo_events?select=id,event_date,title,note&order=event_date.asc', headers);
+            setMemoEvents(latest || []);
             if (editingMemoId === memoId) {
                 setEditingMemoId(null);
                 setMemoTitle('');
