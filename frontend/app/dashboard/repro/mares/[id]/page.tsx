@@ -53,8 +53,8 @@ export default function ReproTimelinePage() {
     const [horseName, setHorseName] = useState<string>('');
     const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
     const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
-    const [rules, setRules] = useState<Array<{ rule_name: string; days_after: number[] }>>([]);
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
+    const [manualScan, setManualScan] = useState({ cover_id: '', scheduled_date: '', note: '' });
 
     useEffect(() => {
         let mounted = true;
@@ -100,22 +100,11 @@ export default function ReproTimelinePage() {
             return buildRestHeaders({ bearerToken: session.access_token });
         };
         const fetchCoverData = async () => {
-            const [rulesData, coverData, scanData] = await Promise.all([
-                restGet('repro_followup_rules?select=rule_name,days_after&order=rule_name.asc', getRestHeaders()),
+            const [coverData, scanData] = await Promise.all([
                 restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, getRestHeaders()),
                 restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, getRestHeaders())
             ]);
             if (!mounted) return;
-            let nextRules = (rulesData || []) as Array<{ rule_name: string; days_after: number[] }>;
-            if (nextRules.length === 0) {
-                const created = await restPost('repro_followup_rules', {
-                    rule_name: 'default',
-                    days_after: [15, 17, 28, 40],
-                    enabled: true
-                }, getRestHeaders());
-                nextRules = created || [{ rule_name: 'default', days_after: [15, 17, 28, 40] }];
-            }
-            setRules(nextRules);
             setCovers(coverData || []);
             setScans(scanData || []);
         };
@@ -148,7 +137,7 @@ export default function ReproTimelinePage() {
                 cover_date: newCover.cover_date,
                 stallion_name: newCover.stallion_name || null,
                 note: newCover.note || null,
-                p_rule_name: newCover.rule_name || 'default'
+                p_rule_name: 'default'
             }, headers);
             const [coverData, scanData] = await Promise.all([
                 restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, headers),
@@ -156,9 +145,30 @@ export default function ReproTimelinePage() {
             ]);
             setCovers(coverData || []);
             setScans(scanData || []);
-            setNewCover({ cover_date: '', stallion_name: '', note: '', rule_name: newCover.rule_name || 'default' });
+            setNewCover({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
+        }
+    };
+
+    const handleAddManualScan = async () => {
+        if (!manualScan.cover_id || !manualScan.scheduled_date) {
+            alert(t('scanSchedule'));
+            return;
+        }
+        try {
+            const headers = buildRestHeaders({ bearerToken: session?.access_token });
+            await restPost('repro_scans', {
+                cover_id: manualScan.cover_id,
+                horse_id: id,
+                scheduled_date: manualScan.scheduled_date,
+                note: manualScan.note || null
+            }, headers);
+            const scanData = await restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, headers);
+            setScans(scanData || []);
+            setManualScan({ cover_id: manualScan.cover_id, scheduled_date: '', note: '' });
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to add scan: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -210,18 +220,10 @@ export default function ReproTimelinePage() {
                             />
                         </div>
                         <div>
-                            <label className="text-xs font-bold text-gray-400 uppercase">{t('ruleDaysAfter')}</label>
-                            <select
-                                className="mt-2 w-full border border-gray-300 rounded p-2"
-                                value={newCover.rule_name}
-                                onChange={(e) => setNewCover({ ...newCover, rule_name: e.target.value })}
-                            >
-                                {rules.map((rule) => (
-                                    <option key={rule.rule_name} value={rule.rule_name}>
-                                        {rule.rule_name} ({rule.days_after.join(',')})
-                                    </option>
-                                ))}
-                            </select>
+                            <label className="text-xs font-bold text-gray-400 uppercase">{t('scanSchedule')}</label>
+                            <div className="mt-2 text-xs text-gray-500">
+                                {t('reproSettings')}
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-400 uppercase">Note</label>
@@ -240,6 +242,53 @@ export default function ReproTimelinePage() {
                         >
                             {t('addCover')}
                         </button>
+                    </div>
+                    <div className="border-t border-stone-200 pt-4 mb-6">
+                        <div className="text-xs text-stone-400 uppercase mb-3">{t('manualCheck')}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
+                                <select
+                                    className="mt-2 w-full border border-gray-300 rounded p-2"
+                                    value={manualScan.cover_id}
+                                    onChange={(e) => setManualScan({ ...manualScan, cover_id: e.target.value })}
+                                >
+                                    <option value="">{t('selectCover')}</option>
+                                    {covers.map((cover) => (
+                                        <option key={cover.id} value={cover.id}>
+                                            {cover.cover_date} {cover.stallion_name || ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('scanSchedule')}</label>
+                                <input
+                                    type="date"
+                                    className="mt-2 w-full border border-gray-300 rounded p-2"
+                                    value={manualScan.scheduled_date}
+                                    onChange={(e) => setManualScan({ ...manualScan, scheduled_date: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase">Note</label>
+                                <input
+                                    type="text"
+                                    className="mt-2 w-full border border-gray-300 rounded p-2"
+                                    value={manualScan.note}
+                                    onChange={(e) => setManualScan({ ...manualScan, note: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end mt-3">
+                            <button
+                                onClick={handleAddManualScan}
+                                className="bg-[#1a3c34] hover:bg-[#122b25] text-white px-4 py-2 rounded-full text-sm font-bold"
+                                disabled={covers.length === 0}
+                            >
+                                {t('addScan')}
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
