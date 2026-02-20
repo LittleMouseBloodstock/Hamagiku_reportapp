@@ -54,7 +54,8 @@ export default function ReproTimelinePage() {
     const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
     const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
-    const [manualScan, setManualScan] = useState({ cover_id: '', scheduled_date: '', note: '' });
+    const [vetCheck, setVetCheck] = useState({ check_date: '', note: '' });
+    const [vetChecks, setVetChecks] = useState<Array<{ id: string; check_date: string; note?: string | null }>>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -100,13 +101,15 @@ export default function ReproTimelinePage() {
             return buildRestHeaders({ bearerToken: session.access_token });
         };
         const fetchCoverData = async () => {
-            const [coverData, scanData] = await Promise.all([
+            const [coverData, scanData, vetData] = await Promise.all([
                 restGet(`repro_covers?select=id,cover_date,stallion_name,note&horse_id=eq.${id}&order=cover_date.desc`, getRestHeaders()),
-                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, getRestHeaders())
+                restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, getRestHeaders()),
+                restGet(`repro_vet_checks?select=id,check_date,note&horse_id=eq.${id}&order=check_date.desc`, getRestHeaders())
             ]);
             if (!mounted) return;
             setCovers(coverData || []);
             setScans(scanData || []);
+            setVetChecks(vetData || []);
         };
         fetchCoverData().catch((error) => console.warn('Failed to load cover data', error));
         return () => { mounted = false; };
@@ -151,24 +154,23 @@ export default function ReproTimelinePage() {
         }
     };
 
-    const handleAddManualScan = async () => {
-        if (!manualScan.cover_id || !manualScan.scheduled_date) {
-            alert(t('scanSchedule'));
+    const handleAddVetCheck = async () => {
+        if (!vetCheck.check_date) {
+            alert(t('vetCheck'));
             return;
         }
         try {
             const headers = buildRestHeaders({ bearerToken: session?.access_token });
-            await restPost('repro_scans', {
-                cover_id: manualScan.cover_id,
+            await restPost('repro_vet_checks', {
                 horse_id: id,
-                scheduled_date: manualScan.scheduled_date,
-                note: manualScan.note || null
+                check_date: vetCheck.check_date,
+                note: vetCheck.note || null
             }, headers);
-            const scanData = await restGet(`repro_scans?select=id,cover_id,scheduled_date,actual_date,result,note&horse_id=eq.${id}&order=scheduled_date.asc`, headers);
-            setScans(scanData || []);
-            setManualScan({ cover_id: manualScan.cover_id, scheduled_date: '', note: '' });
+            const vetData = await restGet(`repro_vet_checks?select=id,check_date,note&horse_id=eq.${id}&order=check_date.desc`, headers);
+            setVetChecks(vetData || []);
+            setVetCheck({ check_date: '', note: '' });
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            alert(`Failed to add scan: ${error.message || 'Unknown error'}`);
+            alert(`Failed to add check: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -244,30 +246,15 @@ export default function ReproTimelinePage() {
                         </button>
                     </div>
                     <div className="border-t border-stone-200 pt-4 mb-6">
-                        <div className="text-xs text-stone-400 uppercase mb-3">{t('manualCheck')}</div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="text-xs text-stone-400 uppercase mb-3">{t('vetCheck')}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
-                                <select
-                                    className="mt-2 w-full border border-gray-300 rounded p-2"
-                                    value={manualScan.cover_id}
-                                    onChange={(e) => setManualScan({ ...manualScan, cover_id: e.target.value })}
-                                >
-                                    <option value="">{t('selectCover')}</option>
-                                    {covers.map((cover) => (
-                                        <option key={cover.id} value={cover.id}>
-                                            {cover.cover_date} {cover.stallion_name || ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-400 uppercase">{t('scanSchedule')}</label>
+                                <label className="text-xs font-bold text-gray-400 uppercase">{t('vetCheckDate')}</label>
                                 <input
                                     type="date"
                                     className="mt-2 w-full border border-gray-300 rounded p-2"
-                                    value={manualScan.scheduled_date}
-                                    onChange={(e) => setManualScan({ ...manualScan, scheduled_date: e.target.value })}
+                                    value={vetCheck.check_date}
+                                    onChange={(e) => setVetCheck({ ...vetCheck, check_date: e.target.value })}
                                 />
                             </div>
                             <div>
@@ -275,19 +262,30 @@ export default function ReproTimelinePage() {
                                 <input
                                     type="text"
                                     className="mt-2 w-full border border-gray-300 rounded p-2"
-                                    value={manualScan.note}
-                                    onChange={(e) => setManualScan({ ...manualScan, note: e.target.value })}
+                                    value={vetCheck.note}
+                                    onChange={(e) => setVetCheck({ ...vetCheck, note: e.target.value })}
                                 />
                             </div>
                         </div>
                         <div className="flex justify-end mt-3">
                             <button
-                                onClick={handleAddManualScan}
+                                onClick={handleAddVetCheck}
                                 className="bg-[#1a3c34] hover:bg-[#122b25] text-white px-4 py-2 rounded-full text-sm font-bold"
-                                disabled={covers.length === 0}
                             >
-                                {t('addScan')}
+                                {t('addVetCheck')}
                             </button>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                            {vetChecks.length === 0 ? (
+                                <div className="text-sm text-gray-400">-</div>
+                            ) : (
+                                vetChecks.map((check) => (
+                                    <div key={check.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
+                                        <div className="font-semibold">{check.check_date}</div>
+                                        {check.note ? <div className="text-xs text-gray-400">{check.note}</div> : null}
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

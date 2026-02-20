@@ -294,9 +294,9 @@ const translations: Translations = {
     memoEmpty: { ja: "この日のメモ予定はありません", en: "No memo events for this day" },
     memoDeleteConfirm: { ja: "この予定を削除しますか？", en: "Delete this event?" },
     memoDeleteError: { ja: "予定の削除に失敗しました: ", en: "Failed to delete event: " },
-    manualCheck: { ja: "個別チェック追加", en: "Add Manual Check" },
-    addScan: { ja: "チェック追加", en: "Add Check" },
-    selectCover: { ja: "種付けを選択", en: "Select cover" },
+    vetCheck: { ja: "獣医チェック", en: "Vet Check" },
+    vetCheckDate: { ja: "実施日", en: "Check Date" },
+    addVetCheck: { ja: "獣医チェック追加", en: "Add Vet Check" },
 };
 
 interface LanguageContextType {
