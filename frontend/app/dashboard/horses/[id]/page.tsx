@@ -816,10 +816,6 @@ export default function HorseDetail() {
 
                 {isBroodmare && (
                     <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">{t('scanSchedule')}</h2>
-                            <span className="text-xs text-gray-400">{t('reproManagement')}</span>
-                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                             <div>
                                 <label className="text-xs font-bold text-gray-400 uppercase">{t('coverDate')}</label>
