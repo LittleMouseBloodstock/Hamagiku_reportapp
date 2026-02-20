@@ -57,6 +57,7 @@ export default function Dashboard() {
     const [memoTitle, setMemoTitle] = useState('');
     const [memoNote, setMemoNote] = useState('');
     const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+    const [memoModalOpen, setMemoModalOpen] = useState(false);
     const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
     const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
     const [coverEvents, setCoverEvents] = useState<Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
@@ -283,6 +284,7 @@ export default function Dashboard() {
             setMemoTitle('');
             setMemoNote('');
             setEditingMemoId(null);
+            setMemoModalOpen(false);
         } catch (error) {
             console.error('Failed to add memo event:', error);
             alert(t('memoSaveError') + (error as Error).message);
@@ -294,6 +296,7 @@ export default function Dashboard() {
         setMemoDate(memo.event_date);
         setMemoTitle(memo.title);
         setMemoNote(memo.note || '');
+        setMemoModalOpen(true);
     };
 
     const handleDeleteMemo = async (memoId: string) => {
@@ -309,6 +312,7 @@ export default function Dashboard() {
                 setEditingMemoId(null);
                 setMemoTitle('');
                 setMemoNote('');
+                setMemoModalOpen(false);
             }
         } catch (error) {
             console.error('Failed to delete memo:', error);
@@ -434,26 +438,16 @@ export default function Dashboard() {
                                 memoEvents
                                     .filter((m) => m.event_date === memoDate)
                                     .map((memo) => (
-                                        <div key={memo.id} className="border border-stone-200 rounded-lg p-3 text-xs text-stone-600">
+                                        <button
+                                            key={memo.id}
+                                            type="button"
+                                            onClick={() => handleEditMemo(memo)}
+                                            className="w-full text-left border border-stone-200 rounded-lg p-3 text-xs text-stone-600 hover:bg-stone-50"
+                                        >
                                             <div className="font-semibold text-stone-800">{memo.title}</div>
                                             {memo.note ? <div className="text-stone-500 mt-1">{memo.note}</div> : null}
-                                            <div className="mt-2 flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleEditMemo(memo)}
-                                                    className="text-[#1a3c34] hover:underline"
-                                                >
-                                                    {t('memoEdit')}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteMemo(memo.id)}
-                                                    className="text-red-500 hover:underline"
-                                                >
-                                                    {t('memoDelete')}
-                                                </button>
-                                            </div>
-                                        </div>
+                                            <div className="mt-2 text-[10px] text-[#1a3c34]">{t('memoEdit')}</div>
+                                        </button>
                                     ))
                             )}
                         </div>
@@ -689,6 +683,63 @@ export default function Dashboard() {
                     </div>
                 </div>
             </main>
+            {memoModalOpen ? (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50" onClick={() => setMemoModalOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-4" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-semibold text-stone-700">{t('memoEvent')}</div>
+                            <button className="text-stone-400 hover:text-stone-600" onClick={() => setMemoModalOpen(false)}>
+                                {t('reproClose')}
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoDate')}</label>
+                                <input
+                                    type="date"
+                                    value={memoDate}
+                                    onChange={(e) => setMemoDate(e.target.value)}
+                                    className="mt-1 w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoTitle')}</label>
+                                <input
+                                    value={memoTitle}
+                                    onChange={(e) => setMemoTitle(e.target.value)}
+                                    placeholder={t('memoTitlePlaceholder')}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-stone-500">{t('memoNote')}</label>
+                                <textarea
+                                    value={memoNote}
+                                    onChange={(e) => setMemoNote(e.target.value)}
+                                    placeholder={t('memoNotePlaceholder')}
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-24 resize-none"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSaveMemo}
+                                className="w-full rounded-lg bg-[#1a3c34] text-white text-sm py-2"
+                            >
+                                {editingMemoId ? t('memoUpdate') : t('addMemo')}
+                            </button>
+                            {editingMemoId ? (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteMemo(editingMemoId)}
+                                    className="w-full rounded-lg border border-stone-200 text-red-600 text-sm py-2"
+                                >
+                                    {t('memoDelete')}
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
