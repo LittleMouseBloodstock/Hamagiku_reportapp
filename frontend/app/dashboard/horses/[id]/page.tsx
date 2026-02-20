@@ -71,6 +71,8 @@ export default function HorseDetail() {
     const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
     const [rules, setRules] = useState<Array<{ rule_name: string; days_after: number[] }>>([]);
     const [newCover, setNewCover] = useState({ cover_date: '', stallion_name: '', note: '', rule_name: 'default' });
+    const [editingCoverId, setEditingCoverId] = useState<string | null>(null);
+    const [coverDraft, setCoverDraft] = useState({ cover_date: '', stallion_name: '', note: '' });
 
     // Form & Owner State
     const [clients, setClients] = useState<Client[]>([]);
@@ -402,6 +404,42 @@ export default function HorseDetail() {
             setNewCover({ cover_date: '', stallion_name: '', note: '', rule_name: newCover.rule_name || 'default' });
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
+        }
+    };
+
+    const startEditCover = (cover: { id: string; cover_date: string; stallion_name?: string | null; note?: string | null }) => {
+        setEditingCoverId(cover.id);
+        setCoverDraft({
+            cover_date: cover.cover_date,
+            stallion_name: cover.stallion_name || '',
+            note: cover.note || ''
+        });
+    };
+
+    const saveCover = async () => {
+        if (!editingCoverId) return;
+        try {
+            await restPatch(`repro_covers?id=eq.${editingCoverId}`, {
+                cover_date: coverDraft.cover_date,
+                stallion_name: coverDraft.stallion_name || null,
+                note: coverDraft.note || null,
+                updated_at: new Date().toISOString()
+            });
+            setCovers((prev) => prev.map((c) => (c.id === editingCoverId ? { ...c, ...coverDraft } : c)));
+            setEditingCoverId(null);
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to update cover: ${error.message || 'Unknown error'}`);
+        }
+    };
+
+    const deleteCover = async (coverId: string) => {
+        if (!window.confirm(t('memoDeleteConfirm'))) return;
+        try {
+            await restDelete(`repro_covers?id=eq.${coverId}`);
+            setCovers((prev) => prev.filter((c) => c.id !== coverId));
+            if (editingCoverId === coverId) setEditingCoverId(null);
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert(`Failed to delete cover: ${error.message || 'Unknown error'}`);
         }
     };
 
@@ -877,9 +915,66 @@ export default function HorseDetail() {
                                     ) : (
                                         covers.map((cover) => (
                                             <div key={cover.id} className="border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
-                                                <div className="font-semibold">{cover.cover_date}</div>
-                                                <div>{cover.stallion_name || '-'}</div>
-                                                {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                                {editingCoverId === cover.id ? (
+                                                    <div className="space-y-2">
+                                                        <input
+                                                            type="date"
+                                                            className="w-full border border-gray-300 rounded p-2 text-sm"
+                                                            value={coverDraft.cover_date}
+                                                            onChange={(e) => setCoverDraft({ ...coverDraft, cover_date: e.target.value })}
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            className="w-full border border-gray-300 rounded p-2 text-sm"
+                                                            value={coverDraft.stallion_name}
+                                                            onChange={(e) => setCoverDraft({ ...coverDraft, stallion_name: e.target.value })}
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            className="w-full border border-gray-300 rounded p-2 text-sm"
+                                                            value={coverDraft.note}
+                                                            onChange={(e) => setCoverDraft({ ...coverDraft, note: e.target.value })}
+                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={saveCover}
+                                                                className="px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--color-primary)] text-white"
+                                                            >
+                                                                {t('memoUpdate')}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingCoverId(null)}
+                                                                className="px-3 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600"
+                                                            >
+                                                                {t('memoCancel')}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="font-semibold">{cover.cover_date}</div>
+                                                        <div>{cover.stallion_name || '-'}</div>
+                                                        {cover.note ? <div className="text-xs text-gray-400">{cover.note}</div> : null}
+                                                        <div className="mt-2 flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => startEditCover(cover)}
+                                                                className="text-xs text-[#1a3c34] hover:underline"
+                                                            >
+                                                                {t('memoEdit')}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => deleteCover(cover.id)}
+                                                                className="text-xs text-red-500 hover:underline"
+                                                            >
+                                                                {t('memoDelete')}
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         ))
                                     )}
