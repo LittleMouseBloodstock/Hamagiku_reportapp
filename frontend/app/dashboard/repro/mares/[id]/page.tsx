@@ -80,7 +80,7 @@ export default function ReproTimelinePage() {
         if (!session?.access_token || !id) return;
         const headers = buildRestHeaders({ bearerToken: session.access_token });
         const data = await restGet(
-            `repro_checks?select=id,performed_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc`,
+            `repro_checks?select=id,performed_at,created_at,interventions,repro_findings(organ,side,finding_type,size_mm,value,palpation_tags)&horse_id=eq.${id}&order=performed_at.desc,created_at.desc`,
             headers
         );
         if (!mounted || mounted.current) {
