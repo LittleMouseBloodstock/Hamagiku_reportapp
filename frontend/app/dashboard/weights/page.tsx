@@ -11,6 +11,8 @@ type Horse = {
     name: string;
     name_en: string;
     horse_status?: string | null;
+    sex?: string | null;
+    broodmare_flag?: boolean | null;
 };
 
 type HorseWeight = {
@@ -51,7 +53,7 @@ export default function WeightsPage() {
             try {
                 const orFilter = encodeURIComponent('(horse_status.is.null,horse_status.eq.Active)');
                 const horseData = await restGet(
-                    `horses?select=id,name,name_en,horse_status&or=${orFilter}&order=name`,
+                    `horses?select=id,name,name_en,horse_status,sex,broodmare_flag&or=${orFilter}&order=name`,
                     getRestHeaders()
                 );
 
@@ -65,7 +67,23 @@ export default function WeightsPage() {
                     return;
                 }
 
-                const ids = horseData.map((h: Horse) => h.id);
+                const filteredHorses = (horseData as Horse[]).filter((horse) => {
+                    const isMare = horse.sex === 'Mare';
+                    const isBroodmareFilly = horse.sex === 'Filly' && horse.broodmare_flag === true;
+                    return !(isMare || isBroodmareFilly);
+                });
+
+                if (!filteredHorses || filteredHorses.length === 0) {
+                    if (isMounted) {
+                        setHorses([]);
+                        setWeights({});
+                        setLatestMap({});
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                const ids = filteredHorses.map((h: Horse) => h.id);
                 const idsFilter = encodeURIComponent(`(${ids.join(',')})`);
                 const [dayWeights, latestWeights] = await Promise.all([
                     restGet(
@@ -91,7 +109,7 @@ export default function WeightsPage() {
                 });
 
                 if (isMounted) {
-                    setHorses(horseData);
+                    setHorses(filteredHorses);
                     setLatestMap(latestByHorse);
                     setWeights(weightsMap);
                     setLoading(false);
