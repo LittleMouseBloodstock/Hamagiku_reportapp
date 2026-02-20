@@ -8,8 +8,7 @@ const navItems = [
     { href: '/dashboard', icon: 'dashboard', labelKey: 'dashboard' },
     { href: '/dashboard/horses', icon: 'format_list_bulleted', labelKey: 'horses' },
     { href: '/dashboard/repro', icon: 'monitor_heart', labelKey: 'reproManagement' },
-    { href: '/dashboard/clients', icon: 'group', labelKey: 'clients' },
-    { href: '/dashboard/settings', icon: 'settings', labelKey: 'settings' }
+    { href: '/dashboard/weights', icon: 'monitoring', labelKey: 'weights' }
 ];
 
 export default function BottomBar() {
