@@ -60,6 +60,7 @@ export default function Dashboard() {
     const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
     const [memoModalOpen, setMemoModalOpen] = useState(false);
     const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
+    const [autoMemoDate, setAutoMemoDate] = useState(today.toISOString().slice(0, 10));
     const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
     const [coverEvents, setCoverEvents] = useState<Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
     const [scanEvents, setScanEvents] = useState<Array<{ id?: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>>([]);
@@ -202,6 +203,17 @@ export default function Dashboard() {
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [language, user?.id, session?.access_token, refreshKey]);
+
+    useEffect(() => {
+        const syncToday = () => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            setAutoMemoDate(todayStr);
+            setMemoDate((prev) => (prev === autoMemoDate && !editingMemoId ? todayStr : prev));
+        };
+        syncToday();
+        const timer = setInterval(syncToday, 60 * 1000);
+        return () => clearInterval(timer);
+    }, [autoMemoDate, editingMemoId]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
@@ -392,7 +404,7 @@ export default function Dashboard() {
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
                                 />
                             </div>
                             <div>
@@ -713,7 +725,7 @@ export default function Dashboard() {
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
                                 />
                             </div>
                             <div>
