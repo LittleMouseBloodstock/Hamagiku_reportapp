@@ -52,6 +52,12 @@ export default function Dashboard() {
     });
     const [todaySchedule, setTodaySchedule] = useState<Array<{ label: string; horseName: string; time?: string }>>([]);
     const today = new Date();
+    const getLocalDateStr = (date: Date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
     const [viewYear, setViewYear] = useState(today.getFullYear());
     const [viewMonth, setViewMonth] = useState(today.getMonth());
     const [selectedDate, setSelectedDate] = useState<Date | null>(today);
@@ -59,8 +65,8 @@ export default function Dashboard() {
     const [memoNote, setMemoNote] = useState('');
     const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
     const [memoModalOpen, setMemoModalOpen] = useState(false);
-    const [memoDate, setMemoDate] = useState(today.toISOString().slice(0, 10));
-    const [autoMemoDate, setAutoMemoDate] = useState(today.toISOString().slice(0, 10));
+    const [memoDate, setMemoDate] = useState(getLocalDateStr(today));
+    const [autoMemoDate, setAutoMemoDate] = useState(getLocalDateStr(today));
     const [memoEvents, setMemoEvents] = useState<Array<{ id: string; event_date: string; title: string; note?: string | null }>>([]);
     const [coverEvents, setCoverEvents] = useState<Array<{ id?: string; horse_id: string; cover_date: string; horses?: { name: string; name_en: string } }>>([]);
     const [scanEvents, setScanEvents] = useState<Array<{ id?: string; horse_id: string; scheduled_date: string; result?: string | null; horses?: { name: string; name_en: string } }>>([]);
@@ -88,7 +94,7 @@ export default function Dashboard() {
                 const headers = getRestHeaders();
                 const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
                 const today = new Date();
-                const todayStr = today.toISOString().slice(0, 10);
+                const todayStr = getLocalDateStr(today);
                 const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount, memoRes, allCovers, allScans] = await Promise.all([
                     restCount('reports?select=*', headers),
                     restCount('horses?select=*&departure_date=is.null', headers),
@@ -206,7 +212,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         const syncToday = () => {
-            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayStr = getLocalDateStr(new Date());
             setAutoMemoDate(todayStr);
             setMemoDate((prev) => (prev === autoMemoDate && !editingMemoId ? todayStr : prev));
         };
@@ -239,7 +245,7 @@ export default function Dashboard() {
     const calendarCells: (number | null)[] = [];
     for (let i = 0; i < firstDay; i += 1) calendarCells.push(null);
     for (let d = 1; d <= daysInMonth; d += 1) calendarCells.push(d);
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = getLocalDateStr(today);
     const datesWithEvents = new Set<string>([
         ...coverEvents.map((c) => c.cover_date),
         ...scanEvents.map((s) => s.scheduled_date),
