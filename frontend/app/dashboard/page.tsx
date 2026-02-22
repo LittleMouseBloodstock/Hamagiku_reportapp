@@ -382,7 +382,7 @@ export default function Dashboard() {
             <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
                 {/* Today + Calendar */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 overflow-hidden">
                         <div className="text-xs text-stone-400 uppercase mb-2">{t('todaySchedule')}</div>
                         {todaySchedule.length === 0 ? (
                             <div className="text-sm text-stone-500">{t('noEventsToday')}</div>
@@ -410,7 +410,7 @@ export default function Dashboard() {
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-2 py-2 text-[13px] appearance-none bg-white"
                                 />
                             </div>
                             <div>
@@ -731,7 +731,7 @@ export default function Dashboard() {
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-2 py-2 text-[13px] appearance-none bg-white"
                                 />
                             </div>
                             <div>
