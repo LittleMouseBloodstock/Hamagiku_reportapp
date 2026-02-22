@@ -293,6 +293,7 @@ export default function ReportEditor() {
                         );
 
                         if (nextReportType === 'departure') {
+                            const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                             setInitialData({
                                 reportDate: new Date().toISOString().slice(0, 10),
                                 horseNameJp: horse?.name || '',
@@ -319,7 +320,9 @@ export default function ReportEditor() {
                                 exerciseJp: '',
                                 exerciseEn: '',
                                 commentJp: '',
-                                commentEn: ''
+                                commentEn: '',
+                                outputMode: defaultOutputMode,
+                                showLogo: defaultOutputMode !== 'print'
                             });
                         } else {
                             setInitialData({
@@ -388,6 +391,13 @@ export default function ReportEditor() {
 
                     // Map DB to ReportData
                     if (reportTypeFromMetrics === 'departure') {
+                        const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                        const metricsOutputMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
+                            ? metrics.outputMode
+                            : defaultOutputMode;
+                        const metricsShowLogo = typeof metrics.showLogo === 'boolean'
+                            ? metrics.showLogo
+                            : metricsOutputMode !== 'print';
                         setInitialData({
                             reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
                             horseNameJp: metrics.horseNameJp || horse?.name || '',
@@ -414,7 +424,9 @@ export default function ReportEditor() {
                             exerciseJp: metrics.exerciseJp || '',
                             exerciseEn: metrics.exerciseEn || '',
                             commentJp: report.body || metrics.commentJp || '',
-                            commentEn: metrics.commentEn || ''
+                            commentEn: metrics.commentEn || '',
+                            outputMode: metricsOutputMode,
+                            showLogo: metricsShowLogo
                         });
                     } else {
                         const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
@@ -924,7 +936,9 @@ export default function ReportEditor() {
                     exerciseJp: dep.exerciseJp,
                     exerciseEn: dep.exerciseEn,
                     commentJp: dep.commentJp,
-                    commentEn: dep.commentEn
+                    commentEn: dep.commentEn,
+                    outputMode: dep.outputMode || 'pdf',
+                    showLogo: dep.showLogo ?? true
                 };
 
                 const payload = {

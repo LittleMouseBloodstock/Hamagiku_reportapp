@@ -29,6 +29,8 @@ export type DepartureReportData = {
     exerciseEn: string;
     commentJp: string;
     commentEn: string;
+    outputMode?: 'pdf' | 'print';
+    showLogo?: boolean;
 };
 
 interface DepartureReportTemplateProps {
@@ -77,12 +79,16 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         exerciseJp: '',
         exerciseEn: '',
         commentJp: '',
-        commentEn: ''
+        commentEn: '',
+        outputMode: 'pdf',
+        showLogo: true
     };
 
     const [data, setData] = useState<DepartureReportData>({ ...defaultData, ...initialData });
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiNotes, setAiNotes] = useState('');
+    const showLogo = data.showLogo ?? (data.outputMode !== 'print');
+    const isPrintMode = data.outputMode === 'print';
 
     useEffect(() => {
         if (initialData && Object.keys(initialData).length > 0) {
@@ -441,15 +447,50 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
             </div>
 
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+                <input
+                    id="show-logo-toggle-departure"
+                    type="checkbox"
+                    checked={data.showLogo ?? true}
+                    onChange={(e) => setData(prev => ({ ...prev, showLogo: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
+                />
+                <label htmlFor="show-logo-toggle-departure" className="select-none">
+                    Logo on PDF/Print
+                </label>
+            </div>
+
             <div className="departure-preview-wrap flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
-                    className="departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] p-8 text-gray-900 font-sans mb-8"
+                    className={`departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}`}
+                    style={{ padding: '20px 30px 10px 30px', boxSizing: 'border-box' }}
                 >
-                    <div className="flex justify-between items-end border-b border-gray-300 pb-3 mb-4">
-                        <div className="text-xl font-bold text-[#1a3c34]">{t('departureReport')}</div>
-                        <div className="text-sm text-gray-500">{data.reportDate || '-'}</div>
-                    </div>
+                    <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[120px] pt-4">
+                        <div className="flex flex-col justify-center items-start z-10">
+                            <div className="font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
+                            <div className="font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
+                        </div>
+
+                        {showLogo && (
+                            <div className="absolute left-1/2 top-[42%] transform -translate-x-1/2 -translate-y-1/2 w-[140px] h-[140px] opacity-75 pointer-events-none logo-container">
+                                <img
+                                    src="/hamagiku-logo.png"
+                                    alt="Logo"
+                                    className="object-contain w-full h-full"
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex flex-col justify-center items-end z-10">
+                            <div className="font-bold text-2xl text-[#1a3c34] tracking-widest text-right whitespace-pre-line leading-tight">
+                                {t('departureReport')}
+                            </div>
+                            <div className="text-[11px] text-[#6b7280] tracking-wide mt-1">
+                                {data.reportDate || '-'}
+                            </div>
+                        </div>
+                    </header>
 
                     {isJa ? (
                         <section className="departure-section">
@@ -480,11 +521,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             </div>
                         </section>
                     )}
+
+                    <div className="footer-text mt-4 text-center text-[10px] text-[#aaa] tracking-widest">
+                        HAMAGIKU FARM - HOKKAIDO, JAPAN | {isJa ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
+                    </div>
                 </div>
             </div>
             <style jsx global>{`
                 @media print {
-                    @page { size: A4; margin: 10mm; }
+                    @page { size: A4; margin: 10mm 0 0 0; }
                     html, body, #__next {
                         height: auto !important;
                         overflow: visible !important;
@@ -507,15 +552,20 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         top: 0 !important;
                         left: 0 !important;
                         width: 210mm !important;
-                        height: 297mm !important;
+                        height: 285mm !important;
+                        min-height: 0 !important;
                         margin: 0 !important;
-                        padding: 16mm 14mm 12mm 14mm !important;
+                        padding: 32px 30px 8px 30px !important;
                         box-shadow: none !important;
                         border: none !important;
                         overflow: hidden !important;
                     }
-                    .departure-preview .text-xl { font-size: 18px !important; }
+                    .departure-preview.print-mode {
+                        top: 20mm !important;
+                        height: 257mm !important;
+                    }
                     .departure-preview .departure-section { font-size: 14px !important; line-height: 1.6 !important; }
+                    .logo-container { clip-path: inset(1px); }
                 }
             `}</style>
         </div>
