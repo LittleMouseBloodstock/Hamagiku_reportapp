@@ -195,6 +195,19 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     />
                 </div>
 
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <input
+                        id="show-logo-toggle-departure"
+                        type="checkbox"
+                        checked={data.showLogo ?? true}
+                        onChange={(e) => setData(prev => ({ ...prev, showLogo: e.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
+                    />
+                    <label htmlFor="show-logo-toggle-departure" className="select-none">
+                        Logo on PDF/Print
+                    </label>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs font-medium text-gray-700">{t('horseNameJp')}</label>
@@ -447,23 +460,10 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-                <input
-                    id="show-logo-toggle-departure"
-                    type="checkbox"
-                    checked={data.showLogo ?? true}
-                    onChange={(e) => setData(prev => ({ ...prev, showLogo: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
-                />
-                <label htmlFor="show-logo-toggle-departure" className="select-none">
-                    Logo on PDF/Print
-                </label>
-            </div>
-
             <div className="departure-preview-wrap flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto flex justify-center items-start h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
-                    className={`departure-preview bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}`}
+                    className={`departure-preview relative bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}`}
                     style={{ padding: '20px 30px 10px 30px', boxSizing: 'border-box' }}
                 >
                     <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[120px] pt-4">
@@ -522,7 +522,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         </section>
                     )}
 
-                    <div className="footer-text mt-4 text-center text-[10px] text-[#aaa] tracking-widest">
+                    <div className="footer-text absolute bottom-3 left-0 w-full text-center text-[10px] text-[#aaa] tracking-widest">
                         HAMAGIKU FARM - HOKKAIDO, JAPAN | {isJa ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
                     </div>
                 </div>
