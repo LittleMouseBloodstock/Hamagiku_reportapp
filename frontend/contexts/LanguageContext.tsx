@@ -264,6 +264,7 @@ const translations: Translations = {
     groupFoal: { ja: "当歳馬 (1歳未満)", en: "Foals (Under 1)" },
     groupYoung: { ja: "育成馬 (2歳以下)", en: "Young Horses (1-2)" },
     groupRacehorse: { ja: "競走馬 (3歳以上)", en: "Racehorses (3+)" },
+    groupAll: { ja: "すべて", en: "All" },
     coverDate: { ja: "種付け日", en: "Cover Date" },
     stallionName: { ja: "種牡馬名", en: "Stallion" },
     scanSchedule: { ja: "検査予定", en: "Scan Schedule" },

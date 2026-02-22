@@ -27,6 +27,7 @@ export default function HorsesPage() {
     const { user, session } = useAuth();
     const [horses, setHorses] = useState<Horse[]>([]);
     const [sortMode, setSortMode] = useState<'name' | 'trainer'>('name');
+    const [groupFilter, setGroupFilter] = useState<'all' | 'broodmare' | 'foal' | 'young' | 'race'>('all');
     const [showMode, setShowMode] = useState<'active' | 'retired'>(() => {
         if (typeof window !== 'undefined') {
             const stored = window.sessionStorage.getItem('horsesShowMode');
@@ -198,6 +199,17 @@ export default function HorsesPage() {
                         <option value="name">{t('sortByName')}</option>
                         <option value="trainer">{t('sortByTrainer')}</option>
                     </select>
+                    <select
+                        value={groupFilter}
+                        onChange={(e) => setGroupFilter(e.target.value as 'all' | 'broodmare' | 'foal' | 'young' | 'race')}
+                        className="w-full sm:w-auto text-sm border border-stone-200 rounded-lg px-3 py-2 bg-white text-stone-600"
+                    >
+                        <option value="all">{t('groupAll')}</option>
+                        <option value="broodmare">{t('groupBroodmare')}</option>
+                        <option value="foal">{t('groupFoal')}</option>
+                        <option value="young">{t('groupYoung')}</option>
+                        <option value="race">{t('groupRacehorse')}</option>
+                    </select>
                     <Link href="/dashboard/horses/new" className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 sm:px-4 bg-primary text-white rounded-lg shadow-sm hover:bg-primary-dark transition-all">
                         <span className="material-symbols-outlined text-sm">add</span>
                         <span className="text-sm font-medium">{t('addHorse')}</span>
@@ -256,7 +268,10 @@ export default function HorsesPage() {
                                         { key: 'young', title: t('groupYoung'), items: young },
                                         { key: 'race', title: t('groupRacehorse'), items: race }
                                     ];
-                                    return sections.flatMap((section) => {
+                                    const visibleSections = groupFilter === 'all'
+                                        ? sections
+                                        : sections.filter((section) => section.key === groupFilter);
+                                    return visibleSections.flatMap((section) => {
                                         if (section.items.length === 0) return [];
                                         return [
                                             (
