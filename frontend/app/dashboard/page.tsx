@@ -401,34 +401,34 @@ export default function Dashboard() {
                             </Link>
                         </div>
                     </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 overflow-hidden min-w-0">
                         <div className="text-xs text-stone-400 uppercase mb-2">{t('memoEvent')}</div>
-                        <div className="space-y-3">
-                            <div>
+                        <div className="space-y-3 min-w-0">
+                            <div className="min-w-0">
                                 <label className="text-xs text-stone-500">{t('memoDate')}</label>
                                 <input
                                     type="date"
                                     value={memoDate}
                                     onChange={(e) => setMemoDate(e.target.value)}
-                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-2 py-2 text-[13px] appearance-none bg-white"
+                                    className="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-stone-200 px-2 py-2 text-[12px] appearance-none bg-white box-border"
                                 />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <label className="text-xs text-stone-500">{t('memoTitle')}</label>
                                 <input
                                     value={memoTitle}
                                     onChange={(e) => setMemoTitle(e.target.value)}
                                     placeholder={t('memoTitlePlaceholder')}
-                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm min-w-0 box-border"
                                 />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <label className="text-xs text-stone-500">{t('memoNote')}</label>
                                 <textarea
                                     value={memoNote}
                                     onChange={(e) => setMemoNote(e.target.value)}
                                     placeholder={t('memoNotePlaceholder')}
-                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-20 resize-none"
+                                    className="mt-1 w-full rounded-lg border border-stone-200 px-3 py-2 text-sm h-20 resize-none min-w-0 box-border"
                                 />
                             </div>
                             <button
