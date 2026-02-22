@@ -15,6 +15,8 @@ export default function HorsesPage() {
         birth_date?: string | null;
         horse_status?: string | null;
         departure_date?: string | null;
+        sex?: string | null;
+        broodmare_flag?: boolean | null;
         owner_id?: string;
         clients?: { name: string; };
         trainer_id?: string | null;
@@ -34,12 +36,21 @@ export default function HorsesPage() {
     });
     const refreshKey = useResumeRefresh();
 
-    const calculateHorseAge = (birthDate?: string | null) => {
-        if (!birthDate) return '';
+    const getAgeByYearRule = (birthDate?: string | null) => {
+        if (!birthDate) return null;
         const year = new Date(birthDate).getFullYear();
-        if (Number.isNaN(year)) return '';
-        return `${new Date().getFullYear() - year}`;
+        if (Number.isNaN(year)) return null;
+        const currentYear = new Date().getFullYear();
+        return currentYear - year;
     };
+
+    const calculateHorseAge = (birthDate?: string | null) => {
+        const age = getAgeByYearRule(birthDate);
+        if (age === null) return '';
+        return `${age}`;
+    };
+
+    const isBroodmare = (horse: Horse) => horse.sex === 'Mare' || (horse.sex === 'Filly' && horse.broodmare_flag === true);
 
     const getHorseStatus = (status?: string | null) => {
         const normalized = status || 'Active';
@@ -210,12 +221,12 @@ export default function HorsesPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
-                                {[...horses]
-                                    .filter((horse) => {
+                                {(() => {
+                                    const filtered = [...horses].filter((horse) => {
                                         const isRetired = !!horse.departure_date;
                                         return showMode === 'active' ? !isRetired : isRetired;
-                                    })
-                                    .sort((a, b) => {
+                                    });
+                                    const sortList = (list: Horse[]) => list.sort((a, b) => {
                                         if (sortMode === 'trainer') {
                                             const aName = (language === 'ja'
                                                 ? a.trainers?.trainer_name
@@ -228,9 +239,35 @@ export default function HorsesPage() {
                                         const aHorse = (language === 'ja' ? a.name : a.name_en) || '';
                                         const bHorse = (language === 'ja' ? b.name : b.name_en) || '';
                                         return aHorse.localeCompare(bHorse);
-                                    })
-                                    .map((horse) => (
-                                    <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
+                                    });
+                                    const broodmares = sortList(filtered.filter((horse) => isBroodmare(horse)));
+                                    const foals = sortList(filtered.filter((horse) => !isBroodmare(horse) && getAgeByYearRule(horse.birth_date) === 0));
+                                    const young = sortList(filtered.filter((horse) => {
+                                        const age = getAgeByYearRule(horse.birth_date);
+                                        return !isBroodmare(horse) && age !== null && age >= 1 && age <= 2;
+                                    }));
+                                    const race = sortList(filtered.filter((horse) => {
+                                        const age = getAgeByYearRule(horse.birth_date);
+                                        return !isBroodmare(horse) && (age === null || age >= 3);
+                                    }));
+                                    const sections = [
+                                        { key: 'broodmare', title: t('groupBroodmare'), items: broodmares },
+                                        { key: 'foal', title: t('groupFoal'), items: foals },
+                                        { key: 'young', title: t('groupYoung'), items: young },
+                                        { key: 'race', title: t('groupRacehorse'), items: race }
+                                    ];
+                                    return sections.flatMap((section) => {
+                                        if (section.items.length === 0) return [];
+                                        return [
+                                            (
+                                                <tr key={`${section.key}-header`} className="bg-stone-50">
+                                                    <td colSpan={7} className="px-6 py-2 text-xs font-semibold text-stone-600 uppercase tracking-wider">
+                                                        {section.title} ({section.items.length})
+                                                    </td>
+                                                </tr>
+                                            ),
+                                            ...section.items.map((horse) => (
+                                                <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
@@ -298,7 +335,10 @@ export default function HorsesPage() {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                            ))
+                                        ];
+                                    });
+                                })()}
                             </tbody>
                         </table>
                     </div>
