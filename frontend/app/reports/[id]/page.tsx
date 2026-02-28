@@ -10,6 +10,18 @@ import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
 
+const stripDraftImagePayload = <T extends ReportData | DepartureReportData>(data: T): T => {
+    if (!data || typeof data !== 'object') return data;
+    const next = { ...data } as T & { mainPhoto?: string; originalPhoto?: string | null };
+    if ('mainPhoto' in next && typeof next.mainPhoto === 'string' && next.mainPhoto.startsWith('data:')) {
+        next.mainPhoto = '';
+    }
+    if ('originalPhoto' in next && typeof next.originalPhoto === 'string' && next.originalPhoto.startsWith('data:')) {
+        next.originalPhoto = '';
+    }
+    return next;
+};
+
 export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
@@ -88,12 +100,14 @@ export default function ReportEditor() {
         if (!session?.access_token) return;
         if (!reportDataRef.current) return;
         if (!horseId && id === 'new') return;
+        if (saving) return;
+        const draftData = stripDraftImagePayload(reportDataRef.current);
         const payload = {
             draft_key: draftKey,
             report_id: id !== 'new' ? id : null,
             horse_id: horseId || null,
             report_type: reportType,
-            data: reportDataRef.current,
+            data: draftData,
             updated_at: new Date().toISOString()
         };
         const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts`, {
@@ -878,6 +892,7 @@ export default function ReportEditor() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         if (!reportDataRef.current) return;
+        if (saving) return;
 
         if (autosaveTimerRef.current) {
             window.clearTimeout(autosaveTimerRef.current);
@@ -885,10 +900,11 @@ export default function ReportEditor() {
 
         autosaveTimerRef.current = window.setTimeout(() => {
             try {
+                const draftData = stripDraftImagePayload(reportDataRef.current as ReportData | DepartureReportData);
                 const payload = {
                     updatedAt: new Date().toISOString(),
                     reportType,
-                    data: reportDataRef.current
+                    data: draftData
                 };
                 window.localStorage.setItem(draftKey, JSON.stringify(payload));
                 setAutosaveStatus('Saved locally');
@@ -897,7 +913,10 @@ export default function ReportEditor() {
                 console.warn('Failed to store draft', err);
             }
             const now = Date.now();
-            if (now - lastRemoteSaveRef.current >= 30_000) {
+            const currentData = reportDataRef.current as ReportData | DepartureReportData | null;
+            const hasInlinePhoto = !!(currentData && 'mainPhoto' in currentData && typeof currentData.mainPhoto === 'string' && currentData.mainPhoto.startsWith('data:'));
+            const remoteInterval = hasInlinePhoto ? 120_000 : 30_000;
+            if (now - lastRemoteSaveRef.current >= remoteInterval) {
                 void saveRemoteDraft();
             }
         }, 300);
@@ -907,7 +926,7 @@ export default function ReportEditor() {
                 window.clearTimeout(autosaveTimerRef.current);
             }
         };
-    }, [draftKey, reportType, isDirty]);
+    }, [draftKey, reportType, isDirty, saving]);
 
     useEffect(() => {
         if (!session?.access_token) return;
@@ -917,6 +936,10 @@ export default function ReportEditor() {
         remoteAutosaveTimerRef.current = window.setInterval(() => {
             if (!reportDataRef.current) return;
             if (!isDirty) return;
+            if (saving) return;
+            const currentData = reportDataRef.current as ReportData | DepartureReportData;
+            const hasInlinePhoto = 'mainPhoto' in currentData && typeof currentData.mainPhoto === 'string' && currentData.mainPhoto.startsWith('data:');
+            if (hasInlinePhoto && Date.now() - lastRemoteSaveRef.current < 120_000) return;
             void saveRemoteDraft();
         }, 30_000);
 
@@ -926,7 +949,7 @@ export default function ReportEditor() {
                 remoteAutosaveTimerRef.current = null;
             }
         };
-    }, [session?.access_token, isDirty, draftKey]);
+    }, [session?.access_token, isDirty, draftKey, saving]);
 
     useEffect(() => {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -1277,7 +1300,7 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 overflow-hidden">
+        <div className="min-h-screen md:h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 md:overflow-hidden">
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-4 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
                 <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start gap-4">
@@ -1361,7 +1384,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full flex-1 min-h-0 flex justify-center overflow-x-auto overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
+            <div className="w-full flex-1 min-h-0 flex justify-center overflow-x-auto overflow-y-visible md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
                 {reportType === 'departure' ? (
                     <DepartureReportTemplate initialData={initialData} onDataChange={handleDataChange} />
                 ) : (
