@@ -38,7 +38,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         height: 285mm !important;
         min-height: 0 !important;
         margin: 0 !important;
-        padding: 32px 30px 10px 30px !important;
+        padding: 24px 28px 6px 28px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
         overflow: hidden !important;
@@ -77,8 +77,9 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .main-photo {
-        width: 80% !important;
-        margin-bottom: 8px !important;
+        width: 84% !important;
+        height: 100mm !important;
+        margin-bottom: 6px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
@@ -100,7 +101,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
         margin-top: auto !important;
-        padding-top: 4px !important;
+        padding-top: 2px !important;
         font-size: 9px !important;
       }`}
 
@@ -1391,8 +1392,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         <div
                             className="main-photo mx-auto bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm"
                             style={{
-                                width: '127.5mm',
-                                height: '95.6mm',
+                                width: showLogo ? '132mm' : '127.5mm',
+                                height: showLogo ? '99mm' : '95.6mm',
                                 maxWidth: '85%'
                             }}
                         >
