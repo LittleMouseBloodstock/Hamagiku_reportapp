@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check } from 'lucide-react';
+import { FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -336,6 +336,17 @@ const parseWeightValue = (weight: string) => {
     const numeric = parseFloat(weight.replace(/[^0-9.]/g, ''));
     if (Number.isNaN(numeric)) return 0;
     return numeric;
+};
+
+const sortWeightHistory = (items: WeightHistoryPoint[]) => {
+    return [...items].sort((a, b) => {
+        if (a.monthKey && b.monthKey) {
+            return a.monthKey.localeCompare(b.monthKey);
+        }
+        if (a.monthKey) return -1;
+        if (b.monthKey) return 1;
+        return a.label.localeCompare(b.label);
+    });
 };
 
 const sanitizeTranslatedComment = (text: string) => {
@@ -680,7 +691,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             monthKey,
             label: `${month}月`
         };
-        setData({ ...data, weightHistory: nextHistory });
+        setData({ ...data, weightHistory: sortWeightHistory(nextHistory) });
     };
 
     const updateWeightHistoryManualMonth = (index: number, rawValue: string) => {
@@ -691,6 +702,20 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             monthKey: monthInfo?.monthKey,
             label: monthInfo?.label || rawValue
         };
+        setData({ ...data, weightHistory: sortWeightHistory(nextHistory) });
+    };
+
+    const moveWeightHistoryRow = (index: number, direction: -1 | 1) => {
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= data.weightHistory.length) return;
+        const nextHistory = [...data.weightHistory];
+        const [item] = nextHistory.splice(index, 1);
+        nextHistory.splice(targetIndex, 0, item);
+        setData({ ...data, weightHistory: nextHistory });
+    };
+
+    const deleteWeightHistoryRow = (index: number) => {
+        const nextHistory = data.weightHistory.filter((_, itemIndex) => itemIndex !== index);
         setData({ ...data, weightHistory: nextHistory });
     };
 
@@ -1204,6 +1229,34 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                                 placeholder="kg"
                                             />
                                             <span className="text-xs text-gray-500">kg</span>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moveWeightHistoryRow(index, -1)}
+                                                    disabled={index === 0}
+                                                    className="rounded border border-gray-300 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+                                                    aria-label="Move up"
+                                                >
+                                                    <ArrowUp size={12} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moveWeightHistoryRow(index, 1)}
+                                                    disabled={index === data.weightHistory.length - 1}
+                                                    className="rounded border border-gray-300 p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+                                                    aria-label="Move down"
+                                                >
+                                                    <ArrowDown size={12} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => deleteWeightHistoryRow(index)}
+                                                    className="rounded border border-red-200 p-1 text-red-500 hover:bg-red-50"
+                                                    aria-label="Delete row"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                     <button
