@@ -250,6 +250,13 @@ const getReportMonthParts = (dateStr: string) => {
     return { year: today.getFullYear(), month: today.getMonth() + 1 };
 };
 
+const shiftMonthKey = (monthKey: string, deltaMonths: number) => {
+    const [year, month] = monthKey.split('-').map((part) => parseInt(part, 10));
+    if (Number.isNaN(year) || Number.isNaN(month)) return null;
+    const date = new Date(year, month - 1 + deltaMonths, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const parseWeightValue = (weight: string) => {
     if (!weight) return 0;
     const numeric = parseFloat(weight.replace(/[^0-9.]/g, ''));
@@ -565,6 +572,49 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const updateReportDate = (year: number, month: number) => {
         setData(prev => ({ ...prev, reportDate: `${year}.${String(month).padStart(2, '0')}` }));
+    };
+
+    const updateWeightHistoryMonth = (index: number, year: number, month: number) => {
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const nextHistory = [...data.weightHistory];
+        nextHistory[index] = {
+            ...nextHistory[index],
+            monthKey,
+            label: `${month}月`
+        };
+        setData({ ...data, weightHistory: nextHistory });
+    };
+
+    const updateWeightHistoryManualMonth = (index: number, rawValue: string) => {
+        const normalized = rawValue.replace(/-/g, '.').trim();
+        const monthInfo = parseReportMonthInfo(normalized);
+        const nextHistory = [...data.weightHistory];
+        nextHistory[index] = {
+            ...nextHistory[index],
+            monthKey: monthInfo?.monthKey,
+            label: monthInfo?.label || rawValue
+        };
+        setData({ ...data, weightHistory: nextHistory });
+    };
+
+    const addWeightHistoryRow = () => {
+        const lastItem = data.weightHistory[data.weightHistory.length - 1];
+        const fallbackMonthKey = `${reportMonthParts.year}-${String(reportMonthParts.month).padStart(2, '0')}`;
+        const nextMonthKey = lastItem?.monthKey
+            ? (shiftMonthKey(lastItem.monthKey, 1) || fallbackMonthKey)
+            : fallbackMonthKey;
+        const [, month] = nextMonthKey.split('-').map((part) => parseInt(part, 10));
+        setData({
+            ...data,
+            weightHistory: [
+                ...data.weightHistory,
+                {
+                    label: `${month}月`,
+                    monthKey: nextMonthKey,
+                    value: 0
+                }
+            ]
+        });
     };
 
     const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
@@ -994,17 +1044,31 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 <label className="block text-xs font-medium text-gray-700 mb-2">{t('weightHistory')}</label>
                                 <div className="space-y-2 bg-gray-50 p-3 rounded-md border border-gray-200">
                                     {data.weightHistory.map((item, index) => (
-                                        <div key={index} className="flex gap-2 items-center">
+                                        <div key={index} className="flex flex-wrap gap-2 items-center">
+                                            <select
+                                                value={item.monthKey ? parseInt(item.monthKey.split('-')[0], 10) : reportMonthParts.year}
+                                                onChange={e => updateWeightHistoryMonth(index, Number(e.target.value), item.monthKey ? parseInt(item.monthKey.split('-')[1], 10) : reportMonthParts.month)}
+                                                className="w-20 border-gray-300 rounded px-2 py-1 text-xs text-gray-900 shadow-sm"
+                                            >
+                                                {reportYearOptions.map((year) => (
+                                                    <option key={year} value={year}>{year}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={item.monthKey ? parseInt(item.monthKey.split('-')[1], 10) : reportMonthParts.month}
+                                                onChange={e => updateWeightHistoryMonth(index, item.monthKey ? parseInt(item.monthKey.split('-')[0], 10) : reportMonthParts.year, Number(e.target.value))}
+                                                className="w-16 border-gray-300 rounded px-2 py-1 text-xs text-gray-900 shadow-sm"
+                                            >
+                                                {reportMonthOptions.map((month) => (
+                                                    <option key={month} value={month}>{language === 'ja' ? `${month}月` : `${month}`}</option>
+                                                ))}
+                                            </select>
                                             <input
                                                 type="text"
-                                                value={item.label}
-                                                onChange={e => {
-                                                    const newHist = [...data.weightHistory];
-                                                    newHist[index].label = e.target.value;
-                                                    setData({ ...data, weightHistory: newHist });
-                                                }}
-                                                className="w-16 border-gray-300 rounded px-2 py-1 text-xs text-center text-gray-900 shadow-sm"
-                                                placeholder="Month"
+                                                value={item.monthKey ? item.monthKey.replace('-', '.') : item.label}
+                                                onChange={e => updateWeightHistoryManualMonth(index, e.target.value)}
+                                                className="w-24 border-gray-300 rounded px-2 py-1 text-xs text-center text-gray-900 shadow-sm"
+                                                placeholder="YYYY.MM"
                                             />
                                             <div className="flex-1 h-px bg-gray-300"></div>
                                             <input
@@ -1022,7 +1086,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         </div>
                                     ))}
                                     <button
-                                        onClick={() => setData({ ...data, weightHistory: [...data.weightHistory, { label: '', value: 0 }] })}
+                                        onClick={addWeightHistoryRow}
                                         className="w-full py-1 text-xs text-center text-gray-500 hover:bg-gray-200 rounded border border-dashed border-gray-300 transition-colors"
                                     >
                                         + Add History Row
