@@ -411,7 +411,7 @@ export default function ReportEditor() {
                         }
                     } else {
                         // No horse selected, fetch list and show selector
-                        const allHorses = await restGet('horses?select=id,name,name_en&order=name');
+                        const allHorses = await restGet('horses?select=id,name,name_en&departure_date=is.null&order=name');
                         if (isMounted) {
                             if (allHorses) setHorses(allHorses);
                             setShowHorseSelector(true);
@@ -639,7 +639,7 @@ export default function ReportEditor() {
                                 }
                             } else {
                                 // List horses fallback
-                                const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=id,name,name_en&order=name`, { headers });
+                                const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=id,name,name_en&departure_date=is.null&order=name`, { headers });
                                 if (res.ok) {
                                     const allHorses = await res.json();
                                     if (isMounted) {
