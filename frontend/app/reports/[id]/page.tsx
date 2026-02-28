@@ -872,6 +872,7 @@ export default function ReportEditor() {
     const handleDataChange = useCallback((data: ReportData | DepartureReportData) => {
         reportDataRef.current = data;
         setIsDirty(true);
+        setAutosaveStatus('Saving draft...');
     }, []);
 
     useEffect(() => {
@@ -899,7 +900,7 @@ export default function ReportEditor() {
             if (now - lastRemoteSaveRef.current >= 30_000) {
                 void saveRemoteDraft();
             }
-        }, 800);
+        }, 300);
 
         return () => {
             if (autosaveTimerRef.current) {
@@ -926,6 +927,17 @@ export default function ReportEditor() {
             }
         };
     }, [session?.access_token, isDirty, draftKey]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (!isDirty) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isDirty]);
 
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
