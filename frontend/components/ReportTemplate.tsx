@@ -53,8 +53,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        top: 0 !important;
-        transform: translateY(-15mm) !important; /* Move up 1.5cm when logo is hidden */
+        padding-top: 20px !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
+        height: 102px !important;
+        padding-top: 0 !important;
+        margin-bottom: 0 !important;
       }`}
 
       /* Print Mode Compression */
@@ -527,7 +532,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
-    const isPrintMode = data.outputMode === 'print' || !showLogo;
+    const isPrintMode = data.outputMode === 'print';
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
     const [renderPhotoSrc, setRenderPhotoSrc] = useState('');
     const sexOptions = [
@@ -1303,7 +1308,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     }}
                 >
                     {/* Header */}
-                    <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[140px] pt-4">
+                    <header className={`report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4' : 'mb-0 h-[112px] pt-0'}`}>
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
