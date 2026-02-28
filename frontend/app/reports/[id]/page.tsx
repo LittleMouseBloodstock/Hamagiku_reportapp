@@ -1265,7 +1265,7 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100">
+        <div className="h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 overflow-hidden">
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-4 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
                 <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start gap-4">
@@ -1349,7 +1349,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full flex justify-center overflow-x-auto pb-8 print:pb-0 print:overflow-visible">
+            <div className="w-full flex-1 min-h-0 flex justify-center overflow-x-auto overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
                 {reportType === 'departure' ? (
                     <DepartureReportTemplate initialData={initialData} onDataChange={handleDataChange} />
                 ) : (

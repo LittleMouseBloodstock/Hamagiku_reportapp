@@ -35,13 +35,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         top: 0 !important;
         left: 0 !important;
         width: 210mm !important;
-        height: auto !important;
-        min-height: 285mm !important;
+        height: 285mm !important;
+        min-height: 0 !important;
         margin: 0 !important;
-        padding: 32px 30px 14px 30px !important;
+        padding: 32px 30px 10px 30px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
-        overflow: visible !important;
+        overflow: hidden !important;
         box-shadow: none !important;
         transform: none !important;
         border: none !important;
@@ -49,8 +49,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode {
         top: 20mm !important;
-        height: auto !important;
-        min-height: 257mm !important;
+        height: 257mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
@@ -85,17 +84,18 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
         margin-top: 8px !important;
-        min-height: 110px !important;
-        padding: 14px !important;
+        min-height: 92px !important;
+        padding: 12px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
-        font-size: 15px !important;
-        line-height: 1.6 !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
-        margin-top: 4px !important;
+        margin-top: auto !important;
+        padding-top: 4px !important;
         font-size: 9px !important;
       }`}
 
@@ -751,7 +751,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const rootClassName = batchPrint
         ? 'bg-white font-sans'
-        : 'flex min-h-screen flex-col bg-gray-100 font-sans md:h-screen md:flex-row md:overflow-hidden';
+        : 'flex min-h-screen flex-col bg-gray-100 font-sans md:min-h-0 md:h-full md:flex-row md:overflow-hidden';
 
     const previewWrapperClass = batchPrint
         ? 'flex-1 bg-white p-0 overflow-visible flex justify-center items-start h-auto print:bg-white print:p-0 print:overflow-visible preview-wrapper'
@@ -1284,7 +1284,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     {/* Old Watermark Position (Removed) */}
 
                     {/* Content Wrapper */}
-                    <div className="relative z-10 flex flex-col h-full">
+                    <div className="relative z-10 flex flex-col h-full min-h-0">
 
                         {/* Horse Profile */}
                         <div className="flex justify-between items-end mb-5">
@@ -1392,7 +1392,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Comment Section */}
-                        <div className="comment-box border-2 border-[#555] p-5 relative bg-white min-h-[140px] mt-4">
+                        <div className="comment-box border-2 border-[#555] p-5 relative bg-white min-h-[140px] mt-4 flex-shrink">
                             <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide">
                                 {t('trainersComment')}
                             </span>
@@ -1408,7 +1408,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Footer */}
-                        <div className="footer-text mt-2 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
+                        <div className="footer-text mt-auto pt-2 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
                             HAMAGIKU FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
                         </div>
 
