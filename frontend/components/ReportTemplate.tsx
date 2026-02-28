@@ -443,6 +443,36 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
     });
 }
 
+async function getNormalizedCoverImage(imageSrc: string, targetWidth = 1200, targetHeight = 900): Promise<string> {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return imageSrc;
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const imageRatio = image.width / image.height;
+    const targetRatio = targetWidth / targetHeight;
+
+    let sx = 0;
+    let sy = 0;
+    let sWidth = image.width;
+    let sHeight = image.height;
+
+    if (imageRatio > targetRatio) {
+        sWidth = image.height * targetRatio;
+        sx = (image.width - sWidth) / 2;
+    } else if (imageRatio < targetRatio) {
+        sHeight = image.width / targetRatio;
+        sy = (image.height - sHeight) / 2;
+    }
+
+    ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+
 interface ReportTemplateProps {
     initialData?: Partial<ReportData>;
     onDataChange?: (data: ReportData) => void;
@@ -499,6 +529,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print' || !showLogo;
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
+    const [renderPhotoSrc, setRenderPhotoSrc] = useState('');
     const sexOptions = [
         { value: 'Colt', label: 'Colt（牡）' },
         { value: 'Filly', label: 'Filly（牝）' },
@@ -715,6 +746,27 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             onDataChange(data);
         }
     }, [data, onDataChange]);
+
+    useEffect(() => {
+        let active = true;
+
+        if (!mainPhotoSrc) {
+            setRenderPhotoSrc('');
+            return () => { active = false; };
+        }
+
+        getNormalizedCoverImage(mainPhotoSrc)
+            .then((normalized) => {
+                if (active) setRenderPhotoSrc(normalized || mainPhotoSrc);
+            })
+            .catch(() => {
+                if (active) setRenderPhotoSrc(mainPhotoSrc);
+            });
+
+        return () => {
+            active = false;
+        };
+    }, [mainPhotoSrc]);
 
     // Handle initialData updates from parent
     useEffect(() => {
@@ -1332,9 +1384,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Main Photo - Reduced width to save vertical space */}
                         <div className="main-photo w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
-                            {mainPhotoSrc ? (
+                            {renderPhotoSrc || mainPhotoSrc ? (
                                 <img
-                                    src={mainPhotoSrc}
+                                    src={renderPhotoSrc || mainPhotoSrc}
                                     alt="Main"
                                     className="absolute inset-0 w-full h-full object-cover"
                                     loading="eager"
