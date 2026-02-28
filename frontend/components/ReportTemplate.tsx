@@ -35,13 +35,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         top: 0 !important;
         left: 0 !important;
         width: 210mm !important;
-        height: 285mm !important; /* Slightly taller to prevent bottom clipping */
-        min-height: 0 !important; /* Override inline min-height to prevent overflow */
+        height: auto !important;
+        min-height: 285mm !important;
         margin: 0 !important;
-        padding: 32px 30px 8px 30px !important;
+        padding: 32px 30px 14px 30px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
-        overflow: hidden !important;
+        overflow: visible !important;
         box-shadow: none !important;
         transform: none !important;
         border: none !important;
@@ -49,7 +49,8 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode {
         top: 20mm !important;
-        height: 257mm !important;
+        height: auto !important;
+        min-height: 257mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
@@ -1240,9 +1241,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                 {/* A4 Container - Uniqlo Style Reverted */}
                 <div
                     id={batchPrint ? undefined : 'report-preview'}
-                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100'}${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
+                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100 overflow-hidden'}${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
                     style={{
                         width: '210mm',
+                        height: batchPrint ? undefined : '297mm',
                         minHeight: '297mm',
                         padding: '20px 30px 10px 30px',
                         boxSizing: 'border-box'
