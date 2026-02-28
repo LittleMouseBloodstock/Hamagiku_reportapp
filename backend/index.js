@@ -32,16 +32,26 @@ app.post('/translate', async (req, res) => {
     const dynamicGenAI = new GoogleGenerativeAI(apiKey);
 
     try {
-        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const instruction = targetLang === 'ja'
-            ? "以下のテキストを、日本の競馬業界の専門用語を使った自然な日本語に翻訳してください。"
-            : "Translate the following text into natural English for a horse racing report.";
+            ? [
+                "以下のテキストを、日本の競馬レポート向けの自然な日本語に翻訳してください。",
+                "出力は翻訳文のみ。",
+                "解説、補足、注釈、見出し、箇条書き、引用符、前置き、後書きは一切不要です。",
+                "入力が1段落なら出力も1段落にしてください。"
+            ].join('\n')
+            : [
+                "Translate the following text into natural English for a horse racing report.",
+                "Return only the translated text.",
+                "Do not add explanations, notes, headings, bullet points, quotation marks, or extra commentary.",
+                "If the input is a single paragraph, return a single paragraph."
+            ].join('\n');
 
         const prompt = `${instruction}\n\nText: ${text}`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        const translatedText = response.text();
+        const translatedText = response.text().trim();
 
         res.json({ translatedText });
     } catch (e) {
@@ -68,7 +78,7 @@ app.post('/generate', async (req, res) => {
 
     try {
         const model = dynamicGenAI.getGenerativeModel({
-            model: "gemini-2.5-flash-lite",
+            model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json" }
         });
 
@@ -114,7 +124,7 @@ app.post('/generate-departure', async (req, res) => {
 
     try {
         const model = dynamicGenAI.getGenerativeModel({
-            model: "gemini-2.5-flash-lite",
+            model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json" }
         });
 
@@ -171,7 +181,7 @@ app.post('/translate-name', async (req, res) => {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         // Prompt for Name conversion
         const prompt = `
         Translate or transliterate the racehorse name "${name}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.

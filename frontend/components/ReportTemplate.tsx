@@ -247,6 +247,36 @@ const parseWeightValue = (weight: string) => {
     return numeric;
 };
 
+const sanitizeTranslatedComment = (text: string) => {
+    const normalized = text.replace(/\r\n/g, '\n').trim();
+    if (!normalized) return '';
+
+    const blockedPrefixes = [
+        '解説',
+        '補足',
+        '使用した専門用語',
+        '専門用語',
+        'translation:',
+        'explanation:',
+        'notes:'
+    ];
+
+    const lines = normalized
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    const cleaned = lines.filter((line) => {
+        const lower = line.toLowerCase();
+        if (blockedPrefixes.some((prefix) => lower.startsWith(prefix.toLowerCase()))) return false;
+        if (/^[*\-•]\s/.test(line)) return false;
+        if (/^\d+\.\s/.test(line)) return false;
+        return true;
+    });
+
+    return cleaned.join('\n').trim();
+};
+
 export type ReportData = {
     reportDate: string;
     horseNameEn: string;
@@ -501,7 +531,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         setIsTranslating(true);
         try {
             const result = await translateText(data.commentEn, 'ja');
-            const translated = result?.translatedText?.trim();
+            const translated = sanitizeTranslatedComment(result?.translatedText?.trim() || '');
             if (!translated) {
                 throw new Error('Translation failed');
             }
