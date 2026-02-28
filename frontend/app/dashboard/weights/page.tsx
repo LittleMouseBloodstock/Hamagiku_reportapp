@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,7 @@ type HorseWeight = {
 };
 
 const getTodayIso = () => new Date().toISOString().slice(0, 10);
+const getDraftStorageKey = (date: string) => `weight-draft:${date}`;
 
 export default function WeightsPage() {
     const { t, language } = useLanguage();
@@ -31,11 +32,18 @@ export default function WeightsPage() {
     const [selectedDate, setSelectedDate] = useState(getTodayIso());
     const [horses, setHorses] = useState<Horse[]>([]);
     const [weights, setWeights] = useState<Record<string, string>>({});
+    const [dirtyMap, setDirtyMap] = useState<Record<string, boolean>>({});
     const [latestMap, setLatestMap] = useState<Record<string, HorseWeight | null>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
     const hasHorses = horses.length > 0;
+    const hasUnsavedChanges = Object.values(dirtyMap).some(Boolean);
+    const dirtyMapRef = useRef<Record<string, boolean>>({});
+
+    useEffect(() => {
+        dirtyMapRef.current = dirtyMap;
+    }, [dirtyMap]);
 
     useEffect(() => {
         if (!session?.access_token) return;
@@ -111,7 +119,17 @@ export default function WeightsPage() {
                 if (isMounted) {
                     setHorses(filteredHorses);
                     setLatestMap(latestByHorse);
-                    setWeights(weightsMap);
+                    setWeights((prev) => {
+                        const next: Record<string, string> = {};
+                        filteredHorses.forEach((horse) => {
+                            if (dirtyMapRef.current[horse.id]) {
+                                next[horse.id] = prev[horse.id] ?? '';
+                            } else {
+                                next[horse.id] = weightsMap[horse.id] ?? '';
+                            }
+                        });
+                        return next;
+                    });
                     setLoading(false);
                 }
             } catch (error) {
@@ -132,6 +150,58 @@ export default function WeightsPage() {
         fetchData();
         return () => { isMounted = false; };
     }, [user?.id, session?.access_token, selectedDate, refreshKey]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const savedDraft = window.localStorage.getItem(getDraftStorageKey(selectedDate));
+            if (!savedDraft) {
+                setDirtyMap({});
+                return;
+            }
+
+            const parsed = JSON.parse(savedDraft) as Record<string, string>;
+            setWeights((prev) => ({ ...prev, ...parsed }));
+            setDirtyMap(
+                Object.keys(parsed).reduce<Record<string, boolean>>((acc, horseId) => {
+                    acc[horseId] = true;
+                    return acc;
+                }, {})
+            );
+        } catch (error) {
+            console.warn('Failed to restore weight draft:', error);
+        }
+    }, [selectedDate]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!hasUnsavedChanges) {
+            window.localStorage.removeItem(getDraftStorageKey(selectedDate));
+            return;
+        }
+
+        const draftPayload = Object.entries(weights).reduce<Record<string, string>>((acc, [horseId, value]) => {
+            if (dirtyMap[horseId]) {
+                acc[horseId] = value;
+            }
+            return acc;
+        }, {});
+
+        window.localStorage.setItem(getDraftStorageKey(selectedDate), JSON.stringify(draftPayload));
+    }, [weights, dirtyMap, hasUnsavedChanges, selectedDate]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (!hasUnsavedChanges) return;
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [hasUnsavedChanges]);
 
     const handleSave = async () => {
         if (!hasHorses) return;
@@ -183,6 +253,10 @@ export default function WeightsPage() {
                 }
             });
             setLatestMap(latestByHorse);
+            setDirtyMap({});
+            if (typeof window !== 'undefined') {
+                window.localStorage.removeItem(getDraftStorageKey(selectedDate));
+            }
             alert(language === 'ja' ? '保存しました。' : 'Saved.');
         } catch (error) {
             console.error('Failed to save weights:', error);
@@ -263,7 +337,11 @@ export default function WeightsPage() {
                                                     step="0.1"
                                                     min="0"
                                                     value={weights[horse.id] ?? ''}
-                                                    onChange={(e) => setWeights(prev => ({ ...prev, [horse.id]: e.target.value }))}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        setWeights(prev => ({ ...prev, [horse.id]: value }));
+                                                        setDirtyMap(prev => ({ ...prev, [horse.id]: true }));
+                                                    }}
                                                     className="w-32 border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700"
                                                     placeholder="kg"
                                                 />
