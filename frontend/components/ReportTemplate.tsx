@@ -1383,12 +1383,20 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Main Photo - Reduced width to save vertical space */}
-                        <div className="main-photo w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
+                        <div
+                            className="main-photo mx-auto bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm"
+                            style={{
+                                width: '127.5mm',
+                                height: '95.6mm',
+                                maxWidth: '85%'
+                            }}
+                        >
                             {renderPhotoSrc || mainPhotoSrc ? (
                                 <img
                                     src={renderPhotoSrc || mainPhotoSrc}
                                     alt="Main"
                                     className="absolute inset-0 w-full h-full object-cover"
+                                    style={{ objectPosition: 'center center' }}
                                     loading="eager"
                                     decoding="sync"
                                 />
