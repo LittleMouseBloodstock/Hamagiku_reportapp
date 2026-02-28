@@ -112,13 +112,28 @@ type WeightHistoryPoint = {
     monthKey?: string;
 };
 
+const ENGLISH_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const ENGLISH_MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+
+const formatMonthInputValue = (monthKey: string | undefined, lang: 'ja' | 'en', fallback = '') => {
+    if (!monthKey || !/^\d{4}-\d{2}$/.test(monthKey)) return fallback;
+    const [year, month] = monthKey.split('-').map((part) => parseInt(part, 10));
+    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) return fallback;
+    return lang === 'ja' ? `${year}.${String(month).padStart(2, '0')}` : `${String(month).padStart(2, '0')}/${year}`;
+};
+
+const getMonthOptionLabel = (month: number, lang: 'ja' | 'en') => {
+    if (lang === 'ja') return `${month}月`;
+    return ENGLISH_MONTH_SHORT[month - 1] || `${month}`;
+};
+
 const formatWeightHistoryLabel = (item: WeightHistoryPoint, lang: 'ja' | 'en') => {
     if (item.monthKey && /^\d{4}-\d{2}$/.test(item.monthKey)) {
         const [year, month] = item.monthKey.split('-').map((part) => parseInt(part, 10));
         if (!Number.isNaN(year) && !Number.isNaN(month)) {
             if (lang === 'ja') return `${year}/${month}`;
             const date = new Date(year, month - 1, 1);
-            return date.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+            return date.toLocaleString('en-GB', { month: 'short', year: 'numeric' });
         }
     }
     return item.label;
@@ -229,14 +244,66 @@ const formatReportMonth = (dateStr: string, lang: 'ja' | 'en') => {
 
 const parseReportMonthInfo = (dateStr: string) => {
     if (!dateStr) return null;
-    const parts = dateStr.replace(/-/g, '.').split('.');
-    if (parts.length < 2) return null;
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) return null;
+    const normalized = dateStr.trim();
+
+    const isoLike = normalized.replace(/-/g, '.');
+    const isoParts = isoLike.split('.');
+    if (isoParts.length >= 2) {
+        const year = parseInt(isoParts[0], 10);
+        const month = parseInt(isoParts[1], 10);
+        if (!Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12) {
+            return {
+                monthKey: `${year}-${String(month).padStart(2, '0')}`,
+                label: `${month}月`
+            };
+        }
+    }
+
+    const slashMatch = normalized.match(/^(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+        const month = parseInt(slashMatch[1], 10);
+        const year = parseInt(slashMatch[2], 10);
+        if (!Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12) {
+            return {
+                monthKey: `${year}-${String(month).padStart(2, '0')}`,
+                label: `${month}月`
+            };
+        }
+    }
+
+    const englishMonthMatch = normalized.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (englishMonthMatch) {
+        const inputMonth = englishMonthMatch[1].toLowerCase();
+        const year = parseInt(englishMonthMatch[2], 10);
+        const monthIndex = ENGLISH_MONTH_NAMES.findIndex((name) => name.toLowerCase() === inputMonth)
+            ?? ENGLISH_MONTH_SHORT.findIndex((name) => name.toLowerCase() === inputMonth);
+        const altMonthIndex = monthIndex >= 0
+            ? monthIndex
+            : ENGLISH_MONTH_SHORT.findIndex((name) => name.toLowerCase() === inputMonth);
+        const resolvedMonthIndex = monthIndex >= 0 ? monthIndex : altMonthIndex;
+        if (!Number.isNaN(year) && resolvedMonthIndex >= 0) {
+            return {
+                monthKey: `${year}-${String(resolvedMonthIndex + 1).padStart(2, '0')}`,
+                label: `${resolvedMonthIndex + 1}月`
+            };
+        }
+    }
+
+    return null;
+};
+
+const formatReportMonthInputValue = (dateStr: string, lang: 'ja' | 'en') => {
+    const monthInfo = parseReportMonthInfo(dateStr);
+    if (!monthInfo) return dateStr;
+    return formatMonthInputValue(monthInfo.monthKey, lang, dateStr);
+};
+
+const normalizeReportMonthInput = (rawValue: string, lang: 'ja' | 'en') => {
+    const monthInfo = parseReportMonthInfo(rawValue);
+    if (!monthInfo) return rawValue;
     return {
-        monthKey: `${year}-${String(month).padStart(2, '0')}`,
-        label: `${month}月`
+        monthKey: monthInfo.monthKey,
+        value: formatMonthInputValue(monthInfo.monthKey, lang, rawValue)
     };
 };
 
@@ -571,7 +638,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const reportMonthOptions = Array.from({ length: 12 }, (_, index) => index + 1);
 
     const updateReportDate = (year: number, month: number) => {
-        setData(prev => ({ ...prev, reportDate: `${year}.${String(month).padStart(2, '0')}` }));
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        setData(prev => ({ ...prev, reportDate: formatMonthInputValue(monthKey, language, prev.reportDate) }));
     };
 
     const updateWeightHistoryMonth = (index: number, year: number, month: number) => {
@@ -586,8 +654,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     };
 
     const updateWeightHistoryManualMonth = (index: number, rawValue: string) => {
-        const normalized = rawValue.replace(/-/g, '.').trim();
-        const monthInfo = parseReportMonthInfo(normalized);
+        const monthInfo = parseReportMonthInfo(rawValue);
         const nextHistory = [...data.weightHistory];
         nextHistory[index] = {
             ...nextHistory[index],
@@ -773,16 +840,19 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                                         >
                                             {reportMonthOptions.map((month) => (
-                                                <option key={month} value={month}>{language === 'ja' ? `${month}月` : `${month}`}</option>
+                                                <option key={month} value={month}>{getMonthOptionLabel(month, language)}</option>
                                             ))}
                                         </select>
                                     </div>
                                     <input
                                         type="text"
-                                        value={data.reportDate}
-                                        onChange={e => setData({ ...data, reportDate: e.target.value })}
+                                        value={formatReportMonthInputValue(data.reportDate, language)}
+                                        onChange={e => {
+                                            const normalized = normalizeReportMonthInput(e.target.value, language);
+                                            setData({ ...data, reportDate: typeof normalized === 'string' ? normalized : normalized.value });
+                                        }}
                                         className="mt-2 w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                                        placeholder="YYYY.MM"
+                                        placeholder={language === 'ja' ? 'YYYY.MM' : 'MM/YYYY'}
                                     />
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -1060,15 +1130,15 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                                 className="w-16 border-gray-300 rounded px-2 py-1 text-xs text-gray-900 shadow-sm"
                                             >
                                                 {reportMonthOptions.map((month) => (
-                                                    <option key={month} value={month}>{language === 'ja' ? `${month}月` : `${month}`}</option>
+                                                    <option key={month} value={month}>{getMonthOptionLabel(month, language)}</option>
                                                 ))}
                                             </select>
                                             <input
                                                 type="text"
-                                                value={item.monthKey ? item.monthKey.replace('-', '.') : item.label}
+                                                value={formatMonthInputValue(item.monthKey, language, item.label)}
                                                 onChange={e => updateWeightHistoryManualMonth(index, e.target.value)}
                                                 className="w-24 border-gray-300 rounded px-2 py-1 text-xs text-center text-gray-900 shadow-sm"
-                                                placeholder="YYYY.MM"
+                                                placeholder={language === 'ja' ? 'YYYY.MM' : 'MM/YYYY'}
                                             />
                                             <div className="flex-1 h-px bg-gray-300"></div>
                                             <input
