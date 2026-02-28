@@ -240,6 +240,16 @@ const parseReportMonthInfo = (dateStr: string) => {
     };
 };
 
+const getReportMonthParts = (dateStr: string) => {
+    const parsed = parseReportMonthInfo(dateStr);
+    if (parsed) {
+        const [year, month] = parsed.monthKey.split('-').map((part) => parseInt(part, 10));
+        return { year, month };
+    }
+    const today = new Date();
+    return { year: today.getFullYear(), month: today.getMonth() + 1 };
+};
+
 const parseWeightValue = (weight: string) => {
     if (!weight) return 0;
     const numeric = parseFloat(weight.replace(/[^0-9.]/g, ''));
@@ -549,6 +559,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [isCropping, setIsCropping] = useState(false);
     const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
+    const reportMonthParts = getReportMonthParts(data.reportDate);
+    const reportYearOptions = Array.from({ length: 8 }, (_, index) => new Date().getFullYear() - 4 + index);
+    const reportMonthOptions = Array.from({ length: 12 }, (_, index) => index + 1);
+
+    const updateReportDate = (year: number, month: number) => {
+        setData(prev => ({ ...prev, reportDate: `${year}.${String(month).padStart(2, '0')}` }));
+    };
 
     const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
@@ -690,11 +707,32 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">{t('reportDate')}</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <select
+                                            value={reportMonthParts.year}
+                                            onChange={e => updateReportDate(Number(e.target.value), reportMonthParts.month)}
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        >
+                                            {reportYearOptions.map((year) => (
+                                                <option key={year} value={year}>{year}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={reportMonthParts.month}
+                                            onChange={e => updateReportDate(reportMonthParts.year, Number(e.target.value))}
+                                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        >
+                                            {reportMonthOptions.map((month) => (
+                                                <option key={month} value={month}>{language === 'ja' ? `${month}月` : `${month}`}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <input
                                         type="text"
                                         value={data.reportDate}
                                         onChange={e => setData({ ...data, reportDate: e.target.value })}
-                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        className="mt-2 w-full rounded-md border-gray-300 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226] focus:ring-opacity-20 bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                                        placeholder="YYYY.MM"
                                     />
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-gray-600">
