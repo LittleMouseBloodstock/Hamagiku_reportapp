@@ -438,15 +438,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
         pixelCrop.height
     );
 
-    return new Promise((resolve, reject) => {
-        canvas.toBlob((blob) => {
-            if (!blob) {
-                reject(new Error('Canvas is empty'));
-                return;
-            }
-            resolve(window.URL.createObjectURL(blob));
-        }, 'image/jpeg');
-    });
+    return canvas.toDataURL('image/jpeg', 0.92);
 }
 
 async function getNormalizedCoverImage(imageSrc: string, targetWidth = 1200, targetHeight = 900): Promise<string> {
