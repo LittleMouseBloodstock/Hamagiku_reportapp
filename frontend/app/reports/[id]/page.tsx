@@ -110,7 +110,7 @@ export default function ReportEditor() {
             data: draftData,
             updated_at: new Date().toISOString()
         };
-        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts`, {
+        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?on_conflict=draft_key`, {
             method: 'POST',
             headers: getDraftHeaders(),
             body: JSON.stringify(payload)
@@ -1109,7 +1109,7 @@ export default function ReportEditor() {
                 const uploadResult = await Promise.race([
                     uploadImage(monthly.mainPhoto, path),
                     new Promise<{ url: string | null, error: unknown }>((_, reject) =>
-                        setTimeout(() => reject(new Error('Upload timeout')), 12000)
+                        setTimeout(() => reject(new Error('Upload timeout')), 30000)
                     )
                 ]);
                 const { url: uploadedUrl, error: uploadError } = uploadResult as { url: string | null, error: unknown };

@@ -807,13 +807,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const result = e.target?.result as string;
                 if (result) {
-                    // Update both main and original
+                    const normalized = await getNormalizedCoverImage(result).catch(() => result);
                     setData(prev => ({
                         ...prev,
-                        mainPhoto: result,
+                        mainPhoto: normalized,
                         originalPhoto: result
                     }));
                     // Start cropper flow with uploaded image
