@@ -1333,23 +1333,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         {/* Main Photo - Reduced width to save vertical space */}
                         <div className="main-photo w-[85%] mx-auto aspect-[4/3] bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm">
                             {mainPhotoSrc ? (
-                                batchPrint || isPrintMode ? (
-                                    <img
-                                        src={mainPhotoSrc}
-                                        alt="Main"
-                                        className="absolute inset-0 w-full h-full object-cover"
-                                        loading="eager"
-                                        decoding="sync"
-                                    />
-                                ) : (
-                                    <Image
-                                        src={mainPhotoSrc}
-                                        alt="Main"
-                                        fill
-                                        className="object-cover"
-                                        unoptimized
-                                    />
-                                )
+                                <img
+                                    src={mainPhotoSrc}
+                                    alt="Main"
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    loading="eager"
+                                    decoding="sync"
+                                />
                             ) : (
                                 <div className="flex items-center justify-center w-full h-full text-gray-400 font-serif-en italic">
                                     No Photo Selected
