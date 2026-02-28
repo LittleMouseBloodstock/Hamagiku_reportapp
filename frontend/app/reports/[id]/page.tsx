@@ -182,69 +182,124 @@ export default function ReportEditor() {
         }
     };
 
-    const normalizeMonthLabel = (value?: string | null) => {
-        if (!value) return '';
-        const trimmed = String(value).trim();
-        const numericMatch = trimmed.match(/^(\d{1,2})/);
-        if (!numericMatch) return trimmed;
-        const month = parseInt(numericMatch[1], 10);
-        if (Number.isNaN(month) || month < 1 || month > 12) return trimmed;
-        return `${month}月`;
+    type WeightHistoryPoint = {
+        label: string;
+        value: number;
+        monthKey?: string;
+    };
+
+    const getMonthInfo = (value?: string | null) => {
+        if (!value) return null;
+        const parts = value.replace(/-/g, '.').split('.');
+        if (parts.length >= 2) {
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            if (!Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12) {
+                return {
+                    monthKey: `${year}-${String(month).padStart(2, '0')}`,
+                    label: `${month}月`
+                };
+            }
+        }
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            return {
+                monthKey: `${year}-${String(month).padStart(2, '0')}`,
+                label: `${month}月`
+            };
+        }
+        return null;
+    };
+
+    const getMonthKeySortValue = (item: WeightHistoryPoint, index: number) => {
+        if (item.monthKey && /^\d{4}-\d{2}$/.test(item.monthKey)) {
+            return parseInt(item.monthKey.replace('-', ''), 10);
+        }
+        const month = parseInt(String(item.label || '').replace(/\D/g, ''), 10);
+        if (!Number.isNaN(month)) return 900000 + month * 100 + index;
+        return 999999 + index;
+    };
+
+    const shiftMonthInfo = (monthKey: string, deltaMonths: number) => {
+        const [year, month] = monthKey.split('-').map((part) => parseInt(part, 10));
+        if (Number.isNaN(year) || Number.isNaN(month)) return null;
+        const date = new Date(year, month - 1 + deltaMonths, 1);
+        return {
+            monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            label: `${date.getMonth() + 1}月`
+        };
+    };
+
+    const normalizeLegacyWeightHistory = (items: WeightHistoryPoint[], reportMonthKey?: string | null) => {
+        const anchor = getMonthInfo(reportMonthKey);
+        if (!anchor || !items.length) return items;
+        const hasLegacy = items.some((item) => !item.monthKey);
+        if (!hasLegacy) return items;
+        return items.map((item, index) => {
+            if (item.monthKey) return item;
+            const monthInfo = shiftMonthInfo(anchor.monthKey, index - (items.length - 1));
+            return {
+                ...item,
+                label: monthInfo?.label || item.label,
+                monthKey: monthInfo?.monthKey
+            };
+        });
     };
 
     const buildWeightHistoryFromWeights = (weights: { measured_at: string; weight: number | null }[]) => {
         return weights?.map((r) => {
-            const d = new Date(r.measured_at);
+            const monthInfo = getMonthInfo(r.measured_at);
             return {
-                label: normalizeMonthLabel(`${d.getMonth() + 1}月`),
+                label: monthInfo?.label || '',
+                monthKey: monthInfo?.monthKey,
                 value: r.weight || 0
             };
-        }).filter((item) => item.value > 0) || [];
+        }).filter((item) => item.value > 0 && item.label) || [];
     };
 
     const mergeWeightHistory = (
-        base: { label: string; value: number }[],
-        override?: { label: string; value: number }[],
-        reportMonth?: string,
+        base: WeightHistoryPoint[],
+        override?: WeightHistoryPoint[],
+        reportMonthKey?: string | null,
         latestWeightValue?: number | null
     ) => {
-        const map = new Map<string, number>();
-        base.forEach((item) => {
-            const label = normalizeMonthLabel(item?.label);
-            if (label && item.value > 0) map.set(label, item.value);
-        });
-        (override || []).forEach((item) => {
-            const label = normalizeMonthLabel(item?.label);
-            if (label && item.value > 0) map.set(label, item.value);
-        });
-        if (reportMonth && latestWeightValue && latestWeightValue > 0) {
-            const label = normalizeMonthLabel(reportMonth);
-            if (label) map.set(label, latestWeightValue);
-        }
-        const result = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
-        return result.sort((a, b) => {
-            const aNum = parseInt(a.label.replace(/\D/g, ''), 10);
-            const bNum = parseInt(b.label.replace(/\D/g, ''), 10);
-            if (Number.isNaN(aNum) || Number.isNaN(bNum)) return 0;
-            return aNum - bNum;
-        });
-    };
+        const keyed = new Map<string, WeightHistoryPoint>();
+        const legacy: WeightHistoryPoint[] = [];
 
-    const getMonthLabel = (value?: string | null) => {
-        if (value) {
-            const parts = value.replace(/-/g, '.').split('.');
-            if (parts.length >= 2) {
-                const month = parseInt(parts[1], 10);
-                if (!Number.isNaN(month) && month >= 1 && month <= 12) {
-                    return `${month}月`;
-                }
+        const pushItem = (item?: WeightHistoryPoint) => {
+            if (!item || !item.label || !(item.value > 0)) return;
+            if (item.monthKey && /^\d{4}-\d{2}$/.test(item.monthKey)) {
+                keyed.set(item.monthKey, item);
+                return;
             }
-            const date = new Date(value);
-            if (!Number.isNaN(date.getTime())) {
-                return `${date.getMonth() + 1}月`;
+            legacy.push(item);
+        };
+
+        base.forEach(pushItem);
+        normalizeLegacyWeightHistory(override || [], reportMonthKey).forEach((item) => {
+            const monthInfo = item.monthKey ? { monthKey: item.monthKey, label: item.label } : getMonthInfo(item.label);
+            pushItem({
+                ...item,
+                label: monthInfo?.label || item.label,
+                monthKey: monthInfo?.monthKey
+            });
+        });
+
+        if (reportMonthKey && latestWeightValue && latestWeightValue > 0) {
+            const monthInfo = getMonthInfo(reportMonthKey);
+            if (monthInfo) {
+                keyed.set(monthInfo.monthKey, {
+                    label: monthInfo.label,
+                    monthKey: monthInfo.monthKey,
+                    value: latestWeightValue
+                });
             }
         }
-        return `${new Date().getMonth() + 1}月`;
+
+        const keyedResult = Array.from(keyed.values()).sort((a, b) => getMonthKeySortValue(a, 0) - getMonthKeySortValue(b, 0));
+        return [...keyedResult, ...legacy];
     };
 
     useEffect(() => {
@@ -281,14 +336,13 @@ export default function ReportEditor() {
                         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
                     if (isMounted) {
-                        const latestWeightValue = latestMonthlyReport?.weight ?? latestWeightEntry?.weight ?? null;
+                        const latestWeightValue = latestWeightEntry?.weight ?? latestMonthlyReport?.weight ?? null;
                         const latestWeightDate = latestWeightEntry?.measured_at || '';
                         const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
-                        const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || latestWeightEntry?.measured_at);
                         const weightHistory = mergeWeightHistory(
                             weightHistoryFromWeights,
                             Array.isArray(latestHistory) ? latestHistory : [],
-                            latestReportMonth,
+                            defaultDate,
                             latestWeightValue
                         );
 
@@ -430,12 +484,12 @@ export default function ReportEditor() {
                         });
                     } else {
                         const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
-                        const reportMonthLabel = getMonthLabel(report.title || report.created_at);
+                        const reportMonthKey = report.title || report.created_at;
                         const baseHistory = Array.isArray(metrics.weightHistory) ? metrics.weightHistory : [];
                         const mergedHistory = mergeWeightHistory(
                             weightHistoryFromWeights,
                             baseHistory,
-                            reportMonthLabel,
+                            reportMonthKey,
                             report.weight ?? null
                         );
                         const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
@@ -543,13 +597,12 @@ export default function ReportEditor() {
                                         return r?.metrics_json?.reportType !== 'departure';
                                     });
                                     const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
-                                    const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || null);
                                     const weightHistoryFromWeights = buildWeightHistoryFromWeights(rData || []);
                                     const weightHistory = mergeWeightHistory(
                                         weightHistoryFromWeights,
                                         Array.isArray(latestHistory) ? latestHistory : [],
-                                        latestReportMonth,
-                                        latestMonthlyReport?.weight ?? latestWeight
+                                        defaultDate,
+                                        latestWeight ?? latestMonthlyReport?.weight
                                     );
 
                                     if (isMounted) {
@@ -577,7 +630,7 @@ export default function ReportEditor() {
                                             mainPhoto: '',
                                             originalPhoto: '',
                                             statusEn: 'Training', statusJp: '調整中',
-                                            weight: latestWeight !== null ? `${latestWeight} kg` : '', targetEn: '', targetJp: '',
+                                            weight: latestWeight !== null ? `${latestWeight} kg` : latestMonthlyReport?.weight !== null && latestMonthlyReport?.weight !== undefined ? `${latestMonthlyReport.weight} kg` : '', targetEn: '', targetJp: '',
                                             commentEn: '', commentJp: '',
                                             weightHistory: weightHistory
                                         });
@@ -607,12 +660,22 @@ export default function ReportEditor() {
                             const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers });
                             const hData = await horseRes.json();
                             const horse = hData[0];
+                            const sixMonthsAgo = new Date();
+                            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                            const historyRes = await fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${report.horse_id}&measured_at=gte.${encodeURIComponent(sixMonthsAgo.toISOString())}&select=measured_at,weight&order=measured_at.asc`, { headers });
+                            const historyData = historyRes.ok ? await historyRes.json() : [];
 
                             if (isMounted) {
                                 setHorseId(report.horse_id);
                                 const metrics = report.metrics_json || {};
                                 const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                                 const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
+                                const mergedHistory = mergeWeightHistory(
+                                    buildWeightHistoryFromWeights(historyData || []),
+                                    Array.isArray(metrics.weightHistory) ? metrics.weightHistory : [],
+                                    report.title || report.created_at,
+                                    report.weight ?? null
+                                );
                                 setInitialData({
                                     reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                                     horseNameJp: metrics.horseNameJp || horse?.name || '',
@@ -642,7 +705,7 @@ export default function ReportEditor() {
                                     statusEn: metrics.statusEn || '',
                                     targetJp: report.target || '',
                                     targetEn: metrics.targetEn || '',
-                                    weightHistory: metrics.weightHistory || [],
+                                    weightHistory: mergedHistory,
                                     mainPhoto: report.main_photo_url || horse?.photo_url || '',
                                     originalPhoto: report.main_photo_url || horse?.photo_url || '',
                                     logo: null
@@ -735,14 +798,13 @@ export default function ReportEditor() {
 
         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
-        const latestWeightValue = latestMonthlyReport?.weight ?? latestWeightEntry?.weight ?? null;
+        const latestWeightValue = latestWeightEntry?.weight ?? latestMonthlyReport?.weight ?? null;
         const latestWeightDate = latestWeightEntry?.measured_at || '';
         const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
-        const latestReportMonth = getMonthLabel(latestMonthlyReport?.title || latestMonthlyReport?.created_at || latestWeightEntry?.measured_at);
         const weightHistory = mergeWeightHistory(
             weightHistoryFromWeights,
             Array.isArray(latestHistory) ? latestHistory : [],
-            latestReportMonth,
+            defaultDate,
             latestWeightValue
         );
 

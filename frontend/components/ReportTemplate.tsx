@@ -5,6 +5,7 @@ import { FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check } from 'l
 import Cropper from 'react-easy-crop';
 import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
+import { translateText } from '@/lib/api';
 
 // Google Fonts Component
 const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean }) => (
@@ -105,23 +106,31 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
   `}</style>
 );
 
+type WeightHistoryPoint = {
+    label: string;
+    value: number;
+    monthKey?: string;
+};
+
+const formatWeightHistoryLabel = (item: WeightHistoryPoint, lang: 'ja' | 'en') => {
+    if (item.monthKey && /^\d{4}-\d{2}$/.test(item.monthKey)) {
+        const [year, month] = item.monthKey.split('-').map((part) => parseInt(part, 10));
+        if (!Number.isNaN(year) && !Number.isNaN(month)) {
+            if (lang === 'ja') return `${year}/${month}`;
+            const date = new Date(year, month - 1, 1);
+            return date.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+        }
+    }
+    return item.label;
+};
+
 // Simple Line Chart Component
-const SimpleLineChart = ({ data, color, lang }: { data: { label: string, value: number }[], color: string, lang: 'ja' | 'en' }) => {
+const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], color: string, lang: 'ja' | 'en' }) => {
     const width = 200;
     const height = 100;
     const padding = 20;
 
     if (!data || data.length < 2) return null;
-
-    const formatLabel = (label: string) => {
-        if (lang === 'ja') return label;
-        const match = label.match(/(\d{1,2})/);
-        if (!match) return label;
-        const month = parseInt(match[1], 10);
-        if (Number.isNaN(month) || month < 1 || month > 12) return label;
-        const date = new Date(2000, month - 1, 1);
-        return date.toLocaleString('en-US', { month: 'short' });
-    };
 
     const maxVal = Math.max(...data.map(d => d.value));
     const minVal = Math.min(...data.map(d => d.value));
@@ -156,7 +165,7 @@ const SimpleLineChart = ({ data, color, lang }: { data: { label: string, value: 
                 return (
                     <g key={i}>
                         <circle cx={x} cy={y} r="3" fill="white" stroke={color} strokeWidth="2" />
-                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatLabel(d.label)}</text>
+                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatWeightHistoryLabel(d, lang)}</text>
                         <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="12" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
                     </g>
                 );
@@ -218,13 +227,17 @@ const formatReportMonth = (dateStr: string, lang: 'ja' | 'en') => {
     return `${monthName} ${year}`;
 };
 
-const parseReportMonthLabel = (dateStr: string) => {
+const parseReportMonthInfo = (dateStr: string) => {
     if (!dateStr) return null;
     const parts = dateStr.replace(/-/g, '.').split('.');
     if (parts.length < 2) return null;
+    const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
-    if (Number.isNaN(month) || month < 1 || month > 12) return null;
-    return `${month}月`;
+    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) return null;
+    return {
+        monthKey: `${year}-${String(month).padStart(2, '0')}`,
+        label: `${month}月`
+    };
 };
 
 const parseWeightValue = (weight: string) => {
@@ -267,7 +280,7 @@ export type ReportData = {
     targetJp: string;
     commentEn: string;
     commentJp: string;
-    weightHistory: { label: string, value: number }[];
+    weightHistory: WeightHistoryPoint[];
     logo: string | null;
     originalPhoto?: string | null; // Keep original for re-cropping
 };
@@ -359,10 +372,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         commentEn: 'Arrived at the farm on Dec. 16th to commence breaking and pre-training. The breaking process progressed smoothly...',
         commentJp: '12月16日に牧場に到着し、馴致とプレトレーニングを開始しました。順調に進んでいます。',
         weightHistory: [
-            { label: '10月', value: 418 },
-            { label: '11月', value: 420 },
-            { label: '12月', value: 423 },
-            { label: '01月', value: 425 },
+            { label: '10月', value: 418, monthKey: '2025-10' },
+            { label: '11月', value: 420, monthKey: '2025-11' },
+            { label: '12月', value: 423, monthKey: '2025-12' },
+            { label: '1月', value: 425, monthKey: '2026-01' },
         ],
         logo: null
     };
@@ -408,14 +421,14 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     useEffect(() => {
         if (readOnly) return;
-        const label = parseReportMonthLabel(data.reportDate);
+        const monthInfo = parseReportMonthInfo(data.reportDate);
         const weightValue = parseWeightValue(data.weight);
-        if (!label || !weightValue) return;
+        if (!monthInfo || !weightValue) return;
         setData(prev => {
-            const existingIndex = prev.weightHistory.findIndex(item => item.label === label);
+            const existingIndex = prev.weightHistory.findIndex(item => item.monthKey === monthInfo.monthKey || item.label === monthInfo.label);
             const nextHistory = existingIndex >= 0
-                ? prev.weightHistory.map((item, idx) => idx === existingIndex ? { ...item, value: weightValue } : item)
-                : [...prev.weightHistory, { label, value: weightValue }];
+                ? prev.weightHistory.map((item, idx) => idx === existingIndex ? { ...item, label: monthInfo.label, monthKey: monthInfo.monthKey, value: weightValue } : item)
+                : [...prev.weightHistory, { label: monthInfo.label, monthKey: monthInfo.monthKey, value: weightValue }];
             if (JSON.stringify(nextHistory) === JSON.stringify(prev.weightHistory)) return prev;
             return { ...prev, weightHistory: nextHistory };
         });
@@ -452,6 +465,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     // --- AI & Translation Logic ---
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
 
     const handleGenerateComment = async () => {
@@ -479,6 +493,24 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             alert("AI Generation failed:\n" + (e instanceof Error ? e.message : String(e)));
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleTranslateComment = async () => {
+        if (!data.commentEn.trim()) return;
+        setIsTranslating(true);
+        try {
+            const result = await translateText(data.commentEn, 'ja');
+            const translated = result?.translatedText?.trim();
+            if (!translated) {
+                throw new Error('Translation failed');
+            }
+            setData(prev => ({ ...prev, commentJp: translated }));
+        } catch (e) {
+            console.error(e);
+            alert("Translation failed:\n" + (e instanceof Error ? e.message : String(e)));
+        } finally {
+            setIsTranslating(false);
         }
     };
 
@@ -974,6 +1006,15 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900 leading-relaxed focus:bg-white transition-colors"
                                         placeholder="Enter comment in English..."
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={handleTranslateComment}
+                                        disabled={isTranslating || !data.commentEn.trim()}
+                                        className="mt-2 inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-[#1a3c34] disabled:opacity-50"
+                                    >
+                                        <Globe size={14} />
+                                        {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+                                    </button>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-gray-700 mb-1">{t('japaneseTranslation')}</label>
