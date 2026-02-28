@@ -133,7 +133,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="h-full overflow-y-auto bg-stone-50 p-6 md:p-10">
+        <div className="h-full overflow-y-auto bg-stone-50 p-6 md:p-10 pb-28 md:pb-10">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div>

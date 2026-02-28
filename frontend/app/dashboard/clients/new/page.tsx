@@ -61,7 +61,7 @@ export default function NewClientPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="max-w-3xl mx-auto p-6 lg:p-12">
+            <div className="max-w-3xl mx-auto p-6 lg:p-12 pb-28 lg:pb-12">
                 <div className="mb-8 flex items-center gap-4">
                     <Link href="/dashboard/clients" className="text-stone-500 hover:text-stone-800">
                         <span className="material-symbols-outlined">arrow_back</span>

@@ -150,16 +150,17 @@ export default function NewHorsePage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto p-6 lg:p-12">
-            <div className="mb-8 flex items-center gap-4">
-                <Link href="/dashboard/horses" className="text-stone-500 hover:text-stone-800">
-                    <span className="material-symbols-outlined">arrow_back</span>
-                </Link>
-                <h1 className="text-2xl font-bold text-stone-800">Register New Horse</h1>
-            </div>
+        <div className="h-full overflow-y-auto">
+            <div className="max-w-2xl mx-auto p-6 lg:p-12 pb-28 lg:pb-12">
+                <div className="mb-8 flex items-center gap-4">
+                    <Link href="/dashboard/horses" className="text-stone-500 hover:text-stone-800">
+                        <span className="material-symbols-outlined">arrow_back</span>
+                    </Link>
+                    <h1 className="text-2xl font-bold text-stone-800">Register New Horse</h1>
+                </div>
 
-            <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 p-8">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-stone-700 mb-1">Horse Name (JP)</label>
@@ -380,19 +381,20 @@ export default function NewHorsePage() {
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-stone-100 flex justify-end gap-3">
-                        <Link href="/dashboard/horses" className="px-5 py-2.5 text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg font-medium transition-colors">
-                            Cancel
-                        </Link>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-5 py-2.5 bg-[#1a3c34] text-white rounded-lg font-medium hover:bg-[#122b25] shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {loading ? 'Saving...' : 'Register Horse'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="pt-4 border-t border-stone-100 flex justify-end gap-3">
+                            <Link href="/dashboard/horses" className="px-5 py-2.5 text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg font-medium transition-colors">
+                                Cancel
+                            </Link>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="px-5 py-2.5 bg-[#1a3c34] text-white rounded-lg font-medium hover:bg-[#122b25] shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {loading ? 'Saving...' : 'Register Horse'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );
