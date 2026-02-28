@@ -1003,7 +1003,7 @@ export default function ReportEditor() {
             console.warn('Save timed out, resetting UI');
             setSaving(false);
             alert('Save is taking too long. Please try again.');
-        }, 25000);
+        }, 90000);
 
         try {
             if (reportType === 'departure') {
@@ -1109,7 +1109,7 @@ export default function ReportEditor() {
                 const uploadResult = await Promise.race([
                     uploadImage(monthly.mainPhoto, path),
                     new Promise<{ url: string | null, error: unknown }>((_, reject) =>
-                        setTimeout(() => reject(new Error('Upload timeout')), 30000)
+                        setTimeout(() => reject(new Error('Upload timeout')), 90000)
                     )
                 ]);
                 const { url: uploadedUrl, error: uploadError } = uploadResult as { url: string | null, error: unknown };

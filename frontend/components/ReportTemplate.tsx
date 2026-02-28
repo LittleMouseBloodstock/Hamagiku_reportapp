@@ -452,7 +452,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
     return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-async function getNormalizedCoverImage(imageSrc: string, targetWidth = 1200, targetHeight = 900): Promise<string> {
+async function getNormalizedCoverImage(imageSrc: string, targetWidth = 960, targetHeight = 720): Promise<string> {
     const image = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -479,7 +479,7 @@ async function getNormalizedCoverImage(imageSrc: string, targetWidth = 1200, tar
     }
 
     ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
-    return canvas.toDataURL('image/jpeg', 0.92);
+    return canvas.toDataURL('image/jpeg', 0.82);
 }
 
 interface ReportTemplateProps {
