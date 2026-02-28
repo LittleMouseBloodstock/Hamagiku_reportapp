@@ -21,6 +21,7 @@ export default function NewHorsePage() {
         trainer_name: string;
         trainer_name_en?: string | null;
         trainer_location?: string | null;
+        trainer_location_en?: string | null;
     }
 
     const router = useRouter();
@@ -32,7 +33,8 @@ export default function NewHorsePage() {
     const [newTrainer, setNewTrainer] = useState({
         trainer_name: '',
         trainer_name_en: '',
-        trainer_location: ''
+        trainer_location: '',
+        trainer_location_en: ''
     });
 
     const calculateHorseAge = (birthDate?: string) => {
@@ -84,7 +86,7 @@ export default function NewHorsePage() {
             if (data) setClients(data);
         };
         const fetchTrainers = async () => {
-            const data = await restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location&order=trainer_name', getRestHeaders());
+            const data = await restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name', getRestHeaders());
             if (data) setTrainers(data);
         };
         fetchClients();
@@ -120,7 +122,8 @@ export default function NewHorsePage() {
                 const createdTrainer = await restPost('trainers', {
                     trainer_name: newTrainer.trainer_name,
                     trainer_name_en: newTrainer.trainer_name_en || null,
-                    trainer_location: newTrainer.trainer_location || null
+                    trainer_location: newTrainer.trainer_location || null,
+                    trainer_location_en: newTrainer.trainer_location_en || null
                 }, getRestHeaders());
                 if (!createdTrainer || createdTrainer.length === 0) throw new Error('Failed to create trainer');
                 finalTrainerId = createdTrainer[0].id;
@@ -258,7 +261,7 @@ export default function NewHorsePage() {
                             <option value="">-- None --</option>
                             {trainers.map((trainer) => (
                                 <option key={trainer.id} value={trainer.id}>
-                                    {trainer.trainer_name}{trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}{trainer.trainer_location ? ` (${trainer.trainer_location})` : ''}
+                                    {trainer.trainer_name}{trainer.trainer_name_en ? ` / ${trainer.trainer_name_en}` : ''}{trainer.trainer_location ? ` (${trainer.trainer_location})` : trainer.trainer_location_en ? ` (${trainer.trainer_location_en})` : ''}
                                 </option>
                             ))}
                         </select>
@@ -275,7 +278,7 @@ export default function NewHorsePage() {
                             </button>
                         </div>
                         {isNewTrainer && (
-                            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">Trainer Name (JP)</label>
                                     <input
@@ -301,6 +304,15 @@ export default function NewHorsePage() {
                                         className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
                                         value={newTrainer.trainer_location}
                                         onChange={(e) => setNewTrainer({ ...newTrainer, trainer_location: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">Location (EN)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={newTrainer.trainer_location_en}
+                                        onChange={(e) => setNewTrainer({ ...newTrainer, trainer_location_en: e.target.value })}
                                     />
                                 </div>
                             </div>

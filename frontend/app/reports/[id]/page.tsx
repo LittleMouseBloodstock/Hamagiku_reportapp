@@ -787,7 +787,7 @@ export default function ReportEditor() {
         const sixMonthsAgoIso = sixMonthsAgo.toISOString();
 
         // Fetch horse details
-        const horseArr = await restGet(`horses?id=eq.${selectedHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,report_output_mode)`);
+        const horseArr = await restGet(`horses?id=eq.${selectedHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
         const horse = horseArr?.[0];
 
         // Fetch past weight history (last 6 months)
