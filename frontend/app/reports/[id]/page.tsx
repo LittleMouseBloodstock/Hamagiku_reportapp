@@ -962,30 +962,39 @@ export default function ReportEditor() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [isDirty]);
 
+    function dataUrlToBlob(dataUrl: string): Blob {
+        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) {
+            throw new Error('Invalid image data');
+        }
+        const mimeType = matches[1];
+        const binary = atob(matches[2]);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mimeType });
+    }
+
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
-            // Convert Base64 to Blob
-            const res = await fetch(base64Data);
-            const blob = await res.blob();
-
-            // Upload to Supabase Storage
+            const blob = dataUrlToBlob(base64Data);
             const { error } = await supabase.storage
                 .from('report-assets')
-                .upload(path, blob, { upsert: true });
+                .upload(path, blob, { upsert: true, contentType: blob.type || 'image/jpeg' });
 
             if (error) {
-                console.error("Upload Error:", error);
+                console.error('Upload Error:', error);
                 return { url: null, error };
             }
 
-            // Get Public URL
             const { data: { publicUrl } } = supabase.storage
                 .from('report-assets')
                 .getPublicUrl(path);
 
             return { url: publicUrl, error: null };
         } catch (e) {
-            console.error("Image Processing Error:", e);
+            console.error('Image Processing Error:', e);
             return { url: null, error: e };
         }
     }
@@ -1191,32 +1200,6 @@ export default function ReportEditor() {
                 }
             }
 
-            // Update Horse (Name/Sire/Dam/Photo if changed)
-            // Do not block report save if horse update fails.
-        if (horseId) {
-            try {
-                const headers = getRestHeaders();
-                await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
-                    method: 'PATCH',
-                    headers,
-                    body: JSON.stringify({
-                        name: monthly.horseNameJp,
-                        name_en: monthly.horseNameEn,
-                        sire: monthly.sireJp || monthly.sire,
-                        dam: monthly.damJp || monthly.dam,
-                        sire_en: monthly.sireEn || null,
-                        dam_en: monthly.damEn || null,
-                        birth_date: monthly.birthDate || null,
-                        sex: monthly.sex || null,
-                        photo_url: mainPhotoUrl, // Sync latest photo to horse thumbnail
-                        updated_at: new Date().toISOString()
-                    })
-                });
-            } catch (horseUpdateError) {
-                console.warn('Horse update failed:', horseUpdateError);
-            }
-        }
-
         setSaving(false);
         setLastSaved(new Date());
         setIsDirty(false);
@@ -1226,6 +1209,34 @@ export default function ReportEditor() {
         void deleteRemoteDraft();
         setAutosaveStatus('Saved');
         setAutosaveStamp(Date.now());
+
+        // Update horse metadata in the background so report save completion is not blocked.
+        if (horseId) {
+            const horsePayload = {
+                name: monthly.horseNameJp,
+                name_en: monthly.horseNameEn,
+                sire: monthly.sireJp || monthly.sire,
+                dam: monthly.damJp || monthly.dam,
+                sire_en: monthly.sireEn || null,
+                dam_en: monthly.damEn || null,
+                birth_date: monthly.birthDate || null,
+                sex: monthly.sex || null,
+                photo_url: mainPhotoUrl,
+                updated_at: new Date().toISOString()
+            };
+            const horseUpdateController = new AbortController();
+            const horseUpdateAbortId = window.setTimeout(() => horseUpdateController.abort(), 8000);
+            fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
+                method: 'PATCH',
+                headers: getRestHeaders(),
+                body: JSON.stringify(horsePayload),
+                signal: horseUpdateController.signal
+            }).catch((horseUpdateError) => {
+                console.warn('Horse update failed:', horseUpdateError);
+            }).finally(() => {
+                window.clearTimeout(horseUpdateAbortId);
+            });
+        }
 
             if (isNew && newReportId) {
                 router.replace(`/reports/${newReportId}`);
