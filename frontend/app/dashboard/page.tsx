@@ -18,6 +18,7 @@ export default function Dashboard() {
         id: string;
         title: string;
         created: string;
+        createdAt?: string;
         author: string;
         status: string;
         languages: string[];
@@ -40,6 +41,7 @@ export default function Dashboard() {
 
     const [reports, setReports] = useState<DashboardReport[]>([]);
     const [reportFilter, setReportFilter] = useState<'all' | 'pending' | 'draft' | 'approved'>('all');
+    const [showOlderReports, setShowOlderReports] = useState(false);
     // Hardcoded stats for demo (replace with real data later)
     const [stats, setStats] = useState({
         totalReports: 0,
@@ -151,6 +153,7 @@ export default function Dashboard() {
                             id: r.id,
                             title: title,
                             created: r.created_at ? new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+                            createdAt: r.created_at || undefined,
                             author: 'You',
                             status: statusRaw,
                             languages: langs,
@@ -209,6 +212,40 @@ export default function Dashboard() {
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [language, user?.id, session?.access_token, refreshKey]);
+
+    const filteredReports = reports.filter((report) => {
+        if (reportFilter === 'all') return true;
+        const status = (report.status || '').toLowerCase();
+        if (reportFilter === 'pending') {
+            return report.status === 'pending_jp_check' || report.status === 'pending_en_check';
+        }
+        if (reportFilter === 'draft') return status === 'draft';
+        if (reportFilter === 'approved') return status === 'approved';
+        return true;
+    });
+
+    const recentThreshold = new Date();
+    recentThreshold.setMonth(recentThreshold.getMonth() - 2);
+
+    const recentFilteredReports = filteredReports.filter((report) => {
+        if (!report.createdAt) return true;
+        const createdAt = new Date(report.createdAt);
+        if (Number.isNaN(createdAt.getTime())) return true;
+        return createdAt >= recentThreshold;
+    });
+
+    const olderFilteredReports = filteredReports.filter((report) => {
+        if (!report.createdAt) return false;
+        const createdAt = new Date(report.createdAt);
+        if (Number.isNaN(createdAt.getTime())) return false;
+        return createdAt < recentThreshold;
+    });
+
+    const displayedReports = showOlderReports ? filteredReports : recentFilteredReports;
+
+    useEffect(() => {
+        setShowOlderReports(false);
+    }, [reportFilter]);
 
     useEffect(() => {
         const syncToday = () => {
@@ -620,18 +657,7 @@ export default function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
-                                {reports
-                                    .filter((report) => {
-                                        if (reportFilter === 'all') return true;
-                                        const status = (report.status || '').toLowerCase();
-                                        if (reportFilter === 'pending') {
-                                            return report.status === 'pending_jp_check' || report.status === 'pending_en_check';
-                                        }
-                                        if (reportFilter === 'draft') return status === 'draft';
-                                        if (reportFilter === 'approved') return status === 'approved';
-                                        return true;
-                                    })
-                                    .map((report) => (
+                                {displayedReports.map((report) => (
                                     <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(`/reports/${report.id}`)}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
@@ -694,16 +720,7 @@ export default function Dashboard() {
                                         </td>
                                     </tr>
                                 ))}
-                                {reports.filter((report) => {
-                                    if (reportFilter === 'all') return true;
-                                    const status = (report.status || '').toLowerCase();
-                                    if (reportFilter === 'pending') {
-                                        return report.status === 'pending_jp_check' || report.status === 'pending_en_check';
-                                    }
-                                    if (reportFilter === 'draft') return status === 'draft';
-                                    if (reportFilter === 'approved') return status === 'approved';
-                                    return true;
-                                }).length === 0 && (
+                                {displayedReports.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-8 text-center text-stone-500 text-sm">
                                             No recent reports found
@@ -713,6 +730,19 @@ export default function Dashboard() {
                             </tbody>
                         </table>
                     </div>
+                    {olderFilteredReports.length > 0 ? (
+                        <div className="border-t border-stone-100 px-4 py-3 flex justify-center">
+                            <button
+                                type="button"
+                                onClick={() => setShowOlderReports((prev) => !prev)}
+                                className="text-sm font-medium text-[#1a3c34] hover:underline"
+                            >
+                                {showOlderReports
+                                    ? (language === 'ja' ? '最近2カ月分だけ表示' : 'Show last 2 months only')
+                                    : (language === 'ja' ? `もっと見る（${olderFilteredReports.length}件）` : `Show older reports (${olderFilteredReports.length})`)}
+                            </button>
+                        </div>
+                    ) : null}
                 </div>
             </main>
             {memoModalOpen ? (
