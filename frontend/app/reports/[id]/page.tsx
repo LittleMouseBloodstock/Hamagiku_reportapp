@@ -978,14 +978,31 @@ export default function ReportEditor() {
 
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
+            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
+                throw new Error('Missing storage configuration');
+            }
             const blob = dataUrlToBlob(base64Data);
-            const { error } = await supabase.storage
-                .from('report-assets')
-                .upload(path, blob, { upsert: true, contentType: blob.type || 'image/jpeg' });
+            const encodedPath = path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
+            const res = await fetch(`${supabaseUrl}/storage/v1/object/report-assets/${encodedPath}`, {
+                method: 'POST',
+                headers: {
+                    apikey: supabaseAnonKey,
+                    Authorization: `Bearer ${session.access_token}`,
+                    'x-upsert': 'true',
+                    'Content-Type': blob.type || 'image/jpeg'
+                },
+                body: blob,
+                signal: controller.signal
+            }).finally(() => {
+                window.clearTimeout(timeoutId);
+            });
 
-            if (error) {
-                console.error('Upload Error:', error);
-                return { url: null, error };
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Upload Error:', text);
+                return { url: null, error: new Error(text || `Storage upload failed: ${res.status}`) };
             }
 
             const { data: { publicUrl } } = supabase.storage
@@ -1115,13 +1132,7 @@ export default function ReportEditor() {
                 const fileName = `main_${Date.now()}.jpg`;
                 const reportPathId = isNew ? `temp_${Date.now()}` : id;
                 const path = `${horseId}/${reportPathId}/${fileName}`;
-                const uploadResult = await Promise.race([
-                    uploadImage(monthly.mainPhoto, path),
-                    new Promise<{ url: string | null, error: unknown }>((_, reject) =>
-                        setTimeout(() => reject(new Error('Upload timeout')), 90000)
-                    )
-                ]);
-                const { url: uploadedUrl, error: uploadError } = uploadResult as { url: string | null, error: unknown };
+                const { url: uploadedUrl, error: uploadError } = await uploadImage(monthly.mainPhoto, path);
                 if (uploadedUrl) {
                     mainPhotoUrl = uploadedUrl;
                 } else {
