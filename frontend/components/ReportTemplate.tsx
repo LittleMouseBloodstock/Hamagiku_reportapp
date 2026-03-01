@@ -830,7 +830,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const previewWrapperClass = batchPrint
         ? 'flex-1 bg-white p-0 overflow-visible flex justify-center items-start h-auto print:bg-white print:p-0 print:overflow-visible preview-wrapper'
-        : 'flex-1 min-h-0 bg-[#525659] p-4 pb-10 md:p-8 md:pb-12 overflow-y-auto flex justify-center items-start h-auto md:h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper';
+        : 'hidden md:flex md:flex-1 md:min-h-0 bg-[#525659] p-4 pb-10 md:p-8 md:pb-12 overflow-y-auto justify-center items-start h-auto md:h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper';
 
     return (
         <div className={rootClassName}>
@@ -882,7 +882,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
             {/* --- Left Side: Input Panel (Hidden on Print OR readOnly) --- */}
             {!readOnly && (
                 <div className="w-full md:w-1/3 lg:w-96 bg-white border-r border-gray-200 shadow-lg overflow-visible md:overflow-y-auto h-auto md:h-full flex-shrink-0 no-print z-20">
-                    <div className="p-6 bg-[#1B3226] text-white sticky top-0 z-10">
+                    <div className="p-6 bg-[#1B3226] text-white md:sticky md:top-0 z-10">
                         <h1 className="text-xl font-serif-en font-bold flex items-center gap-2">
                             <Activity size={20} className="text-[#8CC63F]" />
                             Report Builder
