@@ -422,18 +422,6 @@ export default function HorseDetail() {
     const weightDifference = latestWeight && previousWeight && latestWeight.weight !== null && previousWeight.weight !== null
         ? latestWeight.weight - previousWeight.weight
         : null;
-    const shareWeightSummary = language === 'ja'
-        ? [
-            latestWeight ? `最新体重: ${latestWeight.weight ?? '-'}kg (${formatDateByLanguage(latestWeight.measured_at)})` : '最新体重: -',
-            previousWeight ? `前回体重: ${previousWeight.weight ?? '-'}kg (${formatDateByLanguage(previousWeight.measured_at)})` : '前回体重: -',
-            weightDifference !== null ? `増減: ${weightDifference > 0 ? '+' : ''}${weightDifference}kg` : '増減: -'
-        ].join(' / ')
-        : [
-            latestWeight ? `Latest weight: ${latestWeight.weight ?? '-'}kg (${formatDateByLanguage(latestWeight.measured_at)})` : 'Latest weight: -',
-            previousWeight ? `Previous weight: ${previousWeight.weight ?? '-'}kg (${formatDateByLanguage(previousWeight.measured_at)})` : 'Previous weight: -',
-            weightDifference !== null ? `Difference: ${weightDifference > 0 ? '+' : ''}${weightDifference}kg` : 'Difference: -'
-        ].join(' / ');
-
     const handlePrintWeightSummary = () => {
         if (!horse || typeof window === 'undefined') return;
         const title = language === 'ja' ? '体重サマリー' : 'Weight Summary';
@@ -512,7 +500,7 @@ export default function HorseDetail() {
             </html>
         `;
 
-        const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+        const printWindow = window.open('', '_blank');
         if (!printWindow) {
             alert(language === 'ja' ? '印刷ウィンドウを開けませんでした。' : 'Could not open print window.');
             return;
@@ -520,8 +508,17 @@ export default function HorseDetail() {
         printWindow.document.open();
         printWindow.document.write(html);
         printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
+        const triggerPrint = () => {
+            printWindow.focus();
+            window.setTimeout(() => {
+                printWindow.print();
+            }, 150);
+        };
+        if (printWindow.document.readyState === 'complete') {
+            triggerPrint();
+        } else {
+            printWindow.onload = triggerPrint;
+        }
     };
 
     const startEditCover = (cover: { id: string; cover_date: string; stallion_name?: string | null; note?: string | null }) => {
@@ -1140,7 +1137,7 @@ export default function HorseDetail() {
                     </div>
                 )}
 
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+                <div id="weight-history" className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-5">
                         <div>
                             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
@@ -1150,22 +1147,13 @@ export default function HorseDetail() {
                                 {language === 'ja' ? 'この馬の過去の体重入力一覧です。' : 'A full list of recorded weights for this horse.'}
                             </p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => navigator.clipboard?.writeText(shareWeightSummary)}
-                                className="self-start rounded-full border border-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
-                            >
-                                {language === 'ja' ? '概要をコピー' : 'Copy Summary'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handlePrintWeightSummary}
-                                className="self-start rounded-full bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition-all"
-                            >
-                                {language === 'ja' ? '印刷 / PDF' : 'Print / PDF'}
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={handlePrintWeightSummary}
+                            className="self-start rounded-full bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition-all"
+                        >
+                            {language === 'ja' ? '印刷 / PDF' : 'Print / PDF'}
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">

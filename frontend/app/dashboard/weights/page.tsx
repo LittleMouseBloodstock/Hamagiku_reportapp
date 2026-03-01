@@ -5,6 +5,7 @@ import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
+import { useRouter } from 'next/navigation';
 
 type Horse = {
     id: string;
@@ -28,6 +29,7 @@ export default function WeightsPage() {
     const { t, language } = useLanguage();
     const { user, session } = useAuth();
     const refreshKey = useResumeRefresh();
+    const router = useRouter();
 
     const [selectedDate, setSelectedDate] = useState(getTodayIso());
     const [horses, setHorses] = useState<Horse[]>([]);
@@ -315,6 +317,7 @@ export default function WeightsPage() {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('horseName')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('latestWeight')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('inputWeight')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '体重サマリー' : 'Weight Summary'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-200">
@@ -345,6 +348,15 @@ export default function WeightsPage() {
                                                     className="w-32 border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-700"
                                                     placeholder="kg"
                                                 />
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.push(`/dashboard/horses/${horse.id}#weight-history`)}
+                                                    className="rounded-full border border-[var(--color-primary)] px-3 py-2 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
+                                                >
+                                                    {language === 'ja' ? '見る / 印刷' : 'View / Print'}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
