@@ -434,6 +434,96 @@ export default function HorseDetail() {
             weightDifference !== null ? `Difference: ${weightDifference > 0 ? '+' : ''}${weightDifference}kg` : 'Difference: -'
         ].join(' / ');
 
+    const handlePrintWeightSummary = () => {
+        if (!horse || typeof window === 'undefined') return;
+        const title = language === 'ja' ? '体重サマリー' : 'Weight Summary';
+        const ownerName = horse.clients?.name || '-';
+        const trainerName = language === 'ja'
+            ? (horse.trainers?.trainer_name || horse.trainers?.trainer_name_en || '-')
+            : (horse.trainers?.trainer_name_en || horse.trainers?.trainer_name || '-');
+        const rows = weightEntries.map((entry, index) => {
+            const prev = weightEntries[index + 1];
+            const diff = prev && entry.weight !== null && prev.weight !== null ? entry.weight - prev.weight : null;
+            return `
+                <tr>
+                    <td>${formatDateByLanguage(entry.measured_at)}</td>
+                    <td>${entry.weight !== null && entry.weight !== undefined ? `${entry.weight}kg` : '-'}</td>
+                    <td>${diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}kg`}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const html = `
+            <!doctype html>
+            <html lang="${language === 'ja' ? 'ja' : 'en'}">
+            <head>
+                <meta charset="utf-8" />
+                <title>${title}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; color: #1f2937; margin: 32px; }
+                    h1 { font-size: 28px; margin: 0 0 8px; color: #1a3c34; }
+                    h2 { font-size: 14px; margin: 0 0 20px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; }
+                    .meta { margin-bottom: 20px; font-size: 14px; }
+                    .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+                    .card { border: 1px solid #e5e7eb; background: #f9fafb; padding: 12px 16px; border-radius: 8px; }
+                    .label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; font-weight: 700; }
+                    .value { font-size: 22px; font-weight: 700; color: #1a3c34; }
+                    .sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border-bottom: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; font-size: 14px; }
+                    th { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; }
+                </style>
+            </head>
+            <body>
+                <h1>${language === 'ja' ? horse.name : horse.name_en || horse.name}</h1>
+                <h2>${title}</h2>
+                <div class="meta">
+                    <div><strong>${language === 'ja' ? 'オーナー' : 'Owner'}:</strong> ${ownerName}</div>
+                    <div><strong>${language === 'ja' ? '調教師' : 'Trainer'}:</strong> ${trainerName}</div>
+                </div>
+                <div class="summary">
+                    <div class="card">
+                        <div class="label">${language === 'ja' ? '最新体重' : 'Latest Weight'}</div>
+                        <div class="value">${latestWeight?.weight !== null && latestWeight?.weight !== undefined ? `${latestWeight.weight}kg` : '-'}</div>
+                        <div class="sub">${formatDateByLanguage(latestWeight?.measured_at)}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">${language === 'ja' ? '前回体重' : 'Previous Weight'}</div>
+                        <div class="value">${previousWeight?.weight !== null && previousWeight?.weight !== undefined ? `${previousWeight.weight}kg` : '-'}</div>
+                        <div class="sub">${formatDateByLanguage(previousWeight?.measured_at)}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">${language === 'ja' ? '増減' : 'Difference'}</div>
+                        <div class="value">${weightDifference === null ? '-' : `${weightDifference > 0 ? '+' : ''}${weightDifference}kg`}</div>
+                        <div class="sub">${language === 'ja' ? '最新と前回の比較' : 'Latest vs previous'}</div>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>${language === 'ja' ? '計測日' : 'Date'}</th>
+                            <th>${language === 'ja' ? '体重' : 'Weight'}</th>
+                            <th>${language === 'ja' ? '前回差' : 'Change'}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows || `<tr><td colspan="3">${language === 'ja' ? '体重入力はまだありません。' : 'No weight entries yet.'}</td></tr>`}</tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+        if (!printWindow) {
+            alert(language === 'ja' ? '印刷ウィンドウを開けませんでした。' : 'Could not open print window.');
+            return;
+        }
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
+
     const startEditCover = (cover: { id: string; cover_date: string; stallion_name?: string | null; note?: string | null }) => {
         setEditingCoverId(cover.id);
         setCoverDraft({
@@ -1060,13 +1150,22 @@ export default function HorseDetail() {
                                 {language === 'ja' ? 'この馬の過去の体重入力一覧です。' : 'A full list of recorded weights for this horse.'}
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => navigator.clipboard?.writeText(shareWeightSummary)}
-                            className="self-start rounded-full border border-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
-                        >
-                            {language === 'ja' ? '概要をコピー' : 'Copy Summary'}
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => navigator.clipboard?.writeText(shareWeightSummary)}
+                                className="self-start rounded-full border border-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
+                            >
+                                {language === 'ja' ? '概要をコピー' : 'Copy Summary'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePrintWeightSummary}
+                                className="self-start rounded-full bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-110 transition-all"
+                            >
+                                {language === 'ja' ? '印刷 / PDF' : 'Print / PDF'}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">

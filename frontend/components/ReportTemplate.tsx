@@ -1402,7 +1402,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'max-w-[50%] text-[11px] leading-[1.35] text-[#666]'}`}
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
@@ -1414,37 +1414,42 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         {data.damJp || data.dam}
                                     </>
                                 ) : (
-                                    <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0">
-                                        <span className="font-bold">{t('sire')}:</span>
-                                        <span className="break-words">{data.sireEn || data.sire}</span>
-                                        <span className="px-1 text-gray-400">×</span>
-                                        <span className="font-bold">{t('dam')}:</span>
-                                        <span className="break-words">{data.damEn || data.dam}</span>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-bold shrink-0">{t('sire')}:</span>
+                                            <span className="break-words">{data.sireEn || data.sire}</span>
+                                        </div>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-bold shrink-0">{t('dam')}:</span>
+                                            <span className="break-words">{data.damEn || data.dam}</span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="owner-line text-[14px] text-[#444] bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4">
+                        <div className={`owner-line bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4 ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] whitespace-nowrap tracking-[-0.01em]'}`}>
                             <span className="font-bold mr-1">{t('owner')}:</span>
-                            {formatOwnerName(data.ownerName)}
-                            <span className="mx-2 text-gray-300">/</span>
+                            <span>{formatOwnerName(data.ownerName)}</span>
+                            <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
                             <span className="font-bold mr-1">{t('trainer')}:</span>
-                            {lang === 'ja'
-                                ? ((data.trainerNameJp || data.trainerNameEn || '-') + ' 様')
-                                : (data.trainerNameEn || data.trainerNameJp || '-')}
-                            {(() => {
-                                const loc = lang === 'ja'
-                                    ? data.trainerLocation
-                                    : (data.trainerLocationEn || data.trainerLocation);
-                                return loc ? ` (${loc})` : '';
-                            })()}
-                            <span className="mx-2 text-gray-300">/</span>
+                            <span>
+                                {lang === 'ja'
+                                    ? ((data.trainerNameJp || data.trainerNameEn || '-') + ' 様')
+                                    : (data.trainerNameEn || data.trainerNameJp || '-')}
+                                {(() => {
+                                    const loc = lang === 'ja'
+                                        ? data.trainerLocation
+                                        : (data.trainerLocationEn || data.trainerLocation);
+                                    return loc ? ` (${loc})` : '';
+                                })()}
+                            </span>
+                            <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
                             <span className="font-bold mr-1">{t('birthDate')}:</span>
-                            {data.birthDate || '-'}
-                            <span className="mx-2 text-gray-300">/</span>
+                            <span>{data.birthDate || '-'}</span>
+                            <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
                             <span className="font-bold mr-1">{t('sexAge')}:</span>
-                            {formatSexAge(data.sex, data.age) || '-'}
+                            <span>{formatSexAge(data.sex, data.age) || '-'}</span>
                         </div>
 
                         {/* Main Photo - Reduced width to save vertical space */}
