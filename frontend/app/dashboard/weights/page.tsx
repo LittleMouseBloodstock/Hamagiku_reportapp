@@ -317,8 +317,7 @@ export default function WeightsPage() {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('horseName')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('latestWeight')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('inputWeight')}</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '体重サマリー' : 'Weight Summary'}</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '馬詳細' : 'Horse Detail'}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '詳細 / 印刷' : 'Detail / Print'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-200">
@@ -362,16 +361,7 @@ export default function WeightsPage() {
                                                     onClick={() => router.push(`/dashboard/horses/${horse.id}#weight-history`)}
                                                     className="rounded-full border border-[var(--color-primary)] px-3 py-2 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
                                                 >
-                                                    {language === 'ja' ? '見る / 印刷' : 'View / Print'}
-                                                </button>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => router.push(`/dashboard/horses/${horse.id}`)}
-                                                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200 transition-all"
-                                                >
-                                                    {language === 'ja' ? '詳細' : 'Detail'}
+                                                    {language === 'ja' ? '詳細 / 印刷' : 'Detail / Print'}
                                                 </button>
                                             </td>
                                         </tr>
