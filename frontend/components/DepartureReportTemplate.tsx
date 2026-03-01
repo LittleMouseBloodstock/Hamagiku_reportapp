@@ -460,7 +460,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
             </div>
 
-            <div className="departure-preview-wrap hidden md:flex flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto justify-center items-start h-auto md:h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
+            <div className="departure-preview-wrap hidden md:flex print:flex flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto justify-center items-start h-auto md:h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
                     className={`departure-preview relative bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}`}

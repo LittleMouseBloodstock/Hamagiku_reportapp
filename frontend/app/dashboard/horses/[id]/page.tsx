@@ -46,6 +46,13 @@ type Report = {
     metrics_json?: any;
 };
 
+type WeightEntry = {
+    id: string;
+    measured_at: string;
+    weight: number | null;
+    created_at?: string | null;
+};
+
 type Client = {
     id: string;
     name: string;
@@ -66,6 +73,7 @@ export default function HorseDetail() {
     const refreshKey = useResumeRefresh();
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
+    const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
     const [editMode, setEditMode] = useState(false);
     const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
     const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
@@ -211,11 +219,12 @@ export default function HorseDetail() {
         let isMounted = true;
         const fetchData = async (retryCount = 0) => {
             try {
-                const [clientsData, trainersData, horseData, reportsData] = await Promise.all([
+                const [clientsData, trainersData, horseData, reportsData, weightsData] = await Promise.all([
                     restGet('clients?select=id,name&order=name'),
                     restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name'),
                     restGet(`horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`),
-                    restGet(`reports?select=*&horse_id=eq.${id}&order=created_at.desc`)
+                    restGet(`reports?select=*&horse_id=eq.${id}&order=created_at.desc`),
+                    restGet(`horse_weights?select=id,measured_at,weight,created_at&horse_id=eq.${id}&order=measured_at.desc`)
                 ]);
 
                 if (isMounted) {
@@ -252,6 +261,7 @@ export default function HorseDetail() {
                 }
 
                 if (reportsData && isMounted) setReports(reportsData);
+                if (weightsData && isMounted) setWeightEntries(weightsData);
 
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 console.error('Error fetching horse details:', error);
@@ -406,6 +416,23 @@ export default function HorseDetail() {
             alert(`Failed to create cover: ${error.message || 'Unknown error'}`);
         }
     };
+
+    const latestWeight = weightEntries[0] || null;
+    const previousWeight = weightEntries[1] || null;
+    const weightDifference = latestWeight && previousWeight && latestWeight.weight !== null && previousWeight.weight !== null
+        ? latestWeight.weight - previousWeight.weight
+        : null;
+    const shareWeightSummary = language === 'ja'
+        ? [
+            latestWeight ? `最新体重: ${latestWeight.weight ?? '-'}kg (${formatDateByLanguage(latestWeight.measured_at)})` : '最新体重: -',
+            previousWeight ? `前回体重: ${previousWeight.weight ?? '-'}kg (${formatDateByLanguage(previousWeight.measured_at)})` : '前回体重: -',
+            weightDifference !== null ? `増減: ${weightDifference > 0 ? '+' : ''}${weightDifference}kg` : '増減: -'
+        ].join(' / ')
+        : [
+            latestWeight ? `Latest weight: ${latestWeight.weight ?? '-'}kg (${formatDateByLanguage(latestWeight.measured_at)})` : 'Latest weight: -',
+            previousWeight ? `Previous weight: ${previousWeight.weight ?? '-'}kg (${formatDateByLanguage(previousWeight.measured_at)})` : 'Previous weight: -',
+            weightDifference !== null ? `Difference: ${weightDifference > 0 ? '+' : ''}${weightDifference}kg` : 'Difference: -'
+        ].join(' / ');
 
     const startEditCover = (cover: { id: string; cover_date: string; stallion_name?: string | null; note?: string | null }) => {
         setEditingCoverId(cover.id);
@@ -1022,6 +1049,87 @@ export default function HorseDetail() {
                         </div>
                     </div>
                 )}
+
+                <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-100">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-5">
+                        <div>
+                            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                                {language === 'ja' ? '体重履歴' : 'Weight History'}
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {language === 'ja' ? 'この馬の過去の体重入力一覧です。' : 'A full list of recorded weights for this horse.'}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigator.clipboard?.writeText(shareWeightSummary)}
+                            className="self-start rounded-full border border-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
+                        >
+                            {language === 'ja' ? '概要をコピー' : 'Copy Summary'}
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                                {language === 'ja' ? '最新体重' : 'Latest Weight'}
+                            </div>
+                            <div className="mt-1 text-xl font-bold text-[var(--color-primary)]">
+                                {latestWeight?.weight !== null && latestWeight?.weight !== undefined ? `${latestWeight.weight}kg` : '-'}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">{formatDateByLanguage(latestWeight?.measured_at)}</div>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                                {language === 'ja' ? '前回体重' : 'Previous Weight'}
+                            </div>
+                            <div className="mt-1 text-xl font-bold text-gray-700">
+                                {previousWeight?.weight !== null && previousWeight?.weight !== undefined ? `${previousWeight.weight}kg` : '-'}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">{formatDateByLanguage(previousWeight?.measured_at)}</div>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                                {language === 'ja' ? '増減' : 'Difference'}
+                            </div>
+                            <div className={`mt-1 text-xl font-bold ${weightDifference === null ? 'text-gray-700' : weightDifference >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {weightDifference === null ? '-' : `${weightDifference > 0 ? '+' : ''}${weightDifference}kg`}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                                {language === 'ja' ? '最新体重と前回体重の比較' : 'Latest vs previous'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 bg-gray-50 px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                            <div>{language === 'ja' ? '計測日' : 'Date'}</div>
+                            <div>{language === 'ja' ? '体重' : 'Weight'}</div>
+                            <div>{language === 'ja' ? '前回差' : 'Change'}</div>
+                        </div>
+                        {weightEntries.length === 0 ? (
+                            <div className="px-4 py-6 text-sm text-gray-400">
+                                {language === 'ja' ? '体重入力はまだありません。' : 'No weight entries yet.'}
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {weightEntries.map((entry, index) => {
+                                    const prev = weightEntries[index + 1];
+                                    const diff = prev && entry.weight !== null && prev.weight !== null ? entry.weight - prev.weight : null;
+                                    return (
+                                        <div key={entry.id} className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 px-4 py-3 text-sm text-gray-700">
+                                            <div>{formatDateByLanguage(entry.measured_at)}</div>
+                                            <div className="font-semibold">{entry.weight !== null && entry.weight !== undefined ? `${entry.weight}kg` : '-'}</div>
+                                            <div className={diff === null ? 'text-gray-400' : diff >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                                                {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}kg`}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {/* Reports List */}
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">{language === 'ja' ? 'レポート履歴' : 'Report History'}</h2>

@@ -830,7 +830,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
     const previewWrapperClass = batchPrint
         ? 'flex-1 bg-white p-0 overflow-visible flex justify-center items-start h-auto print:bg-white print:p-0 print:overflow-visible preview-wrapper'
-        : 'hidden md:flex md:flex-1 md:min-h-0 bg-[#525659] p-4 pb-10 md:p-8 md:pb-12 overflow-y-auto justify-center items-start h-auto md:h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper';
+        : 'hidden md:flex print:flex md:flex-1 md:min-h-0 bg-[#525659] p-4 pb-10 md:p-8 md:pb-12 overflow-y-auto justify-center items-start h-auto md:h-full print:bg-white print:p-0 print:overflow-hidden preview-wrapper';
 
     return (
         <div className={rootClassName}>
@@ -1402,7 +1402,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'min-w-0 max-w-[46%] text-[13px] text-[#666]'}`}
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'max-w-[50%] text-[11px] leading-[1.35] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
@@ -1414,12 +1414,12 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         {data.damJp || data.dam}
                                     </>
                                 ) : (
-                                    <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
-                                        <span className="font-bold shrink-0">{t('sire')}:</span>
-                                        <span className="min-w-0 truncate">{data.sireEn || data.sire}</span>
-                                        <span className="shrink-0 px-1 text-gray-400">×</span>
-                                        <span className="font-bold shrink-0">{t('dam')}:</span>
-                                        <span className="min-w-0 truncate">{data.damEn || data.dam}</span>
+                                    <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0">
+                                        <span className="font-bold">{t('sire')}:</span>
+                                        <span className="break-words">{data.sireEn || data.sire}</span>
+                                        <span className="px-1 text-gray-400">×</span>
+                                        <span className="font-bold">{t('dam')}:</span>
+                                        <span className="break-words">{data.damEn || data.dam}</span>
                                     </div>
                                 )}
                             </div>
