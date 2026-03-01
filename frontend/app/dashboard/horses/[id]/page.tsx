@@ -74,6 +74,8 @@ export default function HorseDetail() {
     const [horse, setHorse] = useState<Horse | null>(null);
     const [reports, setReports] = useState<Report[]>([]);
     const [weightEntries, setWeightEntries] = useState<WeightEntry[]>([]);
+    const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
+    const [weightDraft, setWeightDraft] = useState({ measured_at: '', weight: '' });
     const [editMode, setEditMode] = useState(false);
     const [covers, setCovers] = useState<Array<{ id: string; cover_date: string; stallion_name?: string | null; note?: string | null }>>([]);
     const [scans, setScans] = useState<Array<{ id: string; cover_id: string; scheduled_date: string; actual_date?: string | null; result?: string | null; note?: string | null }>>([]);
@@ -518,6 +520,48 @@ export default function HorseDetail() {
             triggerPrint();
         } else {
             printWindow.onload = triggerPrint;
+        }
+    };
+
+    const startEditWeight = (entry: WeightEntry) => {
+        setEditingWeightId(entry.id);
+        setWeightDraft({
+            measured_at: entry.measured_at || '',
+            weight: entry.weight !== null && entry.weight !== undefined ? String(entry.weight) : ''
+        });
+    };
+
+    const saveWeightEntry = async () => {
+        if (!editingWeightId) return;
+        const parsedWeight = Number(weightDraft.weight);
+        if (!weightDraft.measured_at || Number.isNaN(parsedWeight)) {
+            alert(language === 'ja' ? '日付と体重を入力してください。' : 'Please enter both date and weight.');
+            return;
+        }
+        try {
+            await restPatch(`horse_weights?id=eq.${editingWeightId}`, {
+                measured_at: weightDraft.measured_at,
+                weight: parsedWeight
+            });
+            setWeightEntries((prev) =>
+                prev
+                    .map((entry) => entry.id === editingWeightId ? { ...entry, measured_at: weightDraft.measured_at, weight: parsedWeight } : entry)
+                    .sort((a, b) => b.measured_at.localeCompare(a.measured_at))
+            );
+            setEditingWeightId(null);
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert((language === 'ja' ? '体重の更新に失敗しました: ' : 'Failed to update weight: ') + (error.message || 'Unknown error'));
+        }
+    };
+
+    const deleteWeightEntry = async (entryId: string) => {
+        if (!window.confirm(language === 'ja' ? 'この体重記録を削除しますか？' : 'Delete this weight entry?')) return;
+        try {
+            await restDelete(`horse_weights?id=eq.${entryId}`);
+            setWeightEntries((prev) => prev.filter((entry) => entry.id !== entryId));
+            if (editingWeightId === entryId) setEditingWeightId(null);
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            alert((language === 'ja' ? '体重の削除に失敗しました: ' : 'Failed to delete weight: ') + (error.message || 'Unknown error'));
         }
     };
 
@@ -1189,10 +1233,11 @@ export default function HorseDetail() {
                     </div>
 
                     <div className="rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 bg-gray-50 px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                        <div className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-2 bg-gray-50 px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
                             <div>{language === 'ja' ? '計測日' : 'Date'}</div>
                             <div>{language === 'ja' ? '体重' : 'Weight'}</div>
                             <div>{language === 'ja' ? '前回差' : 'Change'}</div>
+                            <div>{language === 'ja' ? '操作' : 'Actions'}</div>
                         </div>
                         {weightEntries.length === 0 ? (
                             <div className="px-4 py-6 text-sm text-gray-400">
@@ -1204,12 +1249,72 @@ export default function HorseDetail() {
                                     const prev = weightEntries[index + 1];
                                     const diff = prev && entry.weight !== null && prev.weight !== null ? entry.weight - prev.weight : null;
                                     return (
-                                        <div key={entry.id} className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 px-4 py-3 text-sm text-gray-700">
-                                            <div>{formatDateByLanguage(entry.measured_at)}</div>
-                                            <div className="font-semibold">{entry.weight !== null && entry.weight !== undefined ? `${entry.weight}kg` : '-'}</div>
-                                            <div className={diff === null ? 'text-gray-400' : diff >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
-                                                {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}kg`}
-                                            </div>
+                                        <div key={entry.id} className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-2 px-4 py-3 text-sm text-gray-700 items-center">
+                                            {editingWeightId === entry.id ? (
+                                                <>
+                                                    <div>
+                                                        <input
+                                                            type="date"
+                                                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                                            value={weightDraft.measured_at}
+                                                            onChange={(e) => setWeightDraft((prevDraft) => ({ ...prevDraft, measured_at: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                                                            value={weightDraft.weight}
+                                                            onChange={(e) => setWeightDraft((prevDraft) => ({ ...prevDraft, weight: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    <div className={diff === null ? 'text-gray-400' : diff >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                                                        {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}kg`}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={saveWeightEntry}
+                                                            className="text-xs font-bold text-[var(--color-primary)] hover:underline"
+                                                        >
+                                                            {language === 'ja' ? '保存' : 'Save'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingWeightId(null)}
+                                                            className="text-xs text-gray-500 hover:underline"
+                                                        >
+                                                            {language === 'ja' ? 'キャンセル' : 'Cancel'}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div>{formatDateByLanguage(entry.measured_at)}</div>
+                                                    <div className="font-semibold">{entry.weight !== null && entry.weight !== undefined ? `${entry.weight}kg` : '-'}</div>
+                                                    <div className={diff === null ? 'text-gray-400' : diff >= 0 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                                                        {diff === null ? '-' : `${diff > 0 ? '+' : ''}${diff}kg`}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startEditWeight(entry)}
+                                                            className="text-xs text-[#1a3c34] hover:underline"
+                                                        >
+                                                            {language === 'ja' ? '編集' : 'Edit'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => deleteWeightEntry(entry.id)}
+                                                            className="text-xs text-red-500 hover:underline"
+                                                        >
+                                                            {language === 'ja' ? '削除' : 'Delete'}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     );
                                 })}
