@@ -1322,7 +1322,7 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="min-h-screen md:h-screen flex flex-col items-stretch md:items-center py-2 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 md:overflow-hidden">
+        <div className="h-full min-h-0 overflow-y-auto md:overflow-hidden flex flex-col items-stretch md:items-center py-2 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 md:h-screen">
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-3 sm:mb-6 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center shadow-lg no-print md:sticky md:top-4 z-50">
                 <div className="flex items-start w-full sm:w-auto justify-between sm:justify-start gap-3 sm:gap-4">

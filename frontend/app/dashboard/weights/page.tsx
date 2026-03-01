@@ -318,15 +318,22 @@ export default function WeightsPage() {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('latestWeight')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('inputWeight')}</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '体重サマリー' : 'Weight Summary'}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{language === 'ja' ? '馬詳細' : 'Horse Detail'}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-200">
                                     {rows.map(({ horse, latest }) => (
                                         <tr key={horse.id} className="hover:bg-stone-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-stone-900">
-                                                    {language === 'ja' ? horse.name : horse.name_en}
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.push(`/dashboard/horses/${horse.id}`)}
+                                                    className="text-left"
+                                                >
+                                                    <div className="text-sm font-medium text-stone-900 hover:text-[var(--color-primary)] transition-colors">
+                                                        {language === 'ja' ? horse.name : horse.name_en}
+                                                    </div>
+                                                </button>
                                                 <div className="text-xs text-stone-500">
                                                     {language === 'ja' ? horse.name_en : horse.name}
                                                 </div>
@@ -356,6 +363,15 @@ export default function WeightsPage() {
                                                     className="rounded-full border border-[var(--color-primary)] px-3 py-2 text-xs font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white transition-all"
                                                 >
                                                     {language === 'ja' ? '見る / 印刷' : 'View / Print'}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.push(`/dashboard/horses/${horse.id}`)}
+                                                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200 transition-all"
+                                                >
+                                                    {language === 'ja' ? '詳細' : 'Detail'}
                                                 </button>
                                             </td>
                                         </tr>
