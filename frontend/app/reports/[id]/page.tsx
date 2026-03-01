@@ -1322,18 +1322,18 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="min-h-screen md:h-screen flex flex-col items-center py-4 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 md:overflow-hidden">
+        <div className="min-h-screen md:h-screen flex flex-col items-stretch md:items-center py-2 sm:py-8 font-sans print:py-0 print:block print:min-h-0 print:h-auto print:bg-white bg-gray-100 md:overflow-hidden">
             {/* Control Panel (Hidden in Print) */}
-            <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-4 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:justify-between items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
-                <div className="flex items-center w-full sm:w-auto justify-between sm:justify-start gap-4">
+            <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-3 sm:mb-6 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center shadow-lg no-print sticky top-0 sm:top-4 z-50">
+                <div className="flex items-start w-full sm:w-auto justify-between sm:justify-start gap-3 sm:gap-4">
                     <Link href={`/dashboard`} className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
                         <ArrowLeft size={20} /> <span className="sm:hidden text-xs">Back</span>
                     </Link>
-                    <div className="flex flex-col">
+                    <div className="flex min-w-0 flex-1 flex-col sm:flex-none">
                         <span className="font-bold text-sm">{isNew ? 'New Report' : 'Report Editor'}</span>
                         {lastSaved && <span className="text-[10px] text-gray-500 flex items-center gap-1"><Check size={8} /> Saved {lastSaved.toLocaleTimeString()}</span>}
                         {autosaveStatus && (
-                            <span className="text-[10px] text-gray-400">
+                            <span className="text-[10px] text-gray-400 break-words">
                                 {autosaveStatus} {autosaveStamp ? `· ${new Date(autosaveStamp).toLocaleTimeString()}` : ''}
                             </span>
                         )}
@@ -1343,7 +1343,7 @@ export default function ReportEditor() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 sm:w-auto sm:justify-end">
                     <div className="hidden sm:block">
                         <LanguageToggle />
                     </div>
@@ -1352,10 +1352,11 @@ export default function ReportEditor() {
                     {reviewStatus === 'draft' && (
                         <button
                             onClick={() => handleUpdateStatus('pending_jp_check')}
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[140px]"
                             title="Request Review"
                         >
                             <Send size={16} /> <span className="hidden sm:inline">Request Review</span>
+                            <span className="sm:hidden">Review</span>
                         </button>
                     )}
 
@@ -1363,17 +1364,19 @@ export default function ReportEditor() {
                         <>
                             <button
                                 onClick={() => handleUpdateStatus('draft')}
-                                className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                                className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[120px]"
                                 title="Reject / Back to Draft"
                             >
                                 <AlertCircle size={16} /> <span className="hidden sm:inline">Reject</span>
+                                <span className="sm:hidden">Reject</span>
                             </button>
                             <button
                                 onClick={() => handleUpdateStatus('approved')}
-                                className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                                className="bg-green-600 hover:bg-green-500 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[120px]"
                                 title="Approve"
                             >
                                 <ShieldCheck size={16} /> <span className="hidden sm:inline">Approve</span>
+                                <span className="sm:hidden">Approve</span>
                             </button>
                         </>
                     )}
@@ -1387,14 +1390,14 @@ export default function ReportEditor() {
                     <button
                         onClick={saveReport}
                         disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[110px]"
                     >
                         {saving ? <UploadCloud size={16} className="animate-bounce" /> : <Save size={16} />}
                         {saving ? 'Saving...' : 'Save'}
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="bg-[var(--color-accent)] hover:brightness-110 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center gap-2 transition-all"
+                        className="bg-[var(--color-accent)] hover:brightness-110 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[90px]"
                     >
                         <Printer size={16} /> PDF
                     </button>
@@ -1406,7 +1409,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full flex-1 min-h-0 flex justify-center overflow-x-auto overflow-y-visible md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
+            <div className="w-full block md:flex md:flex-1 md:min-h-0 md:justify-center overflow-x-visible overflow-y-visible md:overflow-x-auto md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
                 {reportType === 'departure' ? (
                     <DepartureReportTemplate initialData={initialData} onDataChange={handleDataChange} />
                 ) : (
