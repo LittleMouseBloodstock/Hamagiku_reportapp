@@ -1390,8 +1390,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     <div className="relative z-10 flex flex-col h-full min-h-0">
 
                         {/* Horse Profile */}
-                        <div className="flex justify-between items-end mb-5">
-                            <div>
+                        <div className="flex justify-between items-end gap-4 mb-5">
+                            <div className="min-w-0 flex-1">
                                 <h1 className="leading-tight">
                                     <span className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'text-4xl font-serif-jp' : 'text-4xl font-serif-en'}`}>
                                         {lang === 'ja' ? (data.horseNameJp || '（馬名を入力）') : (data.horseNameEn || '(Horse Name)')}
@@ -1401,13 +1401,27 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     </span>
                                 </h1>
                             </div>
-                            <div className="sire-dam-line text-[15px] text-[#666] bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34]">
-                                {/* Multilingual Sire/Dam Display */}
-                                <span className="font-bold mr-1">{t('sire')}:</span>
-                                {lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)}
-                                <span className="mx-2 text-gray-400">×</span>
-                                <span className="font-bold mr-1">{t('dam')}:</span>
-                                {lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}
+                            <div
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'min-w-0 max-w-[46%] text-[13px] text-[#666]'}`}
+                                title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
+                            >
+                                {lang === 'ja' ? (
+                                    <>
+                                        <span className="font-bold mr-1">{t('sire')}:</span>
+                                        {data.sireJp || data.sire}
+                                        <span className="mx-2 text-gray-400">×</span>
+                                        <span className="font-bold mr-1">{t('dam')}:</span>
+                                        {data.damJp || data.dam}
+                                    </>
+                                ) : (
+                                    <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+                                        <span className="font-bold shrink-0">{t('sire')}:</span>
+                                        <span className="min-w-0 truncate">{data.sireEn || data.sire}</span>
+                                        <span className="shrink-0 px-1 text-gray-400">×</span>
+                                        <span className="font-bold shrink-0">{t('dam')}:</span>
+                                        <span className="min-w-0 truncate">{data.damEn || data.dam}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
