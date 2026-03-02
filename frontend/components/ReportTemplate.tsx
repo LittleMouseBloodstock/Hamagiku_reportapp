@@ -53,13 +53,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        padding-top: 20px !important;
+        padding-top: 23mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
-        height: 102px !important;
+        height: 108px !important;
         padding-top: 0 !important;
-        margin-bottom: 0 !important;
+        margin-bottom: 4px !important;
       }`}
 
       /* Print Mode Compression */
@@ -77,9 +77,16 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .main-photo {
-        width: 84% !important;
-        height: 100mm !important;
+        width: 132mm !important;
+        height: 99mm !important;
+        max-width: none !important;
         margin-bottom: 6px !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .main-photo {
+        width: 127.5mm !important;
+        height: 95.6mm !important;
+        max-width: none !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
@@ -1538,3 +1545,4 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         </div >
     );
 }
+
