@@ -590,7 +590,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
+    const showLogoPrimaryFontSize = primaryNameLength > 14 ? '1.95rem' : primaryNameLength > 11 ? '2.1rem' : '2.25rem';
     const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
+    const showLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
     const sexOptions = [
         { value: 'Colt', label: 'Colt（牡）' },
@@ -1447,14 +1449,14 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             <div className="min-w-0 flex-1">
                                 <h1 className="leading-tight">
                                     <span
-                                        className={`horse-name-primary block font-bold text-gray-800 ${showLogo ? '' : 'whitespace-nowrap'} ${lang === 'ja' ? (showLogo ? 'text-4xl font-serif-jp' : 'font-serif-jp tracking-[-0.02em]') : (showLogo ? 'text-4xl font-serif-en' : 'font-serif-en tracking-[-0.02em]')}`}
-                                        style={showLogo ? undefined : { fontSize: noLogoPrimaryFontSize }}
+                                        className={`horse-name-primary block font-bold text-gray-800 whitespace-nowrap ${lang === 'ja' ? (showLogo ? 'font-serif-jp tracking-[-0.02em]' : 'font-serif-jp tracking-[-0.02em]') : (showLogo ? 'font-serif-en tracking-[-0.02em]' : 'font-serif-en tracking-[-0.02em]')}`}
+                                        style={{ fontSize: showLogo ? showLogoPrimaryFontSize : noLogoPrimaryFontSize }}
                                     >
                                         {primaryHorseName}
                                     </span>
                                     <span
-                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 ${showLogo ? '' : 'whitespace-nowrap'} ${lang === 'ja' ? (showLogo ? 'text-xl font-serif-en' : 'font-serif-en tracking-[-0.01em]') : (showLogo ? 'text-lg font-serif-jp' : 'font-serif-jp tracking-[-0.01em]')}`}
-                                        style={showLogo ? undefined : { fontSize: noLogoSecondaryFontSize }}
+                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 whitespace-nowrap ${lang === 'ja' ? (showLogo ? 'font-serif-en tracking-[-0.01em]' : 'font-serif-en tracking-[-0.01em]') : (showLogo ? 'font-serif-jp tracking-[-0.01em]' : 'font-serif-jp tracking-[-0.01em]')}`}
+                                        style={{ fontSize: showLogo ? showLogoSecondaryFontSize : noLogoSecondaryFontSize }}
                                     >
                                         {secondaryHorseName}
                                     </span>
