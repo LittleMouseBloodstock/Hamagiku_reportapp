@@ -590,10 +590,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
-    const showLogoPrimaryFontSize = primaryNameLength > 18 ? '1.58rem' : primaryNameLength > 15 ? '1.72rem' : primaryNameLength > 12 ? '1.95rem' : '2.2rem';
     const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
-    const showLogoSecondaryFontSize = secondaryNameLength > 26 ? '0.9rem' : secondaryNameLength > 20 ? '0.98rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
+    const showLogoPrimaryFontSize = noLogoPrimaryFontSize;
+    const showLogoSecondaryFontSize = noLogoSecondaryFontSize;
     const sexOptions = [
         { value: 'Colt', label: 'Colt（牡）' },
         { value: 'Filly', label: 'Filly（牝）' },
