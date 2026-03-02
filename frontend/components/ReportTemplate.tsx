@@ -96,19 +96,19 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
-        margin-top: 8px !important;
-        min-height: 92px !important;
+        margin-top: 2px !important;
+        min-height: 82px !important;
         padding: 12px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
         font-size: 14px !important;
-        line-height: 1.5 !important;
+        line-height: 1.42 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
         margin-top: auto !important;
-        padding-top: 2px !important;
+        padding-top: 0 !important;
         font-size: 9px !important;
       }`}
 
