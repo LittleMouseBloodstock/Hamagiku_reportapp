@@ -53,7 +53,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        padding-top: 10mm !important;
+        padding-top: 5mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
@@ -1440,10 +1440,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
                             <div className="min-w-0 flex-1">
                                 <h1 className="leading-tight">
-                                    <span className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'text-4xl font-serif-jp' : 'text-4xl font-serif-en'}`}>
+                                    <span className={`horse-name-primary block font-bold text-gray-800 ${showLogo ? '' : 'whitespace-nowrap overflow-hidden text-ellipsis'} ${lang === 'ja' ? (showLogo ? 'text-4xl font-serif-jp' : 'text-[2rem] font-serif-jp') : (showLogo ? 'text-4xl font-serif-en' : 'text-[2rem] font-serif-en')}`}>
                                         {lang === 'ja' ? (data.horseNameJp || '（馬名を入力）') : (data.horseNameEn || '(Horse Name)')}
                                     </span>
-                                    <span className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 ${lang === 'ja' ? 'text-xl font-serif-en' : 'text-lg font-serif-jp'}`}>
+                                    <span className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 ${showLogo ? '' : 'whitespace-nowrap overflow-hidden text-ellipsis'} ${lang === 'ja' ? (showLogo ? 'text-xl font-serif-en' : 'text-lg font-serif-en') : (showLogo ? 'text-lg font-serif-jp' : 'text-base font-serif-jp')}`}>
                                         {lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '')}
                                     </span>
                                 </h1>
