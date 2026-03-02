@@ -590,7 +590,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
-    const showLogoPrimaryFontSize = primaryNameLength > 18 ? '1.15rem' : primaryNameLength > 15 ? '1.3rem' : primaryNameLength > 12 ? '1.55rem' : '1.95rem';
+    const showLogoPrimaryFontSize = primaryNameLength > 18 ? '1.28rem' : primaryNameLength > 15 ? '1.42rem' : primaryNameLength > 12 ? '1.68rem' : '2.05rem';
     const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
     const showLogoSecondaryFontSize = secondaryNameLength > 26 ? '0.9rem' : secondaryNameLength > 20 ? '0.98rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
@@ -1446,7 +1446,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Horse Profile */}
                         <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
-                            <div className={`min-w-0 overflow-hidden ${showLogo ? 'basis-[40%] max-w-[40%] flex-none' : 'flex-1'}`}>
+                            <div className={`min-w-0 overflow-hidden ${showLogo ? 'basis-[46%] max-w-[46%] flex-none' : 'flex-1'}`}>
                                 <h1 className="leading-tight">
                                     <span
                                         className={`horse-name-primary block font-bold text-gray-800 whitespace-nowrap overflow-hidden ${lang === 'ja' ? 'font-serif-jp tracking-[-0.03em]' : 'font-serif-en tracking-[-0.03em]'}`}
@@ -1463,7 +1463,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? 'basis-[60%] max-w-[60%] flex-none' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? 'basis-[54%] max-w-[54%] flex-none' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
