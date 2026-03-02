@@ -53,11 +53,11 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        padding-top: 23mm !important;
+        padding-top: 10mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
-        height: 108px !important;
+        height: 104px !important;
         padding-top: 0 !important;
         margin-bottom: 4px !important;
       }`}
@@ -87,6 +87,44 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         width: 127.5mm !important;
         height: 95.6mm !important;
         max-width: none !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .sire-dam-line {
+        min-height: 50px !important;
+        display: flex !important;
+        align-items: center !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .owner-line {
+        height: 34px !important;
+        margin-bottom: 6px !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .data-section {
+        height: 105px !important;
+        margin-bottom: 6px !important;
+        gap: 14px !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-box {
+        margin-top: 4px !important;
+        min-height: 86px !important;
+        max-height: 86px !important;
+        overflow: hidden !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text {
+        font-size: 14px !important;
+        line-height: 1.42 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .footer-text {
+        padding-top: 0 !important;
+        font-size: 9px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
