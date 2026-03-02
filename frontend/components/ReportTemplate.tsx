@@ -38,7 +38,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         height: 285mm !important;
         min-height: 0 !important;
         margin: 0 !important;
-        padding: 24px 28px 6px 28px !important;
+        padding: 15mm 28px 6px 28px !important;
         background-color: white !important;
         z-index: 2147483647 !important; /* Max Z-Index */
         overflow: hidden !important;
@@ -53,7 +53,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        padding-top: 15mm !important;
+        padding-top: 20mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
@@ -1404,7 +1404,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         width: '210mm',
                         height: batchPrint ? undefined : '297mm',
                         minHeight: '297mm',
-                        padding: showLogo ? '20px 30px 10px 30px' : '15mm 30px 10px 30px',
+                        padding: showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px',
                         boxSizing: 'border-box'
                     }}
                 >
