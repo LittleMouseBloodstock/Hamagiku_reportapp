@@ -592,7 +592,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryNameLength = secondaryHorseName.length;
     const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
-    const showLogoPrimaryFontSize = noLogoPrimaryFontSize;
+    const showLogoPrimaryFontSize = lang === 'ja'
+        ? (primaryNameLength > 14 ? '1.58rem' : primaryNameLength > 11 ? '1.72rem' : '1.9rem')
+        : noLogoPrimaryFontSize;
     const showLogoSecondaryFontSize = noLogoSecondaryFontSize;
     const sexOptions = [
         { value: 'Colt', label: 'Colt（牡）' },
