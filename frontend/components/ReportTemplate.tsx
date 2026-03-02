@@ -590,7 +590,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
-    const showLogoPrimaryFontSize = primaryNameLength > 18 ? '1.35rem' : primaryNameLength > 15 ? '1.5rem' : primaryNameLength > 12 ? '1.72rem' : '2.1rem';
+    const showLogoPrimaryFontSize = primaryNameLength > 18 ? '1.15rem' : primaryNameLength > 15 ? '1.3rem' : primaryNameLength > 12 ? '1.55rem' : '1.95rem';
     const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
     const showLogoSecondaryFontSize = secondaryNameLength > 26 ? '0.9rem' : secondaryNameLength > 20 ? '0.98rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
@@ -1446,16 +1446,16 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Horse Profile */}
                         <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
-                            <div className={`min-w-0 ${showLogo ? 'flex-[0.82]' : 'flex-1'}`}>
+                            <div className={`min-w-0 overflow-hidden ${showLogo ? 'basis-[40%] max-w-[40%] flex-none' : 'flex-1'}`}>
                                 <h1 className="leading-tight">
                                     <span
-                                        className={`horse-name-primary block font-bold text-gray-800 whitespace-nowrap ${lang === 'ja' ? (showLogo ? 'font-serif-jp tracking-[-0.02em]' : 'font-serif-jp tracking-[-0.02em]') : (showLogo ? 'font-serif-en tracking-[-0.02em]' : 'font-serif-en tracking-[-0.02em]')}`}
+                                        className={`horse-name-primary block font-bold text-gray-800 whitespace-nowrap overflow-hidden ${lang === 'ja' ? 'font-serif-jp tracking-[-0.03em]' : 'font-serif-en tracking-[-0.03em]'}`}
                                         style={{ fontSize: showLogo ? showLogoPrimaryFontSize : noLogoPrimaryFontSize }}
                                     >
                                         {primaryHorseName}
                                     </span>
                                     <span
-                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 whitespace-nowrap ${lang === 'ja' ? (showLogo ? 'font-serif-en tracking-[-0.01em]' : 'font-serif-en tracking-[-0.01em]') : (showLogo ? 'font-serif-jp tracking-[-0.01em]' : 'font-serif-jp tracking-[-0.01em]')}`}
+                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 whitespace-nowrap overflow-hidden ${lang === 'ja' ? 'font-serif-en tracking-[-0.02em]' : 'font-serif-jp tracking-[-0.02em]'}`}
                                         style={{ fontSize: showLogo ? showLogoSecondaryFontSize : noLogoSecondaryFontSize }}
                                     >
                                         {secondaryHorseName}
@@ -1463,7 +1463,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? 'w-[58%]' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? 'basis-[60%] max-w-[60%] flex-none' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
