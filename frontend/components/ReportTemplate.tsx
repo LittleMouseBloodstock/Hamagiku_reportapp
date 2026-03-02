@@ -114,12 +114,14 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         margin-top: 4px !important;
         min-height: 86px !important;
         max-height: 86px !important;
-        overflow: hidden !important;
+        overflow: visible !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text {
         font-size: 14px !important;
         line-height: 1.42 !important;
+        max-height: 62px !important;
+        overflow: hidden !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .footer-text {
@@ -1394,12 +1396,12 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         width: '210mm',
                         height: batchPrint ? undefined : '297mm',
                         minHeight: '297mm',
-                        padding: '20px 30px 10px 30px',
+                        padding: showLogo ? '20px 30px 10px 30px' : '10mm 30px 10px 30px',
                         boxSizing: 'border-box'
                     }}
                 >
                     {/* Header */}
-                    <header className={`report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4' : 'mb-0 h-[112px] pt-0'}`}>
+                    <header className={`report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4' : 'mb-1 h-[104px] pt-0'}`}>
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
@@ -1435,7 +1437,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     <div className="relative z-10 flex flex-col h-full min-h-0">
 
                         {/* Horse Profile */}
-                        <div className="flex justify-between items-end gap-4 mb-5">
+                        <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
                             <div className="min-w-0 flex-1">
                                 <h1 className="leading-tight">
                                     <span className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'text-4xl font-serif-jp' : 'text-4xl font-serif-en'}`}>
@@ -1447,7 +1449,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
+                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? '' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
@@ -1473,7 +1475,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
 
-                        <div className={`owner-line bg-[#f9fbfa] py-2 px-3 border border-[#e5e7eb] mb-4 ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] whitespace-nowrap tracking-[-0.01em]'}`}>
+                        <div className={`owner-line bg-[#f9fbfa] px-3 border border-[#e5e7eb] ${showLogo ? 'py-2 mb-4' : 'py-[6px] mb-[6px] h-[34px] overflow-hidden'} ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] whitespace-nowrap tracking-[-0.01em]'}`}>
                             <span className="font-bold mr-1">{t('owner')}:</span>
                             <span>{formatOwnerName(data.ownerName)}</span>
                             <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
@@ -1523,7 +1525,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Data Section - Compact Height (Reduced from 220px to 120px) */}
-                        <div className="data-section flex gap-6 mb-4 h-[120px]">
+                        <div className={`data-section flex ${showLogo ? 'gap-6 mb-4 h-[120px]' : 'gap-[14px] mb-[6px] h-[105px]'}`}>
                             {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
                                 <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
@@ -1557,23 +1559,23 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Comment Section */}
-                        <div className="comment-box border-2 border-[#555] p-5 relative bg-white min-h-[140px] mt-4 flex-shrink">
+                        <div className={`comment-box border-2 border-[#555] relative bg-white flex-shrink ${showLogo ? 'p-5 min-h-[140px] mt-4' : 'p-3 min-h-[86px] max-h-[86px] mt-1 overflow-visible'}`}>
                             <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide">
                                 {t('trainersComment')}
                             </span>
                             {lang === 'ja' ? (
-                                <div className="comment-text text-[15px] leading-[1.8] text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold">
+                                <div className={`comment-text text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold ${showLogo ? 'text-[15px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className="comment-text text-[16px] leading-[1.8] text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold">
+                                <div className={`comment-text text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
                                     {data.commentEn || ''}
                                 </div>
                             )}
                         </div>
 
                         {/* Footer */}
-                        <div className="footer-text mt-auto pt-2 text-center text-[10px] text-[#aaa] font-serif-en tracking-widest">
+                        <div className={`footer-text mt-auto text-center text-[#aaa] font-serif-en tracking-widest ${showLogo ? 'pt-2 text-[10px]' : 'pt-0 text-[9px]'}`}>
                             HAMAGIKU FARM - HOKKAIDO, JAPAN | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
                         </div>
 
