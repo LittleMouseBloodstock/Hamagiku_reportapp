@@ -53,7 +53,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
-        padding-top: 10mm !important;
+        padding-top: 15mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
@@ -1404,7 +1404,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         width: '210mm',
                         height: batchPrint ? undefined : '297mm',
                         minHeight: '297mm',
-                        padding: showLogo ? '20px 30px 10px 30px' : '10mm 30px 10px 30px',
+                        padding: showLogo ? '20px 30px 10px 30px' : '15mm 30px 10px 30px',
                         boxSizing: 'border-box'
                     }}
                 >
@@ -1544,7 +1544,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
                                 <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
                                     <span className="text-[10px] text-[#666] uppercase mb-1">{t('training')}</span>
-                                    <span className="text-base text-[#333] font-serif-jp leading-tight">
+                                    <span className={`text-[#333] font-serif-jp leading-tight whitespace-nowrap ${showLogo ? 'text-base' : 'text-[15px] tracking-[-0.02em]'}`}>
                                         {lang === 'ja' ? (data.trainingStatusJp || '-') : (data.trainingStatusEn || '-')}
                                     </span>
                                 </div>
