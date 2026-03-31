@@ -69,6 +69,12 @@ const landingCopy = {
       '表示言語に合わせて入力欄・ラベル・プレビューの見え方を切り替えられます。送り先に合わせた出力を、その場で確認できます。',
     previewDashboardLabel: 'ダッシュボード',
     previewReportLabel: 'レポート作成',
+    previewDashboardImage: '/lp-dashboard-shot.png',
+    previewReportImage: '/lp-report-shot.png',
+    previewTrustTitle: '信頼される理由',
+    previewTrustBody:
+      '日本語でも英語でも、同じ構造でレポートを作成・確認できるため、現場の入力からオーナー向け共有まで流れがぶれません。',
+    previewTrustList: ['日本語 UI のダッシュボード表示', '送付前に確認しやすいレポート画面', '入力から共有まで同じ流れで運用可能'],
     previewMetrics: [
       { label: '管理馬', value: '24' },
       { label: '今月のレポート', value: '18' },
@@ -201,6 +207,12 @@ const landingCopy = {
       'When the site is in English, the product preview also switches to English. That keeps the experience consistent and makes it clear that the workflow is already usable for international teams.',
     previewDashboardLabel: 'Dashboard',
     previewReportLabel: 'Report Builder',
+    previewDashboardImage: '/lp-dashboard-shot-en.png',
+    previewReportImage: '/lp-report-shot-en.png',
+    previewTrustTitle: 'Why teams trust it',
+    previewTrustBody:
+      'The preview matches the selected language, so teams can immediately see how notes turn into owner-ready reports inside the actual workflow.',
+    previewTrustList: ['English dashboard and report preview', 'Owner-ready report layout', 'Consistent workflow from note entry to sharing'],
     previewMetrics: [
       { label: 'Active horses', value: '24' },
       { label: 'Reports this month', value: '18' },
@@ -275,51 +287,10 @@ const landingCopy = {
 } as const;
 
 function ProductPreview({
-  language,
   copy,
 }: {
-  language: 'ja' | 'en';
   copy: (typeof landingCopy)['ja'] | (typeof landingCopy)['en'];
 }) {
-  if (language === 'en') {
-    return (
-      <div className="grid gap-4 xl:pt-6" id="demo">
-        <div className="rounded-[26px] border border-[#e2d8c7] bg-white p-4 shadow-[0_30px_80px_-44px_rgba(0,0,0,0.28)]">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[#c5a059]">{copy.previewEyebrow}</p>
-          <h2 className="mt-3 font-display text-[2rem] leading-tight text-[#18392f]">{copy.previewTitle}</h2>
-          <p className="mt-3 text-sm leading-7 text-stone-600">{copy.previewBody}</p>
-          <div className="mt-5 grid gap-4">
-            <div className="overflow-hidden rounded-[20px] border border-[#ebe1cf]">
-              <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
-                {copy.previewDashboardLabel}
-              </div>
-              <Image
-                src="/lp-dashboard-shot-en.png"
-                alt="English dashboard screenshot"
-                width={1280}
-                height={847}
-                className="h-auto w-full bg-white"
-                priority
-              />
-            </div>
-            <div className="overflow-hidden rounded-[20px] border border-[#ebe1cf]">
-              <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
-                {copy.previewReportLabel}
-              </div>
-              <Image
-                src="/lp-report-shot-en.png"
-                alt="English report builder screenshot"
-                width={1270}
-                height={846}
-                className="h-auto w-full bg-white"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="grid gap-4 xl:pt-6" id="demo">
       <div className="rounded-[26px] border border-[#e2d8c7] bg-white p-4 shadow-[0_30px_80px_-44px_rgba(0,0,0,0.28)]">
@@ -327,72 +298,42 @@ function ProductPreview({
         <h2 className="mt-3 font-display text-[2rem] leading-tight text-[#18392f]">{copy.previewTitle}</h2>
         <p className="mt-3 text-sm leading-7 text-stone-600">{copy.previewBody}</p>
         <div className="mt-5 grid gap-4">
-          <div className="overflow-hidden rounded-[22px] border border-[#ebe1cf] bg-[#f8f3ea]">
-            <div className="flex items-center justify-between border-b border-[#ebe1cf] bg-white px-4 py-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-[#c5a059]">{copy.previewDashboardLabel}</p>
-                <p className="mt-1 text-sm font-semibold text-stone-700">牧場全体の状況</p>
-              </div>
-              <div className="rounded-full bg-[#183b2d]/8 px-3 py-1 text-xs font-semibold text-[#183b2d]">
-                運用中ワークスペース
-              </div>
+          <div className="overflow-hidden rounded-[20px] border border-[#ebe1cf]">
+            <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
+              {copy.previewDashboardLabel}
             </div>
-            <div className="grid gap-3 p-4 sm:grid-cols-3">
-              {copy.previewMetrics.map((metric) => (
-                <div key={metric.label} className="rounded-2xl border border-[#e9decf] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-stone-500">{metric.label}</p>
-                  <p className="mt-2 font-display text-[2rem] text-[#18392f]">{metric.value}</p>
-                </div>
-              ))}
+            <Image
+              src={copy.previewDashboardImage}
+              alt={`${copy.previewDashboardLabel} screenshot`}
+              width={1280}
+              height={847}
+              className="h-auto w-full bg-white"
+              priority
+            />
+          </div>
+
+          <div className="overflow-hidden rounded-[20px] border border-[#ebe1cf]">
+            <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
+              {copy.previewReportLabel}
             </div>
-            <div className="px-4 pb-4">
-              <div className="rounded-2xl border border-[#e9decf] bg-white p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-stone-800">{copy.previewHorseName}</p>
-                    <p className="text-xs text-stone-500">{copy.previewRecipient}</p>
-                  </div>
-                  <div className="rounded-full bg-[#c5a059]/14 px-3 py-1 text-xs font-semibold text-[#8a6724]">
-                    下書き作成済み
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-[120px_1fr]">
-                  <div className="overflow-hidden rounded-xl border border-[#eadfce]">
-                    <Image
-                      src="/lp-report-shot.png"
-                      alt="馬の写真プレビュー"
-                      width={1243}
-                      height={768}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="rounded-xl bg-[#fbf7ef] p-4">
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#c5a059]">{copy.previewCommentLabel}</p>
-                    <p className="mt-3 text-sm leading-7 text-stone-700">{copy.previewComment}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Image
+              src={copy.previewReportImage}
+              alt={`${copy.previewReportLabel} screenshot`}
+              width={1270}
+              height={846}
+              className="h-auto w-full bg-white"
+            />
           </div>
 
           <div className="rounded-[22px] border border-[#ebe1cf] bg-[#183b2d] p-5 text-white">
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_260px] sm:items-start">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-[#e8d49a]">
-                  信頼される理由
-                </p>
-                <p className="mt-3 text-sm leading-7 text-white/78">
-                  プレビューの表示言語、レポートの構造、送り先に合わせた見え方がそろっているため、オーナー・調教師・獣医の誰に向けても流れが崩れません。
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/12 bg-white/6 p-4">
-                <p className="text-xs font-semibold text-white">出力モード</p>
-                <ul className="mt-3 space-y-2 text-sm text-white/75">
-                  <li>英語のみ</li>
-                  <li>日本語のみ</li>
-                  <li>日英併記</li>
-                </ul>
-              </div>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-[#e8d49a]">{copy.previewTrustTitle}</p>
+            <p className="mt-3 text-sm leading-7 text-white/78">{copy.previewTrustBody}</p>
+            <div className="mt-4 rounded-2xl border border-white/12 bg-white/6 p-4">
+              <ul className="space-y-2 text-sm text-white/75">
+                {copy.previewTrustList.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
@@ -474,7 +415,7 @@ export default function Home() {
             <p className="mt-4 text-sm leading-7 text-stone-600">{copy.contactLine}</p>
           </div>
 
-          <ProductPreview language={language} copy={copy} />
+          <ProductPreview copy={copy} />
         </div>
       </section>
 
