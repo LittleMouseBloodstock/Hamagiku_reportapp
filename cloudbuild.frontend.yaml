@@ -1,0 +1,32 @@
+substitutions:
+  _IMAGE: ""
+  _NEXT_PUBLIC_SUPABASE_URL: ""
+  _NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+  _NEXT_PUBLIC_API_URL: ""
+  _NEXT_PUBLIC_FEATURE_REPORT_GENERATION_V2: "true"
+  _NEXT_PUBLIC_FEATURE_DIFF_LEARNING: "false"
+  _NEXT_PUBLIC_FEATURE_STYLE_PROFILE_REBUILD: "false"
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - frontend/Dockerfile
+      - -t
+      - ${_IMAGE}
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_URL=${_NEXT_PUBLIC_SUPABASE_URL}
+      - --build-arg
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${_NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - --build-arg
+      - NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}
+      - --build-arg
+      - NEXT_PUBLIC_FEATURE_REPORT_GENERATION_V2=${_NEXT_PUBLIC_FEATURE_REPORT_GENERATION_V2}
+      - --build-arg
+      - NEXT_PUBLIC_FEATURE_DIFF_LEARNING=${_NEXT_PUBLIC_FEATURE_DIFF_LEARNING}
+      - --build-arg
+      - NEXT_PUBLIC_FEATURE_STYLE_PROFILE_REBUILD=${_NEXT_PUBLIC_FEATURE_STYLE_PROFILE_REBUILD}
+      - frontend
+images:
+  - ${_IMAGE}
