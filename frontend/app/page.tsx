@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import PublicSiteFooter from '@/components/PublicSiteFooter';
@@ -404,6 +404,25 @@ function ProductPreview({
 export default function Home() {
   const { language } = useLanguage();
   const copy = landingCopy[language];
+
+  useEffect(() => {
+    const previousHtmlOverflowY = document.documentElement.style.overflowY;
+    const previousHtmlOverflowX = document.documentElement.style.overflowX;
+    const previousBodyOverflowY = document.body.style.overflowY;
+    const previousBodyOverflowX = document.body.style.overflowX;
+
+    document.documentElement.style.overflowY = 'auto';
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.overflowY = 'auto';
+    document.body.style.overflowX = 'hidden';
+
+    return () => {
+      document.documentElement.style.overflowY = previousHtmlOverflowY;
+      document.documentElement.style.overflowX = previousHtmlOverflowX;
+      document.body.style.overflowY = previousBodyOverflowY;
+      document.body.style.overflowX = previousBodyOverflowX;
+    };
+  }, []);
 
   const landingTheme = {
     '--brand-primary': '#183b2d',
