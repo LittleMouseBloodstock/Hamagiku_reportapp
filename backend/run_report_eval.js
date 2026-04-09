@@ -30,9 +30,17 @@ function normalize(value) {
     .trim();
 }
 
+const TERM_ALIASES = {
+  '問題なし': ['問題なし', '問題は見られません', '問題はありません', '特に問題はない', '特段の問題がない'],
+  'no': ['no', 'no issues', 'no significant issues', 'no particular issues'],
+};
+
 function includesAll(text, tokens = []) {
   const normalized = normalize(text);
-  return tokens.filter((token) => !normalized.includes(normalize(token)));
+  return tokens.filter((token) => {
+    const aliases = TERM_ALIASES[token] || [token];
+    return !aliases.some((alias) => normalized.includes(normalize(alias)));
+  });
 }
 
 function evaluateMonthly(result, expectations = {}) {

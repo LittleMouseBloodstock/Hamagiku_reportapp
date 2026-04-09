@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-04-09T12:42:43.695Z",
+  "caseCount": 3,
+  "results": [
+    {
+      "id": "monthly-ja-en-01",
+      "type": "monthly",
+      "output": {
+        "ja": "現在の体重は478kgで、全体的な状態は良好に推移しております。両前肢に骨瘤による痛みが見られますため、定期的な冷却とショックウェーブ療法でケアを進めております。運動はウォーキングマシンから開始し、来週からはトレッドミルでの軽い運動へと移行する予定です。なお、右前肢のレントゲン検査では骨に特段の問題がないことを確認しております。",
+        "en": "He currently weighs 478kg and his overall condition remains good.\n\nWe are managing some discomfort from splints on both front legs with regular cooling and shockwave therapy.\n\nHis exercise program will begin with the walking machine, transitioning to light work on the treadmill next week.\n\nWe're pleased to report that x-rays of his right foreleg showed no significant issues with the bone."
+      },
+      "evaluation": {
+        "jaMissing": [],
+        "enMissing": [],
+        "enForbidden": []
+      }
+    },
+    {
+      "id": "monthly-ja-en-02",
+      "type": "monthly",
+      "output": {
+        "ja": "右前の状態は安定しており、現在は常歩運動を中心に調整を進めています。獣医からは骨に問題がないとの報告を受けていますのでご安心ください。来週からはトレッドミルでの運動も開始する予定です。",
+        "en": "The condition of the right front leg remains stable.\n\nWe are currently focusing on walking exercise, and we have received confirmation from the vet that there are no issues with the bone.\n\nWe plan to begin treadmill work next week."
+      },
+      "evaluation": {
+        "jaMissing": [],
+        "enMissing": [],
+        "enForbidden": []
+      }
+    },
+    {
+      "id": "departure-01",
+      "type": "departure",
+      "output": {
+        "ja": {
+          "farrier": "",
+          "worming": "",
+          "feeding": "エクイバランペーストを継続しています。",
+          "exercise": "ウォーキングマシンから運動を開始し、来週からはトレッドミルへ移行します。",
+          "comment": "右前跛行のためレントゲンを撮影しましたが、骨に特に問題は見られませんでした。"
+        },
+        "en": {
+          "farrier": "",
+          "worming": "",
+          "feeding": "Continues on Equibalance Paste.",
+          "exercise": "Exercise started with the walking machine and will transition to the treadmill from next week.",
+          "comment": "X-rays were taken due to right front lameness, but no particular issues were found with the bone."
+        }
+      },
+      "evaluation": {
+        "missing": [
+          "ja.comment: 問題なし"
+        ]
+      }
+    }
+  ]
+}
