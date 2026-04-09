@@ -35,5 +35,55 @@
         "comment": ["x-ray", "no"]
       }
     }
+  },
+  {
+    "id": "monthly-ja-en-03",
+    "type": "monthly",
+    "prompt": "放牧から戻ってきてから順調です。現在は常歩から軽いキャンターまで進めています。気持ちも前向きで、馬体もふっくらしてきました。",
+    "expectations": {
+      "jaMustInclude": ["順調", "キャンター", "馬体"],
+      "enMustInclude": ["canter", "condition"],
+      "enMustAvoid": ["guaranteed", "fully fit"]
+    }
+  },
+  {
+    "id": "monthly-ja-en-04",
+    "type": "monthly",
+    "prompt": "ここまで舎飼いで様子を見てきましたが、患部の反応は落ち着いてきました。今週から曳き運動を始める予定です。",
+    "expectations": {
+      "jaMustInclude": ["落ち着いて", "曳き運動", "予定"],
+      "enMustInclude": ["settled", "walking in hand", "plan"],
+      "enMustAvoid": ["fully healed", "ready for fast work"]
+    }
+  },
+  {
+    "id": "monthly-ja-en-05",
+    "type": "monthly",
+    "prompt": "先日の治療後は大きな反動もなく経過しています。乗り出し後の反応も今のところ落ち着いています。",
+    "expectations": {
+      "jaMustInclude": ["反動", "経過", "落ち着いて"],
+      "enMustInclude": ["follow-up", "settled", "so far"],
+      "enMustAvoid": ["fully resolved", "cured"]
+    }
+  },
+  {
+    "id": "monthly-ja-en-06",
+    "type": "monthly",
+    "prompt": "日によって少し気分の波はありますが、全体としては落ち着いて運動できています。扱いにくさが強い印象はありません。",
+    "expectations": {
+      "jaMustInclude": ["気分の波", "落ち着いて", "印象"],
+      "enMustInclude": ["variation", "settled", "manageable"],
+      "enMustAvoid": ["bad temperament", "difficult mare"]
+    }
+  },
+  {
+    "id": "monthly-ja-en-07",
+    "type": "monthly",
+    "prompt": "左前に少し熱感が残るため、運動後の冷却と定期的なショックウェーブ治療を続けています。歩様は安定しています。",
+    "expectations": {
+      "jaMustInclude": ["冷却", "ショックウェーブ", "歩様"],
+      "enMustInclude": ["cooling", "shockwave", "movement"],
+      "enMustAvoid": ["severe", "acute fracture"]
+    }
   }
 ]

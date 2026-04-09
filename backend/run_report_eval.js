@@ -33,6 +33,15 @@ function normalize(value) {
 const TERM_ALIASES = {
   '問題なし': ['問題なし', '問題は見られません', '問題はありません', '特に問題はない', '特段の問題がない'],
   'no': ['no', 'no issues', 'no significant issues', 'no particular issues'],
+  condition: ['condition', 'filled out', 'filled out nicely', 'physique', 'overall condition'],
+  'walking in hand': ['walking in hand', 'hand walking', 'walk in hand'],
+  'follow-up': ['follow-up', 'follow up', 'following the recent treatment', 'following recent treatment', 'recent treatment'],
+  variation: ['variation', 'fluctuations', 'day-to-day variation'],
+  settled: ['settled', 'calm', 'calm during exercise', 'settling well', 'settled well'],
+  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle'],
+  movement: ['movement', 'gait', 'way of going'],
+  '気分の波': ['気分の波', '気分の浮き沈み'],
+  印象: ['印象', '面は見受けられません', '扱いにくい面'],
 };
 
 function includesAll(text, tokens = []) {
