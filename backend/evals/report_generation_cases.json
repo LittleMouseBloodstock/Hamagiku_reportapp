@@ -1,0 +1,39 @@
+[
+  {
+    "id": "monthly-ja-en-01",
+    "type": "monthly",
+    "prompt": "現在体重478kg、全体的に良好な状態です。両前肢の骨瘤による痛みを抱えており、定期的な冷却療法とショックウェーブ療法を行っています。運動メニューは、まずはウォーキングマシンから開始し、来週からはトレッドミルに移行します。右前肢のレントゲン検査では骨に特に問題がないとの診断でした。",
+    "expectations": {
+      "jaMustInclude": ["良好", "ショックウェーブ", "レントゲン"],
+      "enMustInclude": ["good", "shockwave", "x-ray"],
+      "enMustAvoid": ["suspensory", "fracture"]
+    }
+  },
+  {
+    "id": "monthly-ja-en-02",
+    "type": "monthly",
+    "prompt": "右前の状態は安定しています。現在は常歩運動を中心に進めており、来週からトレッドミルを開始する予定です。骨には問題がないとの説明を受けています。",
+    "expectations": {
+      "jaMustInclude": ["安定", "トレッドミル"],
+      "enMustInclude": ["stable", "treadmill"],
+      "enMustAvoid": ["fracture", "ligament"]
+    }
+  },
+  {
+    "id": "departure-01",
+    "type": "departure",
+    "notes": "飼い葉はエクイバランペーストを継続。運動はウォーキングマシンから開始し、来週からトレッドミルへ移行。右前跛行のためレントゲンを撮影したが、骨には特に問題なし。",
+    "expectations": {
+      "jaFieldsMustInclude": {
+        "feeding": ["エクイバラン"],
+        "exercise": ["ウォーキングマシン", "トレッドミル"],
+        "comment": ["レントゲン", "問題なし"]
+      },
+      "enFieldsMustInclude": {
+        "feeding": ["Equibal", "paste"],
+        "exercise": ["walking machine", "treadmill"],
+        "comment": ["x-ray", "no"]
+      }
+    }
+  }
+]

@@ -2,6 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
+const {
+  generateMonthlyReport,
+  generateDepartureReport,
+} = require('./report_generation_service');
 require('dotenv').config();
 
 const app = express();
@@ -10,197 +14,108 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
 
-// Initialize Gemini
-// Note: In production, ensure GEMINI_API_KEY is set in Cloud Run environment variables.
-const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-
 app.get('/', (req, res) => {
-    res.send('Multilingual Report API');
+  res.send('Multilingual Report API');
 });
 
-// Translation Endpoint
 app.post('/translate', async (req, res) => {
-    const { text, targetLang } = req.body;
+  const { text, targetLang } = req.body;
+  const apiKey = req.headers['x-api-key'] || process.env.GEMINI_API_KEY;
 
-    // Check if API key is provided in header or env
-    const apiKey = req.headers['x-api-key'] || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ error: "API Key not configured" });
-    }
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API Key not configured' });
+  }
 
-    // Re-init with provided key if dynamic
-    const dynamicGenAI = new GoogleGenerativeAI(apiKey);
+  const dynamicGenAI = new GoogleGenerativeAI(apiKey);
 
-    try {
-        const model = dynamicGenAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const instruction = targetLang === 'ja'
-            ? [
-                "以下のテキストを、日本の競馬レポート向けの自然な日本語に翻訳してください。",
-                "出力は翻訳文のみ。",
-                "解説、補足、注釈、見出し、箇条書き、引用符、前置き、後書きは一切不要です。",
-                "入力が1段落なら出力も1段落にしてください。"
-            ].join('\n')
-            : [
-                "Translate the following text into natural English for a horse racing report.",
-                "Return only the translated text.",
-                "Do not add explanations, notes, headings, bullet points, quotation marks, or extra commentary.",
-                "If the input is a single paragraph, return a single paragraph."
-            ].join('\n');
+  try {
+    const model = dynamicGenAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const instruction = targetLang === 'ja'
+      ? [
+        '以下のテキストを、日本の競馬レポート向けの自然な日本語に翻訳してください。',
+        '出力は翻訳文のみ。',
+        '解説、補足、注釈、見出し、箇条書き、引用符、前置き、後書きは一切不要です。',
+        '入力が1段落なら出力も1段落にしてください。'
+      ].join('\n')
+      : [
+        'Translate the following text into natural English for a horse racing report.',
+        'Return only the translated text.',
+        'Do not add explanations, notes, headings, bullet points, quotation marks, or extra commentary.',
+        'If the input is a single paragraph, return a single paragraph.'
+      ].join('\n');
 
-        const prompt = `${instruction}\n\nText: ${text}`;
+    const prompt = `${instruction}\n\nText: ${text}`;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const translatedText = response.text().trim();
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const translatedText = response.text().trim();
-
-        res.json({ translatedText });
-    } catch (e) {
-        console.error("Translation Error:", e);
-        res.status(500).json({ error: e.message });
-    }
+    res.json({ translatedText });
+  } catch (e) {
+    console.error('Translation Error:', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Content Generation Endpoint (Dual Language)
 app.post('/generate', async (req, res) => {
-    const { prompt, apiKey: clientApiKey } = req.body;
+  const { prompt, apiKey: clientApiKey } = req.body;
+  const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
 
-    const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
-    console.log("Debug: /generate called");
-    console.log("Debug: Env GEMINI_API_KEY present?", !!process.env.GEMINI_API_KEY);
-    console.log("Debug: Client API Key provided?", !!clientApiKey);
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API Key not configured in Environment Variables' });
+  }
 
-    if (!apiKey) {
-        console.error("Error: API Key is missing in both Env and Request body");
-        return res.status(500).json({ error: "API Key not configured in Environment Variables" });
-    }
-
-    const dynamicGenAI = new GoogleGenerativeAI(apiKey);
-
-    try {
-        const model = dynamicGenAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        const systemInstruction = `
-        You are a professional racehorse trainer.
-        Based on the provided keywords, write a monthly report comment (approx 150-200 characters for Japanese, 50-80 words for English).
-        
-        Output valid JSON with exactly these keys:
-        {
-          "ja": "Japanese comment here (professional tone)",
-          "en": "English comment here (professional, natural translation of the Japanese)"
-        }
-        
-        Ensure the English and Japanese meanings align.
-        `;
-
-        const fullPrompt = `${systemInstruction}\n\nKeywords: ${prompt}`;
-
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const text = response.text();
-
-        // Parse JSON
-        const jsonResponse = JSON.parse(text);
-
-        res.json(jsonResponse);
-    } catch (e) {
-        console.error("Generation Error:", e);
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    res.json(await generateMonthlyReport({ prompt, apiKey }));
+  } catch (e) {
+    console.error('Generation Error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
 });
 
-// Departure Report Field Generation Endpoint (Dual Language)
 app.post('/generate-departure', async (req, res) => {
-    const { notes, apiKey: clientApiKey } = req.body;
+  const { notes, apiKey: clientApiKey } = req.body;
+  const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
 
-    const apiKey = clientApiKey || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ error: "API Key not configured in Environment Variables" });
-    }
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API Key not configured in Environment Variables' });
+  }
 
-    const dynamicGenAI = new GoogleGenerativeAI(apiKey);
-
-    try {
-        const model = dynamicGenAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        const systemInstruction = `
-        You are a professional racehorse trainer.
-        Based on the provided notes (bullet points or short sentences), generate concise content for a departure report.
-
-        Output valid JSON with exactly this shape and keys:
-        {
-          "ja": {
-            "farrier": "",
-            "worming": "",
-            "feeding": "",
-            "exercise": "",
-            "comment": ""
-          },
-          "en": {
-            "farrier": "",
-            "worming": "",
-            "feeding": "",
-            "exercise": "",
-            "comment": ""
-          }
-        }
-
-        Rules:
-        - Use Japanese for "ja" and English for "en".
-        - If notes do NOT mention a field, return an empty string for that field.
-        - Keep each field concise (1-2 sentences maximum).
-        - English must match the meaning of Japanese.
-        `;
-
-        const fullPrompt = `${systemInstruction}\n\nNotes: ${notes}`;
-
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const text = response.text();
-
-        const jsonResponse = JSON.parse(text);
-        res.json(jsonResponse);
-    } catch (e) {
-        console.error("Departure Generation Error:", e);
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    res.json(await generateDepartureReport({ notes, apiKey }));
+  } catch (e) {
+    console.error('Departure Generation Error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
 });
 
-// Name Translation Endpoint
 app.post('/translate-name', async (req, res) => {
-    const { name, targetLang } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+  const { name, targetLang } = req.body;
+  const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) return res.status(500).json({ error: "API Key not configured" });
+  if (!apiKey) return res.status(500).json({ error: 'API Key not configured' });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenerativeAI(apiKey);
 
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        // Prompt for Name conversion
-        const prompt = `
-        Translate or transliterate the racehorse name "${name}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
-        Return ONLY the translated name as a string. No JSON, no explanations.
-        Example: "Lucky Vega" -> "ラッキーベガ"
-        Example: "クロフネ" -> "Kurofune"
-        `;
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const prompt = `
+    Translate or transliterate the racehorse name "${name}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
+    Return ONLY the translated name as a string. No JSON, no explanations.
+    Example: "Lucky Vega" -> "ラッキーベガ"
+    Example: "クロフネ" -> "Kurofune"
+    `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const translatedName = response.text().trim();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const translatedName = response.text().trim();
 
-        res.json({ translatedName });
-    } catch (e) {
-        console.error("Name Translation Error:", e);
-        res.status(500).json({ error: e.message });
-    }
+    res.json({ translatedName });
+  } catch (e) {
+    console.error('Name Translation Error:', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
