@@ -9,6 +9,9 @@ function parseArgs(argv) {
     caseId: null,
     outputDir: path.join(__dirname, 'evals', 'results'),
     apiKey: process.env.GEMINI_API_KEY || null,
+    offset: 0,
+    limit: null,
+    appendTo: null,
   };
 
   for (const arg of argv) {
@@ -16,6 +19,9 @@ function parseArgs(argv) {
     if (arg.startsWith('--case=')) options.caseId = arg.split('=')[1] || null;
     if (arg.startsWith('--out=')) options.outputDir = arg.split('=')[1] || options.outputDir;
     if (arg.startsWith('--api-key=')) options.apiKey = arg.split('=')[1] || options.apiKey;
+    if (arg.startsWith('--offset=')) options.offset = Number(arg.split('=')[1] || '0');
+    if (arg.startsWith('--limit=')) options.limit = Number(arg.split('=')[1] || '0') || null;
+    if (arg.startsWith('--append-to=')) options.appendTo = arg.split('=')[1] || null;
   }
 
   return options;
@@ -103,25 +109,42 @@ async function main() {
     throw new Error('Missing GEMINI_API_KEY or --api-key.');
   }
 
-  const cases = JSON.parse(fs.readFileSync(options.casesFile, 'utf8'))
-    .filter((testCase) => !options.caseId || testCase.id === options.caseId);
+  const allCases = JSON.parse(fs.readFileSync(options.casesFile, 'utf8'));
+  let cases = allCases.filter((testCase) => !options.caseId || testCase.id === options.caseId);
+  if (options.offset > 0) {
+    cases = cases.slice(options.offset);
+  }
+  if (options.limit) {
+    cases = cases.slice(0, options.limit);
+  }
 
   if (!cases.length) {
     throw new Error('No eval cases matched the current filter.');
   }
 
   fs.mkdirSync(options.outputDir, { recursive: true });
-  const results = [];
+  let results = [];
+  if (options.appendTo && fs.existsSync(options.appendTo)) {
+    const existing = JSON.parse(fs.readFileSync(options.appendTo, 'utf8'));
+    results = Array.isArray(existing?.results) ? existing.results : [];
+  }
   for (const testCase of cases) {
     console.log(`Running ${testCase.id}...`);
+    const alreadyExists = results.some((item) => item.id === testCase.id);
+    if (alreadyExists) {
+      console.log(`Skipping ${testCase.id} (already exists in append target)...`);
+      continue;
+    }
     results.push(await runCase(testCase, options.apiKey));
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const outputPath = path.join(options.outputDir, `report-eval-${timestamp}.json`);
+  const outputPath = options.appendTo || path.join(options.outputDir, `report-eval-${timestamp}.json`);
   fs.writeFileSync(outputPath, JSON.stringify({
     generatedAt: new Date().toISOString(),
     caseCount: results.length,
+    offset: options.offset,
+    limit: options.limit,
     results,
   }, null, 2));
 
