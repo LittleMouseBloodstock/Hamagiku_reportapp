@@ -9,3 +9,6 @@ out
 
 # Local Operational Scripts
 backend/fix_storage_policies.sql
+
+# Eval artifacts
+backend/evals/results/*.json
