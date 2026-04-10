@@ -44,11 +44,11 @@ const TERM_ALIASES = {
   'follow-up': ['follow-up', 'follow up', 'following the recent treatment', 'following recent treatment', 'recent treatment'],
   variation: ['variation', 'fluctuations', 'day-to-day variation', 'variability'],
   settled: ['settled', 'calm', 'calm during exercise', 'settling well', 'settled well'],
-  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle', 'difficulty in handling', 'handling him', 'difficult to manage', 'handling issues', 'handling challenges'],
-  movement: ['movement', 'gait', 'way of going'],
+  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle', 'difficulty in handling', 'handling him', 'difficult to manage', 'handling issues', 'handling challenges', 'handling'],
+  movement: ['movement', 'gait', 'way of going', 'action'],
   cooling: ['cooling', 'icing', 'post-exercise icing'],
-  '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波'],
-  印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません'],
+  '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波', '気分の変動', '気性の波'],
+  印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません', '感じられません', '目立つようなことはありません'],
   冷却: ['冷却', 'アイシング'],
 };
 
