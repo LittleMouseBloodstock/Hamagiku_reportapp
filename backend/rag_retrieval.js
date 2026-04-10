@@ -1,4 +1,5 @@
 const { createSupabaseAdminClient } = require('./supabase_admin');
+const { embedText, vectorToSqlLiteral } = require('./embedding_utils');
 
 function createAdminClient() {
   return createSupabaseAdminClient();
@@ -32,7 +33,6 @@ function computeLexicalScore(queryText, candidateText) {
     if (!hits) continue;
     score += token.length >= 4 ? hits * 3 : hits * 1.5;
   }
-
   return score;
 }
 
@@ -42,6 +42,8 @@ function buildQueryText(params) {
     notes: params?.notes || '',
     horseNameJp: params?.horseNameJp || '',
     horseNameEn: params?.horseNameEn || '',
+    horseId: params?.horseId || '',
+    clientId: params?.clientId || '',
   });
 }
 
@@ -55,11 +57,26 @@ async function safeSelect(queryBuilder) {
   }
 }
 
-async function searchKnowledge(params = {}) {
-  const supabase = createAdminClient();
-  if (!supabase) return [];
+async function safeRpc(supabase, fn, args) {
+  try {
+    const { data, error } = await supabase.rpc(fn, args);
+    if (error) return [];
+    return data || [];
+  } catch (_) {
+    return [];
+  }
+}
 
-  const queryText = buildQueryText(params);
+async function tryEmbedQueryText(queryText) {
+  try {
+    const embedding = await embedText(queryText);
+    return vectorToSqlLiteral(embedding);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function searchKnowledgeLexical(supabase, params, queryText) {
   const rows = await safeSelect(
     supabase
       .from('domain_knowledge')
@@ -71,15 +88,73 @@ async function searchKnowledge(params = {}) {
   return rows
     .map((item) => ({
       ...item,
-      _score: computeLexicalScore(queryText, [
-        item.title,
-        item.content,
-        JSON.stringify(item.metadata || {}),
-        item.category,
-      ].filter(Boolean).join('\n')),
+      similarity: null,
+      _score: computeLexicalScore(
+        queryText,
+        [
+          item.title,
+          item.content,
+          JSON.stringify(item.metadata || {}),
+          item.category,
+        ].filter(Boolean).join('\n')
+      ),
     }))
     .sort((a, b) => (b._score || 0) - (a._score || 0))
     .slice(0, params.limit || 5);
+}
+
+async function searchSimilarReportsLexical(supabase, params, queryText) {
+  const rows = await safeSelect(
+    supabase
+      .from('reports')
+      .select('id, horse_id, client_id, body, metrics_json, created_at')
+      .not('body', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(20)
+  );
+
+  return rows
+    .map((item) => ({
+      report_id: item.id,
+      horse_id: item.horse_id,
+      client_id: item.client_id,
+      body: item.body,
+      metrics_json: item.metrics_json,
+      created_at: item.created_at,
+      similarity: null,
+      _score: computeLexicalScore(
+        queryText,
+        [
+          item.body,
+          JSON.stringify(item.metrics_json || {}),
+        ].filter(Boolean).join('\n')
+      ),
+    }))
+    .sort((a, b) => (b._score || 0) - (a._score || 0))
+    .slice(0, params.limit || 3);
+}
+
+async function searchKnowledge(params = {}) {
+  const supabase = createAdminClient();
+  if (!supabase) return [];
+
+  const queryText = buildQueryText(params);
+  const embeddedQuery = await tryEmbedQueryText(queryText);
+
+  if (embeddedQuery) {
+    const semanticRows = await safeRpc(supabase, 'match_knowledge_chunks', {
+      query_embedding_text: embeddedQuery,
+      match_count: params.limit || 5,
+      filter_language: params.language || 'ja',
+      filter_category: params.category || null,
+    });
+
+    if (semanticRows.length) {
+      return semanticRows;
+    }
+  }
+
+  return searchKnowledgeLexical(supabase, params, queryText);
 }
 
 async function loadTranslationRules() {
@@ -100,26 +175,22 @@ async function searchSimilarReports(params = {}) {
   if (!supabase) return [];
 
   const queryText = buildQueryText(params);
-  const rows = await safeSelect(
-    supabase
-      .from('report_documents')
-      .select('id, final_text, generated_text, metadata, created_at')
-      .not('final_text', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-  );
+  const embeddedQuery = await tryEmbedQueryText(queryText);
 
-  return rows
-    .map((item) => ({
-      ...item,
-      _score: computeLexicalScore(queryText, [
-        item.final_text,
-        item.generated_text,
-        JSON.stringify(item.metadata || {}),
-      ].filter(Boolean).join('\n')),
-    }))
-    .sort((a, b) => (b._score || 0) - (a._score || 0))
-    .slice(0, params.limit || 3);
+  if (embeddedQuery) {
+    const semanticRows = await safeRpc(supabase, 'match_report_chunks', {
+      query_embedding_text: embeddedQuery,
+      match_count: params.limit || 3,
+      filter_horse_id: params.horseId || null,
+      filter_client_id: params.clientId || null,
+    });
+
+    if (semanticRows.length) {
+      return semanticRows;
+    }
+  }
+
+  return searchSimilarReportsLexical(supabase, params, queryText);
 }
 
 module.exports = {

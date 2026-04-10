@@ -30,7 +30,7 @@ function buildTranslationRuleContext(items = []) {
 function buildSimilarReportContext(items = []) {
   return items
     .slice(0, 3)
-    .map((item, index) => `Example ${index + 1}: ${String(item.final_text || item.generated_text || '').slice(0, 600)}`)
+    .map((item, index) => `Example ${index + 1}: ${String(item.body || item.final_text || item.generated_text || '').slice(0, 600)}`)
     .join('\n\n');
 }
 
