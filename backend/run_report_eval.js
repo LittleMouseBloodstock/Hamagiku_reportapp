@@ -37,18 +37,18 @@ function normalize(value) {
 }
 
 const TERM_ALIASES = {
-  '問題なし': ['問題なし', '問題は見られません', '問題はありません', '特に問題はない', '特段の問題がない'],
+  '問題なし': ['問題なし', '問題は見られません', '問題はありません', '問題ありませんでした', '特に問題はない', '特段の問題がない'],
   'no': ['no', 'no issues', 'no significant issues', 'no particular issues'],
   condition: ['condition', 'filled out', 'filled out nicely', 'physique', 'overall condition'],
-  'walking in hand': ['walking in hand', 'hand walking', 'walk in hand'],
+  'walking in hand': ['walking in hand', 'hand walking', 'hand-walking', 'walk in hand'],
   'follow-up': ['follow-up', 'follow up', 'following the recent treatment', 'following recent treatment', 'recent treatment'],
-  variation: ['variation', 'fluctuations', 'day-to-day variation', 'variability'],
+  variation: ['variation', 'fluctuations', 'day-to-day variation', 'variability', 'day-to-day basis', 'day to day', 'temperament on a day-to-day basis'],
   settled: ['settled', 'calm', 'calm during exercise', 'settling well', 'settled well'],
-  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle', 'difficulty in handling', 'handling him', 'difficult to manage', 'handling issues', 'handling challenges', 'handling'],
-  movement: ['movement', 'gait', 'way of going', 'action'],
+  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'no significant issues with his handling', 'not particularly difficult to handle', 'easy to handle', 'difficulty in handling', 'handling him', 'difficult to manage', 'handling issues', 'handling challenges', 'handling'],
+  movement: ['movement', 'gait', 'way of going', 'action', 'moves'],
   cooling: ['cooling', 'icing', 'post-exercise icing'],
-  '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波', '気分の変動', '気性の波'],
-  印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません', '感じられません', '目立つようなことはありません'],
+  '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波', '気分の変動', '気性の波', '気分の変動が見られる', '日によっては気分の変動', '日によっては気分の変動が見られる'],
+  印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません', '感じられません', '目立つようなことはありません', '扱いにくい面はございません', '扱いにくい面はありません', '扱いにくさが強い印象はありません', '特に扱いにくい面はございません'],
   冷却: ['冷却', 'アイシング'],
 };
 
