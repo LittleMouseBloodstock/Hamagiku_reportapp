@@ -52,6 +52,22 @@ cd backend
 node run_report_eval.js
 ```
 
+日次 quota に当たる場合の分割実行:
+
+```powershell
+cd backend
+.\run_report_eval_incremental.ps1 -OutputPath .\evals\results\report-eval-incremental.json -Offset 0 -Limit 2
+.\run_report_eval_incremental.ps1 -OutputPath .\evals\results\report-eval-incremental.json -Offset 2 -Limit 2
+.\run_report_eval_incremental.ps1 -OutputPath .\evals\results\report-eval-incremental.json -Offset 4 -Limit 2
+.\run_report_eval_incremental.ps1 -OutputPath .\evals\results\report-eval-incremental.json -Offset 6 -Limit 2
+```
+
+補足:
+
+- `run_report_eval.js` は `--append-to` に対応済み
+- 既に保存済みの case id は skip される
+- free-tier quota で 8 件一括が厳しい場合は 2 件ずつ積む
+
 直近の基準結果:
 
 - `backend/evals/results/report-eval-2026-04-09T12-43-59-035Z.json`
