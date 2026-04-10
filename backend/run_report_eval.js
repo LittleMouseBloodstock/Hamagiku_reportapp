@@ -42,12 +42,14 @@ const TERM_ALIASES = {
   condition: ['condition', 'filled out', 'filled out nicely', 'physique', 'overall condition'],
   'walking in hand': ['walking in hand', 'hand walking', 'walk in hand'],
   'follow-up': ['follow-up', 'follow up', 'following the recent treatment', 'following recent treatment', 'recent treatment'],
-  variation: ['variation', 'fluctuations', 'day-to-day variation'],
+  variation: ['variation', 'fluctuations', 'day-to-day variation', 'variability'],
   settled: ['settled', 'calm', 'calm during exercise', 'settling well', 'settled well'],
-  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle'],
+  manageable: ['manageable', 'manageability', 'no significant issues with their manageability', 'not particularly difficult to handle', 'easy to handle', 'difficulty in handling', 'handling him', 'difficult to manage', 'handling issues', 'handling challenges'],
   movement: ['movement', 'gait', 'way of going'],
-  '気分の波': ['気分の波', '気分の浮き沈み'],
-  印象: ['印象', '面は見受けられません', '扱いにくい面'],
+  cooling: ['cooling', 'icing', 'post-exercise icing'],
+  '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波'],
+  印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません'],
+  冷却: ['冷却', 'アイシング'],
 };
 
 function includesAll(text, tokens = []) {
