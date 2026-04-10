@@ -66,6 +66,10 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function extractRetryDelayMs(message = '') {
   const retryMatch = String(message).match(/retry in\s+([\d.]+)s/i);
   if (!retryMatch) return null;
@@ -87,7 +91,7 @@ function buildGeminiError(error) {
   return wrapped;
 }
 
-async function generateGeminiTextWithRetry(model, prompt, maxAttempts = 3) {
+async function generateGeminiTextWithRetry(model, prompt, maxAttempts = 5) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -103,9 +107,11 @@ async function generateGeminiTextWithRetry(model, prompt, maxAttempts = 3) {
         throw wrapped;
       }
 
-      const waitMs = wrapped.retryAfterSeconds
+      const baseWaitMs = wrapped.retryAfterSeconds
         ? wrapped.retryAfterSeconds * 1000
-        : attempt * 2000;
+        : Math.round(2000 * Math.pow(2, attempt - 1));
+      const jitterMs = Math.floor(Math.random() * 750);
+      const waitMs = clamp(baseWaitMs + jitterMs, 2000, 20000);
       await sleep(waitMs);
     }
   }
