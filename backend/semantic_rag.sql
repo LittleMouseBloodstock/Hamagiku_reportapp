@@ -102,7 +102,7 @@ AS $$
   SELECT
     r.id AS report_id,
     r.horse_id,
-    r.client_id,
+    rc.client_id,
     r.body,
     r.metrics_json,
     r.created_at,
@@ -110,7 +110,7 @@ AS $$
   FROM report_chunks rc
   JOIN reports r ON r.id = rc.report_id
   WHERE (filter_horse_id IS NULL OR r.horse_id = filter_horse_id OR (1 - (rc.embedding <=> query_embedding_text::vector)) > 0.82)
-    AND (filter_client_id IS NULL OR r.client_id = filter_client_id OR (1 - (rc.embedding <=> query_embedding_text::vector)) > 0.8)
+    AND (filter_client_id IS NULL OR rc.client_id = filter_client_id OR (1 - (rc.embedding <=> query_embedding_text::vector)) > 0.8)
     AND rc.embedding IS NOT NULL
   ORDER BY rc.embedding <=> query_embedding_text::vector
   LIMIT match_count;

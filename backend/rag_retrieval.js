@@ -107,7 +107,7 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
   const rows = await safeSelect(
     supabase
       .from('reports')
-      .select('id, horse_id, client_id, body, metrics_json, created_at')
+      .select('id, horse_id, body, metrics_json, created_at')
       .not('body', 'is', null)
       .order('created_at', { ascending: false })
       .limit(20)
@@ -117,7 +117,7 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
     .map((item) => ({
       report_id: item.id,
       horse_id: item.horse_id,
-      client_id: item.client_id,
+      client_id: null,
       body: item.body,
       metrics_json: item.metrics_json,
       created_at: item.created_at,

@@ -62,7 +62,7 @@ async function rebuildKnowledgeChunks(supabase, args) {
 async function rebuildReportChunks(supabase, args) {
   const { data, error } = await supabase
     .from('reports')
-    .select('id, horse_id, client_id, title, body, metrics_json, created_at')
+    .select('id, horse_id, title, body, metrics_json, created_at')
     .not('body', 'is', null)
     .order('created_at', { ascending: false })
     .limit(args.limit);
@@ -84,7 +84,7 @@ async function rebuildReportChunks(supabase, args) {
     const rows = chunks.map((chunk, index) => ({
       report_id: item.id,
       horse_id: item.horse_id || null,
-      client_id: item.client_id || null,
+      client_id: null,
       language: 'mixed',
       chunk_text: chunk,
       embedding: vectorToSqlLiteral(embeddings[index] || []),
