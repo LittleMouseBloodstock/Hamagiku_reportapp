@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
@@ -34,7 +33,6 @@ const emptyRecord = (): CareRecord => ({
 export default function CareRecordsPage() {
     const { session } = useAuth();
     const { language, t } = useLanguage();
-    const refreshKey = useResumeRefresh();
     const [horses, setHorses] = useState<HorseOption[]>([]);
     const [selectedHorseId, setSelectedHorseId] = useState('');
     const [loading, setLoading] = useState(true);
@@ -87,7 +85,7 @@ export default function CareRecordsPage() {
         loadPage();
         return () => { mounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [session?.access_token, refreshKey]);
+    }, [session?.access_token]);
 
     useEffect(() => {
         let mounted = true;
