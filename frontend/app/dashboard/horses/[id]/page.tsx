@@ -997,6 +997,12 @@ export default function HorseDetail() {
                         >
                             <FileText size={18} /> {t('createDepartureReport')}
                         </button>
+                        <Link
+                            href={`/dashboard/care-records?horseId=${id}`}
+                            className="bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 px-5 py-2.5 rounded-full font-bold shadow-sm flex items-center gap-2 transition-all whitespace-nowrap justify-center"
+                        >
+                            <Activity size={18} /> {t('careRecords') || 'Care Records'}
+                        </Link>
                         {editMode ? (
                             <div className="flex gap-2">
                                 <button onClick={handleUpdateHorse} className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex-1">{t('save')}</button>

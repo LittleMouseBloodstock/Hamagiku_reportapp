@@ -21,6 +21,7 @@ const translations: Translations = {
     settings: { ja: "設定", en: "Settings" },
     trainers: { ja: "調教師一覧", en: "Trainers" },
     weights: { ja: "体重管理", en: "Weight Management" },
+    careRecords: { ja: "ケア記録", en: "Care Records" },
 
     // Dashboard Header
     deliverables: { ja: "Deliverables", en: "Deliverables" }, // Kept as English in JP design
@@ -199,6 +200,10 @@ const translations: Translations = {
     departureDate: { ja: "退厩日", en: "Departure Date" },
     lastFarrier: { ja: "最終装蹄", en: "Farrier" },
     lastWorming: { ja: "最終駆虫", en: "Recent Worming" },
+    vetShareNotes: { ja: "獣医共有メモ", en: "Vet Share Notes" },
+    reportOutputNone: { ja: "含めない", en: "Do not include" },
+    reportOutputBody: { ja: "本文に反映", en: "Use in body" },
+    reportOutputAppendix: { ja: "別記として保持", en: "Keep for appendix" },
     feeding: { ja: "飼葉内容", en: "Feeding" },
     exercise: { ja: "調教内容", en: "Exercise Routine" },
     sexAge: { ja: "性別・年齢", en: "Sex / Age" },

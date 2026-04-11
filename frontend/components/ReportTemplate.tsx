@@ -459,6 +459,12 @@ export type ReportData = {
     targetJp: string;
     commentEn: string;
     commentJp: string;
+    careRecords?: Array<{
+        id: string;
+        date: string;
+        note: string;
+        reportMode: 'none' | 'body' | 'appendix';
+    }>;
     weightHistory: WeightHistoryPoint[];
     logo: string | null;
     originalPhoto?: string | null; // Keep original for re-cropping
@@ -572,6 +578,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         targetJp: 'デビュー戦',
         commentEn: 'Arrived at the farm on Dec. 16th to commence breaking and pre-training. The breaking process progressed smoothly...',
         commentJp: '12月16日に牧場に到着し、馴致とプレトレーニングを開始しました。順調に進んでいます。',
+        careRecords: [],
         weightHistory: [
             { label: '10月', value: 418, monthKey: '2025-10' },
             { label: '11月', value: 420, monthKey: '2025-11' },
@@ -683,12 +690,17 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const handleGenerateComment = async () => {
         if (!aiPrompt) return;
         setIsGenerating(true);
+        const carePrompt = (data.careRecords || [])
+            .filter((item) => item.reportMode === 'body' && item.note.trim())
+            .map((item) => `- ${item.date || 'undated'}: ${item.note.trim()}`)
+            .join('\n');
+        const fullPrompt = [aiPrompt, carePrompt ? `Care notes to reflect if relevant:\n${carePrompt}` : ''].filter(Boolean).join('\n\n');
         try {
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
             const res = await fetch(`${baseUrl}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: aiPrompt })
+                body: JSON.stringify({ prompt: fullPrompt })
             });
 
             if (!res.ok) {

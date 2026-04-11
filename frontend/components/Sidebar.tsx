@@ -59,6 +59,10 @@ export default function Sidebar() {
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">monitoring</span>
                     <span className="hidden lg:block text-sm font-medium">{t('weights') || 'Weight Management'}</span>
                 </Link>
+                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/care-records">
+                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">medical_services</span>
+                    <span className="hidden lg:block text-sm font-medium">{t('careRecords') || 'Care Records'}</span>
+                </Link>
                 <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/settings">
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">settings</span>
                     <span className="hidden lg:block text-sm font-medium">{t('settings') || 'Settings'}</span>

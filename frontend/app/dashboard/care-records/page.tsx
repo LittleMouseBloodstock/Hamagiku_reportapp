@@ -1,0 +1,308 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import useResumeRefresh from '@/hooks/useResumeRefresh';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
+
+type HorseOption = {
+    id: string;
+    name: string;
+    name_en?: string | null;
+    departure_date?: string | null;
+    last_farrier_date?: string | null;
+    last_farrier_note?: string | null;
+    last_worming_date?: string | null;
+    last_worming_note?: string | null;
+};
+
+type CareRecord = {
+    id: string;
+    date: string;
+    note: string;
+    reportMode: 'none' | 'body' | 'appendix';
+};
+
+const emptyRecord = (): CareRecord => ({
+    id: `care-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    date: '',
+    note: '',
+    reportMode: 'none'
+});
+
+export default function CareRecordsPage() {
+    const { session } = useAuth();
+    const { language, t } = useLanguage();
+    const refreshKey = useResumeRefresh();
+    const [horses, setHorses] = useState<HorseOption[]>([]);
+    const [selectedHorseId, setSelectedHorseId] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [formData, setFormData] = useState({
+        departure_date: '',
+        last_farrier_date: '',
+        last_farrier_note: '',
+        last_worming_date: '',
+        last_worming_note: ''
+    });
+    const [records, setRecords] = useState<CareRecord[]>([]);
+
+    const selectedHorse = useMemo(
+        () => horses.find((horse) => horse.id === selectedHorseId) || null,
+        [horses, selectedHorseId]
+    );
+
+    const getHeaders = () => {
+        if (!session?.access_token) throw new Error('Missing access token for REST');
+        return buildRestHeaders({ bearerToken: session.access_token, prefer: 'return=representation' });
+    };
+
+    const draftKeyForHorse = (horseId: string) => `care-records:${horseId}`;
+
+    const loadCareDraft = async (horseId: string) => {
+        const rows = await restGet(`report_drafts?draft_key=eq.${encodeURIComponent(draftKeyForHorse(horseId))}&select=data`, getHeaders());
+        const nextRecords = rows?.[0]?.data?.records;
+        return Array.isArray(nextRecords) ? nextRecords as CareRecord[] : [];
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        const loadPage = async () => {
+            if (!session?.access_token) return;
+            try {
+                const horseData = await restGet('horses?select=id,name,name_en,departure_date,last_farrier_date,last_farrier_note,last_worming_date,last_worming_note&order=name', getHeaders());
+                if (!mounted) return;
+                const nextHorses = horseData as HorseOption[] || [];
+                setHorses(nextHorses);
+                const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+                const initialHorseId = params?.get('horseId') || nextHorses[0]?.id || '';
+                setSelectedHorseId(initialHorseId);
+            } catch (error) {
+                console.error('Failed to load care records page:', error);
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+        loadPage();
+        return () => { mounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [session?.access_token, refreshKey]);
+
+    useEffect(() => {
+        let mounted = true;
+        const loadHorseData = async () => {
+            if (!selectedHorseId || !session?.access_token) return;
+            const horse = horses.find((item) => item.id === selectedHorseId);
+            if (!horse) return;
+            setFormData({
+                departure_date: horse.departure_date || '',
+                last_farrier_date: horse.last_farrier_date || '',
+                last_farrier_note: horse.last_farrier_note || '',
+                last_worming_date: horse.last_worming_date || '',
+                last_worming_note: horse.last_worming_note || ''
+            });
+            const nextRecords = await loadCareDraft(selectedHorseId);
+            if (!mounted) return;
+            setRecords(nextRecords.length ? nextRecords : [emptyRecord()]);
+        };
+        loadHorseData().catch((error) => console.error('Failed to load horse care state:', error));
+        return () => { mounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedHorseId, horses, session?.access_token]);
+
+    const handleRecordChange = (recordId: string, key: keyof CareRecord, value: string) => {
+        setRecords((prev) => prev.map((record) => record.id === recordId ? { ...record, [key]: value } : record));
+    };
+
+    const addRecord = () => setRecords((prev) => [...prev, emptyRecord()]);
+
+    const removeRecord = (recordId: string) => {
+        setRecords((prev) => {
+            const next = prev.filter((record) => record.id !== recordId);
+            return next.length ? next : [emptyRecord()];
+        });
+    };
+
+    const handleSave = async () => {
+        if (!selectedHorseId) return;
+        setSaving(true);
+        try {
+            await restPatch(`horses?id=eq.${selectedHorseId}`, {
+                departure_date: formData.departure_date || null,
+                last_farrier_date: formData.last_farrier_date || null,
+                last_farrier_note: formData.last_farrier_note || null,
+                last_worming_date: formData.last_worming_date || null,
+                last_worming_note: formData.last_worming_note || null,
+                updated_at: new Date().toISOString()
+            }, getHeaders());
+
+            const cleanedRecords = records
+                .map((record) => ({ ...record, note: record.note.trim() }))
+                .filter((record) => record.date || record.note);
+
+            await restPost('report_drafts?on_conflict=draft_key', {
+                draft_key: draftKeyForHorse(selectedHorseId),
+                horse_id: selectedHorseId,
+                report_type: 'care-records',
+                updated_at: new Date().toISOString(),
+                data: { records: cleanedRecords }
+            }, getHeaders());
+
+            setHorses((prev) => prev.map((horse) => horse.id === selectedHorseId ? {
+                ...horse,
+                departure_date: formData.departure_date || null,
+                last_farrier_date: formData.last_farrier_date || null,
+                last_farrier_note: formData.last_farrier_note || null,
+                last_worming_date: formData.last_worming_date || null,
+                last_worming_note: formData.last_worming_note || null
+            } : horse));
+        } catch (error) {
+            console.error('Failed to save care records:', error);
+            alert(language === 'ja' ? 'ケア記録の保存に失敗しました。' : 'Failed to save care records.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return <div className="p-6 text-stone-500">Loading care records...</div>;
+    }
+
+    return (
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
+                <div>
+                    <div className="text-xl font-bold text-[#1a3c34] font-display">{t('careRecords') || 'Care Records'}</div>
+                    <div className="text-sm text-stone-500">
+                        {language === 'ja'
+                            ? '退厩・装蹄・駆虫と、牧場側の獣医共有メモを馬ごとに管理します。'
+                            : 'Manage departure/farrier/worming details and farm-side vet notes by horse.'}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <select
+                        value={selectedHorseId}
+                        onChange={(e) => setSelectedHorseId(e.target.value)}
+                        className="w-64 rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                    >
+                        {horses.map((horse) => (
+                            <option key={horse.id} value={horse.id}>
+                                {language === 'ja' ? horse.name : (horse.name_en || horse.name)}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving || !selectedHorseId}
+                        className="px-5 py-2 text-sm rounded-lg bg-[#1a3c34] text-white hover:bg-[#122b25] shadow-sm disabled:opacity-50"
+                    >
+                        {saving ? (language === 'ja' ? '保存中...' : 'Saving...') : (t('save') || 'Save')}
+                    </button>
+                </div>
+            </header>
+
+            <main className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6">
+                    <section className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 space-y-4">
+                        <div className="text-lg font-semibold text-stone-800">
+                            {selectedHorse ? (language === 'ja' ? selectedHorse.name : (selectedHorse.name_en || selectedHorse.name)) : '-'}
+                        </div>
+                        {selectedHorse && language === 'ja' && selectedHorse.name_en ? (
+                            <div className="text-sm text-stone-500">{selectedHorse.name_en}</div>
+                        ) : null}
+                        <div className="space-y-3">
+                            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-stone-400 uppercase">{t('departureDate')}</div>
+                                <div className="mt-2 text-sm text-stone-700">{formData.departure_date || '-'}</div>
+                            </div>
+                            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-stone-400 uppercase">{t('lastFarrier')}</div>
+                                <div className="mt-2 text-sm text-stone-700">{[formData.last_farrier_date, formData.last_farrier_note].filter(Boolean).join(' ') || '-'}</div>
+                            </div>
+                            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                                <div className="text-xs font-semibold tracking-[0.18em] text-stone-400 uppercase">{t('lastWorming')}</div>
+                                <div className="mt-2 text-sm text-stone-700">{[formData.last_worming_date, formData.last_worming_note].filter(Boolean).join(' ') || '-'}</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">{t('departureDate')}</label>
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.departure_date} onChange={(e) => setFormData((prev) => ({ ...prev, departure_date: e.target.value }))} />
+                                </div>
+                                <div />
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastFarrier')}</label>
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_date} onChange={(e) => setFormData((prev) => ({ ...prev, last_farrier_date: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '装蹄メモ' : 'Farrier Note'}</label>
+                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_note} onChange={(e) => setFormData((prev) => ({ ...prev, last_farrier_note: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastWorming')}</label>
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_date} onChange={(e) => setFormData((prev) => ({ ...prev, last_worming_date: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '駆虫メモ' : 'Worming Note'}</label>
+                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_note} onChange={(e) => setFormData((prev) => ({ ...prev, last_worming_note: e.target.value }))} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-lg font-semibold text-stone-800">{t('vetShareNotes') || 'Vet Share Notes'}</div>
+                                    <div className="text-sm text-stone-500">
+                                        {language === 'ja'
+                                            ? '獣医から受けた説明や経過を、牧場側の共有メモとして残します。'
+                                            : 'Keep farm-side notes from vet explanations and follow-up updates.'}
+                                    </div>
+                                </div>
+                                <button onClick={addRecord} className="px-4 py-2 text-sm rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200">
+                                    {language === 'ja' ? '記録追加' : 'Add Note'}
+                                </button>
+                            </div>
+
+                            {records.map((record, index) => (
+                                <div key={record.id} className="rounded-xl border border-stone-200 p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm font-semibold text-stone-700">
+                                            {language === 'ja' ? `記録 ${index + 1}` : `Record ${index + 1}`}
+                                        </div>
+                                        <button onClick={() => removeRecord(record.id)} className="text-xs text-red-500 hover:text-red-700">
+                                            {language === 'ja' ? '削除' : 'Delete'}
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)_220px] gap-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-stone-600 mb-1">{t('date')}</label>
+                                            <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.date} onChange={(e) => handleRecordChange(record.id, 'date', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '共有メモ' : 'Shared Note'}</label>
+                                            <textarea className="w-full min-h-[120px] rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.note} onChange={(e) => handleRecordChange(record.id, 'note', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? 'レポート出力' : 'Report Output'}</label>
+                                            <select className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.reportMode} onChange={(e) => handleRecordChange(record.id, 'reportMode', e.target.value)}>
+                                                <option value="none">{t('reportOutputNone') || 'Do not include'}</option>
+                                                <option value="body">{t('reportOutputBody') || 'Use in body'}</option>
+                                                <option value="appendix">{t('reportOutputAppendix') || 'Keep for appendix'}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    );
+}

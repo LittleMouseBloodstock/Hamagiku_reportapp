@@ -134,6 +134,21 @@ export default function ReportEditor() {
         });
     };
 
+    const fetchCareRecords = async (targetHorseId: string): Promise<CareRecord[]> => {
+        if (!session?.access_token || !targetHorseId) return [];
+        try {
+            const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(`care-records:${targetHorseId}`)}&select=data`, {
+                headers: getDraftHeaders()
+            });
+            if (!res.ok) return [];
+            const rows = await res.json();
+            const records = rows?.[0]?.data?.records;
+            return Array.isArray(records) ? records : [];
+        } catch {
+            return [];
+        }
+    };
+
     const restGet = async (path: string) => {
         const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
             headers: getRestHeaders()
@@ -200,6 +215,13 @@ export default function ReportEditor() {
         label: string;
         value: number;
         monthKey?: string;
+    };
+
+    type CareRecord = {
+        id: string;
+        date: string;
+        note: string;
+        reportMode: 'none' | 'body' | 'appendix';
     };
 
     const getMonthInfo = (value?: string | null) => {
@@ -346,6 +368,7 @@ export default function ReportEditor() {
 
                         const latestWeightEntry = await fetchLatestWeightEntry(paramHorseId);
                         const latestMonthlyReport = await fetchLatestMonthlyReport(paramHorseId);
+                        const careRecords = await fetchCareRecords(paramHorseId);
 
                         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
@@ -418,6 +441,7 @@ export default function ReportEditor() {
                                 weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '',
                                 targetEn: '', targetJp: '',
                                 commentEn: '', commentJp: '',
+                                careRecords,
                                 weightHistory: weightHistory
                             });
                         }
@@ -443,6 +467,7 @@ export default function ReportEditor() {
                 // Fetch Horse Data
                 const horseArr = await restGet(`horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
                 const horse = horseArr?.[0];
+                const careRecords = await fetchCareRecords(report.horse_id);
                 const sixMonthsAgo = new Date();
                 sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
                 const sixMonthsAgoIso = sixMonthsAgo.toISOString();
@@ -541,6 +566,7 @@ export default function ReportEditor() {
                             targetJp: report.target || '',
                             targetEn: metrics.targetEn || '',
 
+                            careRecords: Array.isArray(metrics.careRecordsSnapshot) ? metrics.careRecordsSnapshot : careRecords,
                             weightHistory: mergedHistory,
 
                             mainPhoto: report.main_photo_url || '',
@@ -1153,6 +1179,7 @@ export default function ReportEditor() {
             commentEn: monthly.commentEn,
             statusEn: monthly.statusEn,
             targetEn: monthly.targetEn,
+            careRecordsSnapshot: monthly.careRecords || [],
             weightHistory: monthly.weightHistory,
             sireEn: monthly.sireEn,
             sireJp: monthly.sireJp,
