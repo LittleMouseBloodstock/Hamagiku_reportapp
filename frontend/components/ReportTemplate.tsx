@@ -850,6 +850,15 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         });
     };
 
+    const updateCareRecordReportMode = (recordId: string, reportMode: 'none' | 'body' | 'appendix') => {
+        setData((prev) => ({
+            ...prev,
+            careRecords: (prev.careRecords || []).map((record) => (
+                record.id === recordId ? { ...record, reportMode } : record
+            ))
+        }));
+    };
+
     const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
@@ -1378,6 +1387,54 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     </button>
                                 </div>
                             </div>
+                        </section>
+
+                        {/* Care Records */}
+                        <section>
+                            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                                <FileText size={16} /> {language === 'ja' ? 'このレポートのケア記録' : 'Care Records for This Report'}
+                            </h2>
+                            {(data.careRecords || []).length ? (
+                                <div className="space-y-3">
+                                    {(data.careRecords || []).map((record, index) => (
+                                        <div key={record.id || `${record.date}-${index}`} className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="text-xs font-bold text-stone-700">
+                                                        {record.date || (language === 'ja' ? '日付なし' : 'Undated')}
+                                                    </div>
+                                                    <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-stone-600">
+                                                        {record.note || (language === 'ja' ? 'メモ未入力' : 'No note')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                                                {language === 'ja' ? 'レポート出力' : 'Report Output'}
+                                            </label>
+                                            <select
+                                                value={record.reportMode}
+                                                onChange={(e) => updateCareRecordReportMode(record.id, e.target.value as 'none' | 'body' | 'appendix')}
+                                                className="mt-1 w-full rounded-md border-stone-300 bg-white px-2 py-2 text-xs text-stone-900 shadow-sm focus:border-[#1B3226] focus:ring focus:ring-[#1B3226]/20"
+                                            >
+                                                <option value="none">{language === 'ja' ? '含めない' : 'Do not include'}</option>
+                                                <option value="body">{language === 'ja' ? '本文に反映' : 'Use in body'}</option>
+                                                <option value="appendix">{language === 'ja' ? '2ページ目に添付' : 'Attach as appendix'}</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                    <p className="text-[11px] leading-relaxed text-stone-500">
+                                        {language === 'ja'
+                                            ? '本文に反映した記録はAI生成時に軽く参照されます。2ページ目に添付した記録はappendixとして別ページに出ます。'
+                                            : 'Body records are lightly referenced during AI generation. Appendix records are printed on a separate appendix page.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4 text-xs leading-relaxed text-stone-500">
+                                    {language === 'ja'
+                                        ? 'この馬のケア記録はまだ読み込まれていません。先に Care Records 画面で記録を保存してから、このレポートを開き直してください。'
+                                        : 'No care records are loaded for this horse yet. Save records from the Care Records screen first, then reopen this report.'}
+                                </div>
+                            )}
                         </section>
 
                         {/* Comments & AI Tools */}
