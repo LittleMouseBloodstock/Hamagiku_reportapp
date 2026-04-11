@@ -152,6 +152,46 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         font-size: 9px !important;
       }`}
 
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 210mm !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        transform: none !important;
+        border: none !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix .report-page {
+        width: 210mm !important;
+        height: 285mm !important;
+        min-height: 285mm !important;
+        margin: 0 !important;
+        padding: 15mm 28px 6px 28px !important;
+        box-sizing: border-box !important;
+        background: white !important;
+        overflow: hidden !important;
+        break-after: page !important;
+        page-break-after: always !important;
+        box-shadow: none !important;
+        transform: none !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix .report-page:last-child {
+        break-after: auto !important;
+        page-break-after: auto !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix.no-logo .report-page {
+        padding-top: 20mm !important;
+      }`}
+
       /* Logo Fix: Clip ALL edges to remove mystery line */
       .logo-container {
          clip-path: inset(1px); /* Cut 1px from all sides */
@@ -591,6 +631,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print';
+    const appendixRecords = (data.careRecords || []).filter((item) => item.reportMode === 'appendix' && item.note.trim());
+    const hasAppendix = appendixRecords.length > 0;
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
     const [renderPhotoSrc, setRenderPhotoSrc] = useState('');
     const primaryHorseName = lang === 'ja' ? (data.horseNameJp || '（馬名を入力）') : (data.horseNameEn || '(Horse Name)');
@@ -1413,15 +1455,25 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                 {/* A4 Container - Uniqlo Style Reverted */}
                 <div
                     id={batchPrint ? undefined : 'report-preview'}
-                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100 overflow-hidden'}${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
+                    className={`report-preview bg-white relative flex flex-col mx-auto transition-transform origin-top${batchPrint ? '' : ' shadow-2xl scale-[0.9] md:scale-100 overflow-hidden'}${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}${hasAppendix ? ' has-appendix' : ''}`}
                     style={{
                         width: '210mm',
-                        height: batchPrint ? undefined : '297mm',
-                        minHeight: '297mm',
-                        padding: showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px',
+                        height: hasAppendix || batchPrint ? undefined : '297mm',
+                        minHeight: hasAppendix ? undefined : '297mm',
+                        padding: hasAppendix ? 0 : (showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px'),
                         boxSizing: 'border-box'
                     }}
                 >
+                    <div
+                        className={hasAppendix ? 'report-page bg-white relative flex flex-col' : 'contents'}
+                        style={hasAppendix ? {
+                            width: '210mm',
+                            height: '297mm',
+                            minHeight: '297mm',
+                            padding: showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px',
+                            boxSizing: 'border-box'
+                        } : undefined}
+                    >
                     {/* Header */}
                     <header className={`report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4' : 'mb-1 h-[104px] pt-0'}`}>
                         <div className="flex flex-col justify-center items-start z-10">
@@ -1608,6 +1660,62 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                     </div>
+                    </div>
+                    {hasAppendix && (
+                        <div
+                            className="report-page appendix-page bg-white relative flex flex-col"
+                            style={{
+                                width: '210mm',
+                                height: '297mm',
+                                minHeight: '297mm',
+                                padding: showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px',
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            <header className="border-b-2 border-[#c5a059] pb-4 mb-6">
+                                <div className="flex items-start justify-between gap-6">
+                                    <div>
+                                        <div className="font-serif-en font-bold text-[#1a3c34] tracking-[0.28em] text-xl leading-tight">HAMAGIKU FARM</div>
+                                        <h2 className={`mt-5 text-3xl font-bold text-[#1a3c34] tracking-wide ${lang === 'ja' ? 'font-serif-jp' : 'font-serif-en'}`}>
+                                            {lang === 'ja' ? 'ケア記録 Appendix' : 'Care Record Appendix'}
+                                        </h2>
+                                        <p className="mt-2 text-sm text-[#666]">
+                                            {lang === 'ja' ? 'レポートに添付する補足記録' : 'Supporting care notes attached to this report'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right text-sm text-[#555]">
+                                        <div className="font-bold">{primaryHorseName}</div>
+                                        <div>{lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}</div>
+                                    </div>
+                                </div>
+                            </header>
+                            <div className="flex-1 space-y-4 overflow-hidden">
+                                {appendixRecords.slice(0, 5).map((record, index) => (
+                                    <section key={record.id || `${record.date}-${index}`} className="rounded-xl border border-[#d8c8af] bg-white p-5">
+                                        <div className="flex items-center justify-between gap-4 border-b border-[#eee4d8] pb-3">
+                                            <h3 className="font-serif-en text-[#1a3c34] font-bold tracking-[0.18em] text-sm uppercase">
+                                                {lang === 'ja' ? `記録 #${index + 1}` : `Record #${index + 1}`}
+                                            </h3>
+                                            <span className="text-sm text-[#666]">{record.date || '-'}</span>
+                                        </div>
+                                        <p className={`mt-4 whitespace-pre-wrap text-[#222] ${lang === 'ja' ? 'font-serif-jp text-[14px] leading-[1.8]' : 'font-serif-en text-[16px] leading-[1.65]'}`}>
+                                            {record.note}
+                                        </p>
+                                    </section>
+                                ))}
+                                {appendixRecords.length > 5 && (
+                                    <p className="text-xs text-[#777]">
+                                        {lang === 'ja'
+                                            ? `ほか ${appendixRecords.length - 5} 件の記録は省略されています。`
+                                            : `${appendixRecords.length - 5} additional records are omitted from this one-page appendix.`}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="footer-text mt-auto text-center text-[#aaa] font-serif-en tracking-widest text-[10px]">
+                                HAMAGIKU FARM - CARE APPENDIX | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div >
