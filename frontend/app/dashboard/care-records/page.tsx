@@ -170,7 +170,10 @@ export default function CareRecordsPage() {
                 report_type: 'care-records',
                 updated_at: new Date().toISOString(),
                 data: { records: cleanedRecords }
-            }, getHeaders());
+            }, buildRestHeaders({
+                bearerToken: session?.access_token,
+                prefer: 'resolution=merge-duplicates,return=representation'
+            }));
 
             setHorses((prev) => prev.map((horse) => horse.id === selectedHorseId ? {
                 ...horse,
