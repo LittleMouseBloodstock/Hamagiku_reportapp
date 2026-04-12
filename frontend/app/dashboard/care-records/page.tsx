@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { InputHTMLAttributes } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
@@ -55,6 +56,15 @@ export default function CareRecordsPage() {
         () => horses.find((horse) => horse.id === selectedHorseId) || null,
         [horses, selectedHorseId]
     );
+    const localizedDateInputProps: InputHTMLAttributes<HTMLInputElement> = language === 'ja'
+        ? { type: 'date', lang: 'ja' }
+        : {
+            type: 'text',
+            lang: 'en',
+            inputMode: 'numeric',
+            placeholder: 'YYYY-MM-DD',
+            pattern: '\\d{4}-\\d{2}-\\d{2}'
+        };
 
     const getHeaders = () => {
         if (!session?.access_token) throw new Error('Missing access token for REST');
@@ -353,12 +363,12 @@ export default function CareRecordsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('departureDate')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.departure_date} onChange={(e) => updateFormField('departure_date', e.target.value)} />
+                                    <input {...localizedDateInputProps} className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.departure_date} onChange={(e) => updateFormField('departure_date', e.target.value)} />
                                 </div>
                                 <div />
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastFarrier')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_date} onChange={(e) => updateFormField('last_farrier_date', e.target.value)} />
+                                    <input {...localizedDateInputProps} className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_date} onChange={(e) => updateFormField('last_farrier_date', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '装蹄メモ' : 'Farrier Note'}</label>
@@ -366,7 +376,7 @@ export default function CareRecordsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastWorming')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_date} onChange={(e) => updateFormField('last_worming_date', e.target.value)} />
+                                    <input {...localizedDateInputProps} className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_date} onChange={(e) => updateFormField('last_worming_date', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '駆虫メモ' : 'Worming Note'}</label>
@@ -403,7 +413,7 @@ export default function CareRecordsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)_220px] gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-stone-600 mb-1">{t('date')}</label>
-                                            <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.date} onChange={(e) => handleRecordChange(record.id, 'date', e.target.value)} />
+                                            <input {...localizedDateInputProps} className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.date} onChange={(e) => handleRecordChange(record.id, 'date', e.target.value)} />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '共有メモ' : 'Shared Note'}</label>
