@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
@@ -37,6 +37,8 @@ export default function CareRecordsPage() {
     const [selectedHorseId, setSelectedHorseId] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const loadedHorseIdRef = useRef('');
+    const hasUnsavedCareChangesRef = useRef(false);
     const [formData, setFormData] = useState({
         departure_date: '',
         last_farrier_date: '',
@@ -75,7 +77,7 @@ export default function CareRecordsPage() {
                 setHorses(nextHorses);
                 const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
                 const initialHorseId = params?.get('horseId') || nextHorses[0]?.id || '';
-                setSelectedHorseId(initialHorseId);
+                setSelectedHorseId((prev) => prev || initialHorseId);
             } catch (error) {
                 console.error('Failed to load care records page:', error);
             } finally {
@@ -91,6 +93,7 @@ export default function CareRecordsPage() {
         let mounted = true;
         const loadHorseData = async () => {
             if (!selectedHorseId || !session?.access_token) return;
+            if (selectedHorseId === loadedHorseIdRef.current) return;
             const horse = horses.find((item) => item.id === selectedHorseId);
             if (!horse) return;
             setFormData({
@@ -103,19 +106,41 @@ export default function CareRecordsPage() {
             const nextRecords = await loadCareDraft(selectedHorseId);
             if (!mounted) return;
             setRecords(nextRecords.length ? nextRecords : [emptyRecord()]);
+            loadedHorseIdRef.current = selectedHorseId;
+            hasUnsavedCareChangesRef.current = false;
         };
         loadHorseData().catch((error) => console.error('Failed to load horse care state:', error));
         return () => { mounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedHorseId, horses, session?.access_token]);
 
+    const markCareDirty = () => {
+        hasUnsavedCareChangesRef.current = true;
+    };
+
+    const updateFormField = (key: keyof typeof formData, value: string) => {
+        markCareDirty();
+        setFormData((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleHorseChange = (horseId: string) => {
+        loadedHorseIdRef.current = '';
+        hasUnsavedCareChangesRef.current = false;
+        setSelectedHorseId(horseId);
+    };
+
     const handleRecordChange = (recordId: string, key: keyof CareRecord, value: string) => {
+        markCareDirty();
         setRecords((prev) => prev.map((record) => record.id === recordId ? { ...record, [key]: value } : record));
     };
 
-    const addRecord = () => setRecords((prev) => [...prev, emptyRecord()]);
+    const addRecord = () => {
+        markCareDirty();
+        setRecords((prev) => [...prev, emptyRecord()]);
+    };
 
     const removeRecord = (recordId: string) => {
+        markCareDirty();
         setRecords((prev) => {
             const next = prev.filter((record) => record.id !== recordId);
             return next.length ? next : [emptyRecord()];
@@ -155,6 +180,7 @@ export default function CareRecordsPage() {
                 last_worming_date: formData.last_worming_date || null,
                 last_worming_note: formData.last_worming_note || null
             } : horse));
+            hasUnsavedCareChangesRef.current = false;
         } catch (error) {
             console.error('Failed to save care records:', error);
             alert(language === 'ja' ? 'ケア記録の保存に失敗しました。' : 'Failed to save care records.');
@@ -181,7 +207,7 @@ export default function CareRecordsPage() {
                 <div className="flex items-center gap-2">
                     <select
                         value={selectedHorseId}
-                        onChange={(e) => setSelectedHorseId(e.target.value)}
+                        onChange={(e) => handleHorseChange(e.target.value)}
                         className="w-64 rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
                     >
                         {horses.map((horse) => (
@@ -230,24 +256,24 @@ export default function CareRecordsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('departureDate')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.departure_date} onChange={(e) => setFormData((prev) => ({ ...prev, departure_date: e.target.value }))} />
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.departure_date} onChange={(e) => updateFormField('departure_date', e.target.value)} />
                                 </div>
                                 <div />
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastFarrier')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_date} onChange={(e) => setFormData((prev) => ({ ...prev, last_farrier_date: e.target.value }))} />
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_date} onChange={(e) => updateFormField('last_farrier_date', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '装蹄メモ' : 'Farrier Note'}</label>
-                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_note} onChange={(e) => setFormData((prev) => ({ ...prev, last_farrier_note: e.target.value }))} />
+                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_farrier_note} onChange={(e) => updateFormField('last_farrier_note', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{t('lastWorming')}</label>
-                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_date} onChange={(e) => setFormData((prev) => ({ ...prev, last_worming_date: e.target.value }))} />
+                                    <input type="date" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_date} onChange={(e) => updateFormField('last_worming_date', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '駆虫メモ' : 'Worming Note'}</label>
-                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_note} onChange={(e) => setFormData((prev) => ({ ...prev, last_worming_note: e.target.value }))} />
+                                    <input type="text" className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={formData.last_worming_note} onChange={(e) => updateFormField('last_worming_note', e.target.value)} />
                                 </div>
                             </div>
                         </div>
