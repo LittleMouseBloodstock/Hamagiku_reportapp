@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
+import { supabase } from '@/lib/supabase';
 
 type HorseOption = {
     id: string;
@@ -21,6 +22,7 @@ type CareRecord = {
     date: string;
     note: string;
     reportMode: 'none' | 'body' | 'appendix';
+    imageUrls?: string[];
 };
 
 const emptyRecord = (): CareRecord => ({
@@ -37,6 +39,7 @@ export default function CareRecordsPage() {
     const [selectedHorseId, setSelectedHorseId] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadingRecordId, setUploadingRecordId] = useState('');
     const loadedHorseIdRef = useRef('');
     const hasUnsavedCareChangesRef = useRef(false);
     const [formData, setFormData] = useState({
@@ -64,6 +67,38 @@ export default function CareRecordsPage() {
         const rows = await restGet(`report_drafts?draft_key=eq.${encodeURIComponent(draftKeyForHorse(horseId))}&select=data`, getHeaders());
         const nextRecords = rows?.[0]?.data?.records;
         return Array.isArray(nextRecords) ? nextRecords as CareRecord[] : [];
+    };
+
+    const fileToBlob = (file: File) => file;
+
+    const uploadCareImage = async (recordId: string, file: File) => {
+        if (!selectedHorseId || !session?.access_token) return null;
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const safeExt = /^[a-z0-9]+$/.test(ext) ? ext : 'jpg';
+        const path = `care-records/${selectedHorseId}/${recordId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
+        const encodedPath = path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+        const { supabaseUrl, supabaseAnonKey } = (() => {
+            const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            if (!url || !key) throw new Error('Missing storage env');
+            return { supabaseUrl: url, supabaseAnonKey: key };
+        })();
+        const res = await fetch(`${supabaseUrl}/storage/v1/object/report-assets/${encodedPath}`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseAnonKey,
+                Authorization: `Bearer ${session.access_token}`,
+                'x-upsert': 'true',
+                'Content-Type': file.type || 'image/jpeg'
+            },
+            body: fileToBlob(file)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `Storage upload failed: ${res.status}`);
+        }
+        const { data: { publicUrl } } = supabase.storage.from('report-assets').getPublicUrl(path);
+        return publicUrl;
     };
 
     useEffect(() => {
@@ -145,6 +180,40 @@ export default function CareRecordsPage() {
             const next = prev.filter((record) => record.id !== recordId);
             return next.length ? next : [emptyRecord()];
         });
+    };
+
+    const handleImageUpload = async (recordId: string, files: FileList | null) => {
+        if (!files?.length) return;
+        setUploadingRecordId(recordId);
+        try {
+            const urls: string[] = [];
+            for (const file of Array.from(files).slice(0, 6)) {
+                const url = await uploadCareImage(recordId, file);
+                if (url) urls.push(url);
+            }
+            if (urls.length) {
+                markCareDirty();
+                setRecords((prev) => prev.map((record) => (
+                    record.id === recordId
+                        ? { ...record, imageUrls: [...(record.imageUrls || []), ...urls] }
+                        : record
+                )));
+            }
+        } catch (error) {
+            console.error('Failed to upload care images:', error);
+            alert(language === 'ja' ? '画像のアップロードに失敗しました。' : 'Failed to upload images.');
+        } finally {
+            setUploadingRecordId('');
+        }
+    };
+
+    const removeRecordImage = (recordId: string, imageUrl: string) => {
+        markCareDirty();
+        setRecords((prev) => prev.map((record) => (
+            record.id === recordId
+                ? { ...record, imageUrls: (record.imageUrls || []).filter((url) => url !== imageUrl) }
+                : record
+        )));
     };
 
     const handleSave = async () => {
@@ -323,6 +392,52 @@ export default function CareRecordsPage() {
                                                 <option value="appendix">{t('reportOutputAppendix') || 'Keep for appendix'}</option>
                                             </select>
                                         </div>
+                                    </div>
+                                    <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-3">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <div className="text-xs font-semibold text-stone-700">
+                                                    {language === 'ja' ? '添付画像' : 'Attached Images'}
+                                                </div>
+                                                <div className="mt-1 text-xs text-stone-500">
+                                                    {language === 'ja'
+                                                        ? '傷、レントゲン、エコー、経過写真など。appendix 出力時に2ページ目へ表示します。'
+                                                        : 'Wound photos, X-rays, ultrasound images, or progress photos. These appear on the appendix page.'}
+                                                </div>
+                                            </div>
+                                            <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-stone-700 shadow-sm ring-1 ring-stone-200 hover:bg-stone-100">
+                                                {uploadingRecordId === record.id
+                                                    ? (language === 'ja' ? 'アップロード中...' : 'Uploading...')
+                                                    : (language === 'ja' ? '画像を追加' : 'Add Images')}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    className="hidden"
+                                                    disabled={uploadingRecordId === record.id}
+                                                    onChange={(e) => {
+                                                        void handleImageUpload(record.id, e.target.files);
+                                                        e.currentTarget.value = '';
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        {(record.imageUrls || []).length ? (
+                                            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                {(record.imageUrls || []).map((url) => (
+                                                    <div key={url} className="relative overflow-hidden rounded-lg border border-stone-200 bg-white">
+                                                        <img src={url} alt="" className="h-24 w-full object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeRecordImage(record.id, url)}
+                                                            className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-[10px] text-white hover:bg-black"
+                                                        >
+                                                            {language === 'ja' ? '削除' : 'Remove'}
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
                             ))}

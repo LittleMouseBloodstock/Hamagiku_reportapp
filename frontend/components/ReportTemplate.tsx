@@ -504,6 +504,7 @@ export type ReportData = {
         date: string;
         note: string;
         reportMode: 'none' | 'body' | 'appendix';
+        imageUrls?: string[];
     }>;
     weightHistory: WeightHistoryPoint[];
     logo: string | null;
@@ -1758,6 +1759,15 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         <p className={`mt-4 whitespace-pre-wrap text-[#222] ${lang === 'ja' ? 'font-serif-jp text-[14px] leading-[1.8]' : 'font-serif-en text-[16px] leading-[1.65]'}`}>
                                             {record.note}
                                         </p>
+                                        {(record.imageUrls || []).length ? (
+                                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                                {(record.imageUrls || []).slice(0, 4).map((url) => (
+                                                    <div key={url} className="overflow-hidden rounded-lg border border-[#eee4d8] bg-[#f8f6f2] p-2">
+                                                        <img src={url} alt="" className="h-32 w-full rounded object-cover" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                     </section>
                                 ))}
                                 {appendixRecords.length > 5 && (
