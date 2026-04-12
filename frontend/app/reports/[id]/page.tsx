@@ -225,16 +225,21 @@ export default function ReportEditor() {
         imageUrls?: string[];
     };
 
-    const mergeCareRecordImages = (snapshotRecords: CareRecord[], latestRecords: CareRecord[]) => {
+    const mergeCareRecords = (snapshotRecords: CareRecord[], latestRecords: CareRecord[]) => {
         const latestById = new Map(latestRecords.map((record) => [record.id, record]));
-        return snapshotRecords.map((record) => {
+        const merged = snapshotRecords.map((record) => {
             const latest = latestById.get(record.id);
-            if (!latest?.imageUrls?.length) return record;
+            if (!latest) return record;
+            latestById.delete(record.id);
             return {
                 ...record,
-                imageUrls: record.imageUrls?.length ? record.imageUrls : latest.imageUrls
+                date: latest.date || record.date,
+                note: latest.note || record.note,
+                reportMode: latest.reportMode !== 'none' ? latest.reportMode : record.reportMode,
+                imageUrls: latest.imageUrls?.length ? latest.imageUrls : record.imageUrls
             };
         });
+        return [...merged, ...Array.from(latestById.values())];
     };
 
     const getMonthInfo = (value?: string | null) => {
@@ -580,7 +585,7 @@ export default function ReportEditor() {
                             targetEn: metrics.targetEn || '',
 
                             careRecords: Array.isArray(metrics.careRecordsSnapshot)
-                                ? mergeCareRecordImages(metrics.careRecordsSnapshot as CareRecord[], careRecords)
+                                ? mergeCareRecords(metrics.careRecordsSnapshot as CareRecord[], careRecords)
                                 : careRecords,
                             weightHistory: mergedHistory,
 
