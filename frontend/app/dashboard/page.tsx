@@ -97,15 +97,17 @@ export default function Dashboard() {
                 const data = await restGet('reports?select=*,review_status,horse_id,horses(name,name_en)&order=created_at.desc', headers);
                 const today = new Date();
                 const todayStr = getLocalDateStr(today);
-                const [reportsCount, activeHorsesCount, retiredHorsesCount, clientsCount, memoRes, allCovers, allScans] = await Promise.all([
+                const [reportsCount, horsesForStatus, clientsCount, memoRes, allCovers, allScans] = await Promise.all([
                     restCount('reports?select=*', headers),
-                    restCount('horses?select=*&departure_date=is.null', headers),
-                    restCount('horses?select=*&departure_date=not.is.null', headers),
+                    restGet('horses?select=id,horse_status', headers),
                     restCount('clients?select=*', headers),
                     restGet('repro_memo_events?select=id,event_date,title,note&order=event_date.asc', headers).catch(() => []),
                     restGet('repro_covers?select=id,horse_id,cover_date,horses(name,name_en)&order=cover_date.desc', headers).catch(() => []),
                     restGet('repro_scans?select=id,horse_id,scheduled_date,result,horses(name,name_en)&order=scheduled_date.desc', headers).catch(() => [])
                 ]);
+                const horseStatusRows = (horsesForStatus as Array<{ horse_status?: string | null }>) || [];
+                const retiredHorsesCount = horseStatusRows.filter((horse) => ['Retired', 'Sold'].includes(horse.horse_status || '')).length;
+                const activeHorsesCount = horseStatusRows.length - retiredHorsesCount;
                 const [todayCovers, todayScans] = await Promise.all([
                     restGet(`repro_covers?select=cover_date,horse_id,horses(name,name_en)&cover_date=eq.${todayStr}`, headers).catch(() => []),
                     restGet(`repro_scans?select=scheduled_date,horse_id,horses(name,name_en)&scheduled_date=eq.${todayStr}`, headers).catch(() => [])

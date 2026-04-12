@@ -52,6 +52,7 @@ export default function HorsesPage() {
     };
 
     const isBroodmare = (horse: Horse) => horse.sex === 'Mare' || (horse.sex === 'Filly' && horse.broodmare_flag === true);
+    const isInactiveHorse = (horse: Pick<Horse, 'horse_status'>) => ['Retired', 'Sold'].includes(horse.horse_status || '');
 
     const getHorseStatus = (status?: string | null) => {
         const normalized = status || 'Active';
@@ -138,8 +139,8 @@ export default function HorsesPage() {
         }
         const prevStatus = horse.horse_status || 'Active';
         const prevDeparture = horse.departure_date || null;
-        const shouldRetire = nextStatus === 'Retired';
-        const nextDeparture = shouldRetire ? new Date().toISOString().slice(0, 10) : null;
+        const shouldLeaveStable = nextStatus === 'Retired' || nextStatus === 'Sold';
+        const nextDeparture = shouldLeaveStable ? (prevDeparture || new Date().toISOString().slice(0, 10)) : null;
 
         setHorses(prev => prev.map((h) => (
             h.id === horse.id
@@ -147,7 +148,7 @@ export default function HorsesPage() {
                 : h
         )));
 
-        if (shouldRetire) {
+        if (shouldLeaveStable) {
             setShowMode('retired');
         }
 
@@ -169,7 +170,7 @@ export default function HorsesPage() {
                     ? { ...h, horse_status: prevStatus, departure_date: prevDeparture }
                     : h
             )));
-            if (shouldRetire) {
+            if (shouldLeaveStable) {
                 setShowMode(prevDeparture ? 'retired' : 'active');
             }
         }
@@ -235,8 +236,8 @@ export default function HorsesPage() {
                             <tbody className="divide-y divide-stone-200">
                                 {(() => {
                                     const filtered = [...horses].filter((horse) => {
-                                        const isRetired = !!horse.departure_date;
-                                        return showMode === 'active' ? !isRetired : isRetired;
+                                        const isInactive = isInactiveHorse(horse);
+                                        return showMode === 'active' ? !isInactive : isInactive;
                                     });
                                     const sortList = (list: Horse[]) => list.sort((a, b) => {
                                         if (sortMode === 'trainer') {

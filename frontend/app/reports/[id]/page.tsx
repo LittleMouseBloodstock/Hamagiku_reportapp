@@ -22,6 +22,8 @@ const stripDraftImagePayload = <T extends ReportData | DepartureReportData>(data
     return next;
 };
 
+const isReportSelectableHorse = (horse: { horse_status?: string | null }) => !['Retired', 'Sold'].includes(horse.horse_status || '');
+
 export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
@@ -43,7 +45,7 @@ export default function ReportEditor() {
 
     // Horse Selection (for New Reports)
     const [showHorseSelector, setShowHorseSelector] = useState(false);
-    const [horses, setHorses] = useState<{ id: string, name: string, name_en: string }[]>([]);
+    const [horses, setHorses] = useState<{ id: string, name: string, name_en: string, horse_status?: string | null }[]>([]);
 
     // Current Data (Synced from Child)
     const reportDataRef = useRef<ReportData | DepartureReportData | null>(null);
@@ -467,9 +469,9 @@ export default function ReportEditor() {
                         }
                     } else {
                         // No horse selected, fetch list and show selector
-                        const allHorses = await restGet('horses?select=id,name,name_en&departure_date=is.null&order=name');
+                        const allHorses = await restGet('horses?select=id,name,name_en,horse_status&order=name');
                         if (isMounted) {
-                            if (allHorses) setHorses(allHorses);
+                            if (allHorses) setHorses(allHorses.filter(isReportSelectableHorse));
                             setShowHorseSelector(true);
                             setLoading(false);
                         }
@@ -699,11 +701,11 @@ export default function ReportEditor() {
                                 }
                             } else {
                                 // List horses fallback
-                                const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=id,name,name_en&departure_date=is.null&order=name`, { headers });
+                                const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=id,name,name_en,horse_status&order=name`, { headers });
                                 if (res.ok) {
                                     const allHorses = await res.json();
                                     if (isMounted) {
-                                        setHorses(allHorses);
+                                        setHorses(allHorses.filter(isReportSelectableHorse));
                                         setShowHorseSelector(true);
                                         setLoading(false);
                                     }
