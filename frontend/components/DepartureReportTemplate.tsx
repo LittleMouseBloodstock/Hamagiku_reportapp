@@ -162,18 +162,18 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? '退厩レポート用の入力欄' : 'Fields for departure report.'}</p>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border border-indigo-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
                         <span className="text-[11px] text-indigo-500">{language === 'ja' ? 'メモから各項目を自動生成' : 'Generate fields from notes'}</span>
                     </div>
                     <div className="space-y-2">
                         <textarea
-                            rows={3}
+                            rows={5}
                             value={aiNotes}
                             onChange={(e) => setAiNotes(e.target.value)}
                             placeholder={language === 'ja' ? "例：退厩理由、近況、装蹄や駆虫のメモ、飼葉/調教内容 など" : "e.g. reason for departure, recent condition, farrier/worming notes, feeding/training"}
-                            className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+                            className="w-full resize-y border-0 rounded-lg bg-white/80 px-3 py-3 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
                         />
                         <button
                             onClick={handleGenerateFields}

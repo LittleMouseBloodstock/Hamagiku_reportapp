@@ -1448,18 +1448,18 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h2>
 
                                 {/* Gemini AI Style Assist UI */}
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border border-indigo-100 shadow-sm">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-lg">✨</span>
                                         <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <input
-                                            type="text"
+                                        <textarea
+                                            rows={3}
                                             value={aiPrompt}
                                             onChange={(e) => setAiPrompt(e.target.value)}
                                             placeholder={lang === 'ja' ? "例：動き良し、カイ食い良好" : "e.g. Good movement, good appetite"}
-                                            className="w-full border-0 rounded-lg bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+                                            className="w-full resize-y border-0 rounded-lg bg-white/80 px-3 py-3 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
                                         />
                                         <div className="flex gap-2">
                                             <button
