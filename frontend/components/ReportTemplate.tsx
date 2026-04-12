@@ -1750,28 +1750,41 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </div>
                             </header>
                             <div className="flex-1 space-y-4 overflow-hidden">
-                                {appendixRecords.slice(0, 5).map((record, index) => (
-                                    <section key={record.id || `${record.date}-${index}`} className="rounded-xl border border-[#d8c8af] bg-white p-5">
-                                        <div className="flex items-center justify-between gap-4 border-b border-[#eee4d8] pb-3">
-                                            <h3 className="font-serif-en text-[#1a3c34] font-bold tracking-[0.18em] text-sm uppercase">
-                                                {lang === 'ja' ? `記録 #${index + 1}` : `Record #${index + 1}`}
-                                            </h3>
-                                            <span className="text-sm text-[#666]">{record.date || '-'}</span>
-                                        </div>
-                                        <p className={`mt-4 whitespace-pre-wrap text-[#222] ${lang === 'ja' ? 'font-serif-jp text-[14px] leading-[1.8]' : 'font-serif-en text-[16px] leading-[1.65]'}`}>
-                                            {record.note}
-                                        </p>
-                                        {(record.imageUrls || []).length ? (
-                                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                                {(record.imageUrls || []).slice(0, 4).map((url) => (
-                                                    <div key={url} className="overflow-hidden rounded-lg border border-[#eee4d8] bg-[#f8f6f2] p-2">
-                                                        <img src={url} alt="" className="h-32 w-full rounded object-cover" />
-                                                    </div>
-                                                ))}
+                                {appendixRecords.slice(0, 5).map((record, index) => {
+                                    const imageUrls = (record.imageUrls || []).filter(Boolean).slice(0, 6);
+                                    const imageHeightClass = imageUrls.length <= 1 ? 'h-[300px]' : imageUrls.length === 2 ? 'h-[230px]' : 'h-[155px]';
+                                    return (
+                                        <section key={record.id || `${record.date}-${index}`} className="rounded-xl border border-[#d8c8af] bg-white p-5">
+                                            <div className="flex items-center justify-between gap-4 border-b border-[#eee4d8] pb-3">
+                                                <h3 className="font-serif-en text-[#1a3c34] font-bold tracking-[0.18em] text-sm uppercase">
+                                                    {lang === 'ja' ? `記録 #${index + 1}` : `Record #${index + 1}`}
+                                                </h3>
+                                                <span className="text-sm text-[#666]">{record.date || '-'}</span>
                                             </div>
-                                        ) : null}
-                                    </section>
-                                ))}
+                                            {record.note ? (
+                                                <p className={`mt-4 whitespace-pre-wrap text-[#222] ${lang === 'ja' ? 'font-serif-jp text-[14px] leading-[1.8]' : 'font-serif-en text-[16px] leading-[1.65]'}`}>
+                                                    {record.note}
+                                                </p>
+                                            ) : null}
+                                            {imageUrls.length ? (
+                                                <div className={`mt-4 grid gap-3 ${imageUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                                    {imageUrls.map((url) => (
+                                                        <div key={url} className="overflow-hidden rounded-lg border border-[#eee4d8] bg-[#f8f6f2] p-2">
+                                                            <img src={url} alt="" className={`${imageHeightClass} w-full rounded bg-white object-contain`} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                            {(record.imageUrls || []).length > 6 ? (
+                                                <p className="mt-2 text-[10px] text-[#777]">
+                                                    {lang === 'ja'
+                                                        ? `ほか ${(record.imageUrls || []).length - 6} 枚の画像は省略されています。`
+                                                        : `${(record.imageUrls || []).length - 6} additional images are omitted.`}
+                                                </p>
+                                            ) : null}
+                                        </section>
+                                    );
+                                })}
                                 {appendixRecords.length > 5 && (
                                     <p className="text-xs text-[#777]">
                                         {lang === 'ja'

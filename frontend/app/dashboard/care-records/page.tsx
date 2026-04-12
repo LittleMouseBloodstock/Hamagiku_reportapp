@@ -218,6 +218,10 @@ export default function CareRecordsPage() {
 
     const handleSave = async () => {
         if (!selectedHorseId) return;
+        if (uploadingRecordId) {
+            alert(language === 'ja' ? '画像アップロードが終わってから保存してください。' : 'Please wait for image uploads to finish before saving.');
+            return;
+        }
         setSaving(true);
         try {
             await restPatch(`horses?id=eq.${selectedHorseId}`, {
@@ -290,10 +294,14 @@ export default function CareRecordsPage() {
                     </select>
                     <button
                         onClick={handleSave}
-                        disabled={saving || !selectedHorseId}
+                        disabled={saving || !!uploadingRecordId || !selectedHorseId}
                         className="px-5 py-2 text-sm rounded-lg bg-[#1a3c34] text-white hover:bg-[#122b25] shadow-sm disabled:opacity-50"
                     >
-                        {saving ? (language === 'ja' ? '保存中...' : 'Saving...') : (t('save') || 'Save')}
+                        {saving
+                            ? (language === 'ja' ? '保存中...' : 'Saving...')
+                            : uploadingRecordId
+                                ? (language === 'ja' ? '画像アップロード中...' : 'Uploading images...')
+                                : (t('save') || 'Save')}
                     </button>
                 </div>
             </header>
