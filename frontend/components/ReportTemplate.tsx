@@ -632,7 +632,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print';
-    const appendixRecords = (data.careRecords || []).filter((item) => item.reportMode === 'appendix' && item.note.trim());
+    const appendixRecords = (data.careRecords || []).filter((item) => (
+        item.reportMode === 'appendix' && (item.note.trim() || (item.imageUrls || []).length)
+    ));
     const hasAppendix = appendixRecords.length > 0;
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
     const [renderPhotoSrc, setRenderPhotoSrc] = useState('');

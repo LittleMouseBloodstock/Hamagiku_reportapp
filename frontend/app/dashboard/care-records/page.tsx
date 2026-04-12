@@ -231,7 +231,7 @@ export default function CareRecordsPage() {
 
             const cleanedRecords = records
                 .map((record) => ({ ...record, note: record.note.trim() }))
-                .filter((record) => record.date || record.note);
+                .filter((record) => record.date || record.note || (record.imageUrls || []).length);
 
             await restPost('report_drafts?on_conflict=draft_key', {
                 draft_key: draftKeyForHorse(selectedHorseId),

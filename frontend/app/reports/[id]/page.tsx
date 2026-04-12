@@ -222,6 +222,19 @@ export default function ReportEditor() {
         date: string;
         note: string;
         reportMode: 'none' | 'body' | 'appendix';
+        imageUrls?: string[];
+    };
+
+    const mergeCareRecordImages = (snapshotRecords: CareRecord[], latestRecords: CareRecord[]) => {
+        const latestById = new Map(latestRecords.map((record) => [record.id, record]));
+        return snapshotRecords.map((record) => {
+            const latest = latestById.get(record.id);
+            if (!latest?.imageUrls?.length) return record;
+            return {
+                ...record,
+                imageUrls: record.imageUrls?.length ? record.imageUrls : latest.imageUrls
+            };
+        });
     };
 
     const getMonthInfo = (value?: string | null) => {
@@ -566,7 +579,9 @@ export default function ReportEditor() {
                             targetJp: report.target || '',
                             targetEn: metrics.targetEn || '',
 
-                            careRecords: Array.isArray(metrics.careRecordsSnapshot) ? metrics.careRecordsSnapshot : careRecords,
+                            careRecords: Array.isArray(metrics.careRecordsSnapshot)
+                                ? mergeCareRecordImages(metrics.careRecordsSnapshot as CareRecord[], careRecords)
+                                : careRecords,
                             weightHistory: mergedHistory,
 
                             mainPhoto: report.main_photo_url || '',
