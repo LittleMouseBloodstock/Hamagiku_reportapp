@@ -182,22 +182,52 @@ export default function CareRecordsPage() {
         });
     };
 
+    const saveCareDraftRecords = async (nextRecords: CareRecord[]) => {
+        if (!selectedHorseId) return;
+        const cleanedRecords = nextRecords
+            .map((record) => ({ ...record, note: record.note.trim() }))
+            .filter((record) => record.date || record.note || (record.imageUrls || []).length);
+
+        await restPost('report_drafts?on_conflict=draft_key', {
+            draft_key: draftKeyForHorse(selectedHorseId),
+            horse_id: selectedHorseId,
+            report_type: 'care-records',
+            updated_at: new Date().toISOString(),
+            data: { records: cleanedRecords }
+        }, buildRestHeaders({
+            bearerToken: session?.access_token,
+            prefer: 'resolution=merge-duplicates,return=representation'
+        }));
+    };
+
     const handleImageUpload = async (recordId: string, files: FileList | null) => {
         if (!files?.length) return;
         setUploadingRecordId(recordId);
         try {
-            const urls: string[] = [];
-            for (const file of Array.from(files).slice(0, 6)) {
-                const url = await uploadCareImage(recordId, file);
-                if (url) urls.push(url);
-            }
+            const selectedFiles = Array.from(files).slice(0, 6);
+            const results = await Promise.allSettled(selectedFiles.map((file) => uploadCareImage(recordId, file)));
+            const urls = results
+                .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled' && !!result.value)
+                .map((result) => result.value);
+            const failedCount = results.length - urls.length;
             if (urls.length) {
-                markCareDirty();
-                setRecords((prev) => prev.map((record) => (
-                    record.id === recordId
-                        ? { ...record, imageUrls: [...(record.imageUrls || []), ...urls] }
-                        : record
-                )));
+                let nextRecordsToSave: CareRecord[] = [];
+                setRecords((prev) => {
+                    const next = prev.map((record) => (
+                        record.id === recordId
+                            ? { ...record, imageUrls: [...(record.imageUrls || []), ...urls] }
+                            : record
+                    ));
+                    nextRecordsToSave = next;
+                    return next;
+                });
+                await saveCareDraftRecords(nextRecordsToSave);
+                hasUnsavedCareChangesRef.current = false;
+            }
+            if (failedCount) {
+                alert(language === 'ja'
+                    ? `${failedCount} 枚の画像アップロードに失敗しました。成功した画像は保存済みです。`
+                    : `${failedCount} image upload(s) failed. Successful uploads have been saved.`);
             }
         } catch (error) {
             console.error('Failed to upload care images:', error);
@@ -233,20 +263,7 @@ export default function CareRecordsPage() {
                 updated_at: new Date().toISOString()
             }, getHeaders());
 
-            const cleanedRecords = records
-                .map((record) => ({ ...record, note: record.note.trim() }))
-                .filter((record) => record.date || record.note || (record.imageUrls || []).length);
-
-            await restPost('report_drafts?on_conflict=draft_key', {
-                draft_key: draftKeyForHorse(selectedHorseId),
-                horse_id: selectedHorseId,
-                report_type: 'care-records',
-                updated_at: new Date().toISOString(),
-                data: { records: cleanedRecords }
-            }, buildRestHeaders({
-                bearerToken: session?.access_token,
-                prefer: 'resolution=merge-duplicates,return=representation'
-            }));
+            await saveCareDraftRecords(records);
 
             setHorses((prev) => prev.map((horse) => horse.id === selectedHorseId ? {
                 ...horse,
