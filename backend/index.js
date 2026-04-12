@@ -6,6 +6,7 @@ const {
   generateMonthlyReport,
   generateDepartureReport,
 } = require('./report_generation_service');
+const { indexReport } = require('./semantic_indexer');
 require('dotenv').config();
 
 const app = express();
@@ -84,6 +85,21 @@ app.post('/generate-departure', async (req, res) => {
     res.json(await generateDepartureReport({ notes, apiKey }));
   } catch (e) {
     console.error('Departure Generation Error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+app.post('/index-report', async (req, res) => {
+  const { reportId } = req.body || {};
+  if (!reportId) {
+    return res.status(400).json({ error: 'reportId is required' });
+  }
+
+  try {
+    const result = await indexReport(reportId);
+    res.json(result);
+  } catch (e) {
+    console.error('Report Index Error:', e);
     res.status(e.statusCode || 500).json({ error: e.message });
   }
 });

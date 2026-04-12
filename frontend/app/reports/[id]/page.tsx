@@ -1042,6 +1042,21 @@ export default function ReportEditor() {
         }
     }
 
+    async function requestReportIndex(reportId: string | null) {
+        if (!reportId) return;
+        const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        if (!apiBase) return;
+        try {
+            await fetch(`${apiBase}/index-report`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reportId })
+            });
+        } catch (error) {
+            console.warn('Report semantic index request failed:', error);
+        }
+    }
+
     async function saveReport() {
         if (!reportDataRef.current || !id) return;
         if (!horseId) {
@@ -1141,6 +1156,7 @@ export default function ReportEditor() {
                 void deleteRemoteDraft();
                 setAutosaveStatus('Saved');
                 setAutosaveStamp(Date.now());
+                void requestReportIndex(newReportId || (typeof id === 'string' ? id : null));
                 if (isNew && newReportId) {
                     router.replace(`/reports/${newReportId}`);
                 }
@@ -1247,6 +1263,7 @@ export default function ReportEditor() {
         void deleteRemoteDraft();
         setAutosaveStatus('Saved');
         setAutosaveStamp(Date.now());
+        void requestReportIndex(newReportId || (typeof id === 'string' ? id : null));
 
         // Update horse metadata in the background so report save completion is not blocked.
         if (horseId) {
