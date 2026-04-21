@@ -52,6 +52,12 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         height: 257mm !important;
       }`}
 
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo {
+        top: 2mm !important;
+        height: 275mm !important;
+        padding-top: 20mm !important;
+      }`}
+
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo {
         padding-top: 20mm !important;
       }`}
@@ -60,6 +66,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         height: 104px !important;
         padding-top: 0 !important;
         margin-bottom: 4px !important;
+        border-bottom-color: transparent !important;
       }`}
 
       /* Print Mode Compression */
@@ -93,10 +100,12 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         min-height: 50px !important;
         display: flex !important;
         align-items: center !important;
+        transform: translateY(16mm) !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .owner-line {
         height: 34px !important;
+        margin-top: 16mm !important;
         margin-bottom: 6px !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;

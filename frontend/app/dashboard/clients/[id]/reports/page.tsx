@@ -477,7 +477,7 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 5mm;
+                        margin: 0;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -537,13 +537,17 @@ export default function ClientBatchReports() {
                         /* page break handled by wrapper */
                     }
                     .batch-report-page .report-preview.no-logo {
-                        top: 0 !important;
-                        transform: translateY(-15mm) !important;
+                        position: relative !important;
+                        top: -18mm !important;
+                        transform: none !important;
                     }
                     .batch-report-page .horse-name-primary,
                     .batch-report-page .horse-name-secondary,
                     .batch-report-page .sire-dam-line {
                         white-space: nowrap !important;
+                    }
+                    .batch-report-page .report-preview.no-logo .report-header {
+                        border-bottom-color: transparent !important;
                     }
                     .batch-report-page .horse-name-primary {
                         font-size: 34px !important;
@@ -555,6 +559,12 @@ export default function ClientBatchReports() {
                     }
                     .batch-report-page .sire-dam-line {
                         font-size: 13px !important;
+                    }
+                    .batch-report-page .report-preview.no-logo .sire-dam-line {
+                        transform: translateY(16mm) !important;
+                    }
+                    .batch-report-page .report-preview.no-logo .owner-line {
+                        margin-top: 16mm !important;
                     }
                 }
             `}</style>
