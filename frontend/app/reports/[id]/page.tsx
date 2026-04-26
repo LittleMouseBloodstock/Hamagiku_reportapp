@@ -244,6 +244,24 @@ export default function ReportEditor() {
         return [...merged, ...Array.from(latestById.values())];
     };
 
+    const mergeDraftCareRecords = (
+        draftData: ReportData | DepartureReportData | null | undefined,
+        latestRecords: CareRecord[],
+        draftType?: 'monthly' | 'departure' | null
+    ) => {
+        if (!draftData) return draftData;
+        if (draftType === 'departure') return draftData;
+
+        const monthlyDraft = draftData as ReportData;
+        const snapshotRecords = Array.isArray(monthlyDraft.careRecords) ? monthlyDraft.careRecords : [];
+        return {
+            ...monthlyDraft,
+            careRecords: snapshotRecords.length
+                ? mergeCareRecords(snapshotRecords, latestRecords)
+                : latestRecords
+        } as ReportData;
+    };
+
     const getMonthInfo = (value?: string | null) => {
         if (!value) return null;
         const parts = value.replace(/-/g, '.').split('.');
@@ -812,7 +830,6 @@ export default function ReportEditor() {
             const remoteTime = remoteDraft?.updated_at ? new Date(remoteDraft.updated_at).getTime() : 0;
             const useRemote = remoteTime > localTime;
 
-            const chosen = useRemote ? remoteDraft : localDraft;
             const chosenData = useRemote ? remoteDraft?.data : localDraft?.data;
             const chosenType = useRemote ? remoteDraft?.report_type : localDraft?.reportType;
             const chosenUpdated = useRemote ? remoteDraft?.updated_at : localDraft?.updatedAt;
@@ -825,11 +842,19 @@ export default function ReportEditor() {
 
             const label = chosenUpdated ? new Date(chosenUpdated).toLocaleString() : 'recent';
             if (window.confirm(`Unsaved draft found (${label}). Restore?`)) {
+                const latestCareRecords = horseId && chosenType !== 'departure'
+                    ? await fetchCareRecords(horseId)
+                    : [];
+                const mergedDraftData = mergeDraftCareRecords(
+                    chosenData as ReportData | DepartureReportData | null | undefined,
+                    latestCareRecords,
+                    chosenType === 'departure' || chosenType === 'monthly' ? chosenType : null
+                );
                 if (chosenType === 'departure' || chosenType === 'monthly') {
                     setReportType(chosenType);
                 }
-                setInitialData(chosenData || {});
-                reportDataRef.current = chosenData || null;
+                setInitialData(mergedDraftData || {});
+                reportDataRef.current = mergedDraftData || null;
                 setIsDirty(true);
             }
             setDraftPromptedKey(draftKey);
@@ -857,6 +882,7 @@ export default function ReportEditor() {
 
         const latestWeightEntry = await fetchLatestWeightEntry(selectedHorseId);
         const latestMonthlyReport = await fetchLatestMonthlyReport(selectedHorseId);
+        const careRecords = await fetchCareRecords(selectedHorseId);
 
         const weightHistoryFromWeights = buildWeightHistoryFromWeights(weights || []);
 
@@ -925,6 +951,7 @@ export default function ReportEditor() {
                 statusEn: 'Training', statusJp: '調整中',
                 weight: latestWeightValue !== null ? `${latestWeightValue} kg` : '', targetEn: '', targetJp: '',
                 commentEn: '', commentJp: '',
+                careRecords: careRecords,
                 weightHistory: weightHistory
             });
         }
