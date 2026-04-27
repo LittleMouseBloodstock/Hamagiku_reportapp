@@ -3,17 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-const navItems = [
-    { href: '/dashboard', icon: 'dashboard', labelKey: 'dashboard' },
-    { href: '/dashboard/horses', icon: 'format_list_bulleted', labelKey: 'horses' },
-    { href: '/dashboard/repro', icon: 'monitor_heart', labelKey: 'reproManagement' },
-    { href: '/dashboard/weights', icon: 'monitoring', labelKey: 'weights' }
-];
+import { dashboardNavItems } from '@/components/dashboardNavItems';
 
 export default function BottomBar() {
     const pathname = usePathname();
     const { t, language } = useLanguage();
+    const navItems = dashboardNavItems.filter((item) => item.showInBottomBar);
 
     return (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#F5F4F0] border-t border-stone-200 px-2 py-2">

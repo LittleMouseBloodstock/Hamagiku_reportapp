@@ -5,21 +5,12 @@ import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import { dashboardNavItems } from '@/components/dashboardNavItems';
 
 type MobileMenuDrawerProps = {
     open: boolean;
     onClose: () => void;
 };
-
-const navItems = [
-    { href: '/dashboard', icon: 'dashboard', labelKey: 'dashboard' },
-    { href: '/dashboard/horses', icon: 'format_list_bulleted', labelKey: 'horses' },
-    { href: '/dashboard/repro', icon: 'monitor_heart', labelKey: 'reproManagement' },
-    { href: '/dashboard/clients', icon: 'group', labelKey: 'clients' },
-    { href: '/dashboard/trainers', icon: 'badge', labelKey: 'trainers' },
-    { href: '/dashboard/weights', icon: 'monitoring', labelKey: 'weights' },
-    { href: '/dashboard/settings', icon: 'settings', labelKey: 'settings' }
-];
 
 export default function MobileMenuDrawer({ open, onClose }: MobileMenuDrawerProps) {
     const pathname = usePathname();
@@ -49,7 +40,7 @@ export default function MobileMenuDrawer({ open, onClose }: MobileMenuDrawerProp
                     </button>
                 </div>
                 <nav className="flex flex-col gap-2">
-                    {navItems.map((item) => {
+                    {dashboardNavItems.map((item) => {
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                         return (
                             <Link

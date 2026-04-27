@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import LanguageToggle from '@/components/LanguageToggle';
+import { dashboardNavItems } from '@/components/dashboardNavItems';
 
 export default function Sidebar() {
     const { t } = useLanguage();
@@ -35,38 +36,16 @@ export default function Sidebar() {
                 </div>
             </div>
             <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">dashboard</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('dashboard')}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/horses">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">format_list_bulleted</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('horses') || 'Horses'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/repro">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">monitor_heart</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('reproManagement') || 'Repro Management'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/clients">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">group</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('clients') || 'Clients'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/trainers">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">badge</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('trainers') || 'Trainers'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/weights">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">monitoring</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('weights') || 'Weight Management'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/care-records">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">medical_services</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('careRecords') || 'Care Records'}</span>
-                </Link>
-                <Link className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200" href="/dashboard/settings">
-                    <span className="material-symbols-outlined group-hover:fill-1 transition-all">settings</span>
-                    <span className="hidden lg:block text-sm font-medium">{t('settings') || 'Settings'}</span>
-                </Link>
+                {dashboardNavItems.map((item) => (
+                    <Link
+                        key={item.href}
+                        className="group flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-primary hover:bg-white transition-colors shadow-sm ring-1 ring-transparent hover:ring-stone-200"
+                        href={item.href}
+                    >
+                        <span className="material-symbols-outlined group-hover:fill-1 transition-all">{item.icon}</span>
+                        <span className="hidden lg:block text-sm font-medium">{t(item.labelKey) || item.labelKey}</span>
+                    </Link>
+                ))}
             </nav>
             <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex flex-col gap-4 justify-center lg:block">
                 <button
