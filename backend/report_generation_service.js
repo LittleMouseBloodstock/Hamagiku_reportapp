@@ -36,7 +36,11 @@ function buildSimilarReportContext(items = []) {
 
 async function buildMonthlyPromptContext(prompt) {
   const [knowledge, translationRules, similarReports] = await Promise.all([
-    searchKnowledge({ prompt, limit: 4 }),
+    searchKnowledge({
+      prompt,
+      limit: 4,
+      excludeCategories: ['departure_report'],
+    }),
     loadTranslationRules(),
     searchSimilarReports({ prompt, limit: 2 }),
   ]);
@@ -51,6 +55,9 @@ async function buildMonthlyPromptContext(prompt) {
     similarReportsCount: similarReports?._ragMeta?.count ?? similarReports.length ?? 0,
     similarReportsReason: similarReports?._ragMeta?.reason || null,
     translationRuleCount: translationRules?._ragMeta?.count ?? translationRules.length ?? 0,
+    translationRuleReason: translationRules?._ragMeta?.reason || null,
+    knowledgeTitles: (knowledge || []).map((item) => item.title).slice(0, 4),
+    similarReportIds: (similarReports || []).map((item) => item.report_id).slice(0, 3),
   }));
 
   return {

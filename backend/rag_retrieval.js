@@ -53,6 +53,20 @@ function attachRagMeta(items, meta) {
   return result;
 }
 
+function matchesCategoryFilters(item, params = {}) {
+  const category = item?.category || null;
+  const include = Array.isArray(params.categories) ? params.categories.filter(Boolean) : [];
+  const exclude = Array.isArray(params.excludeCategories) ? params.excludeCategories.filter(Boolean) : [];
+  if (include.length && !include.includes(category)) return false;
+  if (exclude.length && exclude.includes(category)) return false;
+  return true;
+}
+
+function matchesSimilarReportFilters(item, params = {}) {
+  if (params.excludeReportId && item?.report_id === params.excludeReportId) return false;
+  return true;
+}
+
 async function safeSelect(queryBuilder) {
   try {
     const { data, error } = await queryBuilder;
@@ -60,6 +74,21 @@ async function safeSelect(queryBuilder) {
     return data || [];
   } catch (_) {
     return [];
+  }
+}
+
+async function safeSelectDetailed(queryBuilder) {
+  try {
+    const { data, error } = await queryBuilder;
+    return {
+      data: error ? [] : (data || []),
+      error: error ? error.message : null,
+    };
+  } catch (error) {
+    return {
+      data: [],
+      error: error?.message || 'unknown_error',
+    };
   }
 }
 
@@ -92,6 +121,7 @@ async function searchKnowledgeLexical(supabase, params, queryText) {
   );
 
   return rows
+    .filter((item) => matchesCategoryFilters(item, params))
     .map((item) => ({
       ...item,
       similarity: null,
@@ -136,6 +166,7 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
         ].filter(Boolean).join('\n')
       ),
     }))
+    .filter((item) => matchesSimilarReportFilters(item, params))
     .sort((a, b) => (b._score || 0) - (a._score || 0))
     .slice(0, params.limit || 3);
 }
@@ -154,12 +185,12 @@ async function searchKnowledge(params = {}) {
   const embeddedQuery = await tryEmbedQueryText(queryText);
 
   if (embeddedQuery) {
-    const semanticRows = await safeRpc(supabase, 'match_knowledge_chunks', {
+    const semanticRows = (await safeRpc(supabase, 'match_knowledge_chunks', {
       query_embedding_text: embeddedQuery,
       match_count: params.limit || 5,
       filter_language: params.language || 'ja',
       filter_category: params.category || null,
-    });
+    })).filter((item) => matchesCategoryFilters(item, params));
 
     if (semanticRows.length) {
       return attachRagMeta(semanticRows, {
@@ -181,14 +212,17 @@ async function loadTranslationRules() {
   const supabase = createAdminClient();
   if (!supabase) return attachRagMeta([], { count: 0, reason: 'missing_supabase_admin' });
 
-  const rows = await safeSelect(
+  const result = await safeSelectDetailed(
     supabase
       .from('translation_rules')
       .select('id, source_phrase, target_phrase, priority, rule_type, metadata')
       .order('priority', { ascending: true })
       .limit(30)
   );
-  return attachRagMeta(rows, { count: rows.length });
+  return attachRagMeta(result.data, {
+    count: result.data.length,
+    reason: result.error,
+  });
 }
 
 async function searchSimilarReports(params = {}) {
@@ -205,12 +239,12 @@ async function searchSimilarReports(params = {}) {
   const embeddedQuery = await tryEmbedQueryText(queryText);
 
   if (embeddedQuery) {
-    const semanticRows = await safeRpc(supabase, 'match_report_chunks', {
+    const semanticRows = (await safeRpc(supabase, 'match_report_chunks', {
       query_embedding_text: embeddedQuery,
       match_count: params.limit || 3,
       filter_horse_id: params.horseId || null,
       filter_client_id: params.clientId || null,
-    });
+    })).filter((item) => matchesSimilarReportFilters(item, params));
 
     if (semanticRows.length) {
       return attachRagMeta(semanticRows, {
