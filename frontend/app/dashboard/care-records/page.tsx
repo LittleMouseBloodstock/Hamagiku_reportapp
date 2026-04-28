@@ -5,7 +5,6 @@ import type { InputHTMLAttributes } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
-import { supabase } from '@/lib/supabase';
 
 type HorseOption = {
     id: string;
@@ -79,36 +78,38 @@ export default function CareRecordsPage() {
         return Array.isArray(nextRecords) ? nextRecords as CareRecord[] : [];
     };
 
-    const fileToBlob = (file: File) => file;
+    const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
 
     const uploadCareImage = async (recordId: string, file: File) => {
         if (!selectedHorseId || !session?.access_token) return null;
         const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
         const safeExt = /^[a-z0-9]+$/.test(ext) ? ext : 'jpg';
         const path = `care-records/${selectedHorseId}/${recordId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
-        const encodedPath = path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
-        const { supabaseUrl, supabaseAnonKey } = (() => {
-            const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-            if (!url || !key) throw new Error('Missing storage env');
-            return { supabaseUrl: url, supabaseAnonKey: key };
+        const dataUrl = await fileToDataUrl(file);
+        const { apiBase } = (() => {
+            const url = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+            if (!url) throw new Error('Missing upload API env');
+            return { apiBase: url };
         })();
-        const res = await fetch(`${supabaseUrl}/storage/v1/object/report-assets/${encodedPath}`, {
+        const res = await fetch(`${apiBase}/storage/upload`, {
             method: 'POST',
             headers: {
-                apikey: supabaseAnonKey,
                 Authorization: `Bearer ${session.access_token}`,
-                'x-upsert': 'true',
-                'Content-Type': file.type || 'image/jpeg'
+                'Content-Type': 'application/json'
             },
-            body: fileToBlob(file)
+            body: JSON.stringify({ path, dataUrl })
         });
         if (!res.ok) {
             const text = await res.text();
             throw new Error(text || `Storage upload failed: ${res.status}`);
         }
-        const { data: { publicUrl } } = supabase.storage.from('report-assets').getPublicUrl(path);
-        return publicUrl;
+        const json = await res.json();
+        return json.url || null;
     };
 
     useEffect(() => {

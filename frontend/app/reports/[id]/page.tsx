@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 export const runtime = 'edge';
-import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
@@ -1037,38 +1036,21 @@ export default function ReportEditor() {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [isDirty]);
 
-    function dataUrlToBlob(dataUrl: string): Blob {
-        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-        if (!matches) {
-            throw new Error('Invalid image data');
-        }
-        const mimeType = matches[1];
-        const binary = atob(matches[2]);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i += 1) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return new Blob([bytes], { type: mimeType });
-    }
-
     async function uploadImage(base64Data: string, path: string): Promise<{ url: string | null, error: unknown }> {
         try {
-            if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
-                throw new Error('Missing storage configuration');
+            const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+            if (!apiBase || !session?.access_token) {
+                throw new Error('Missing upload API configuration');
             }
-            const blob = dataUrlToBlob(base64Data);
-            const encodedPath = path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
             const controller = new AbortController();
             const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
-            const res = await fetch(`${supabaseUrl}/storage/v1/object/report-assets/${encodedPath}`, {
+            const res = await fetch(`${apiBase}/storage/upload`, {
                 method: 'POST',
                 headers: {
-                    apikey: supabaseAnonKey,
                     Authorization: `Bearer ${session.access_token}`,
-                    'x-upsert': 'true',
-                    'Content-Type': blob.type || 'image/jpeg'
+                    'Content-Type': 'application/json'
                 },
-                body: blob,
+                body: JSON.stringify({ path, dataUrl: base64Data }),
                 signal: controller.signal
             }).finally(() => {
                 window.clearTimeout(timeoutId);
@@ -1080,11 +1062,8 @@ export default function ReportEditor() {
                 return { url: null, error: new Error(text || `Storage upload failed: ${res.status}`) };
             }
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('report-assets')
-                .getPublicUrl(path);
-
-            return { url: publicUrl, error: null };
+            const json = await res.json();
+            return { url: json.url || null, error: null };
         } catch (e) {
             console.error('Image Processing Error:', e);
             return { url: null, error: e };

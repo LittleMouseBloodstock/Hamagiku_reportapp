@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
+const { createSupabaseAdminClient } = require('./supabase_admin');
 const {
   generateMonthlyReport,
   generateDepartureReport,
@@ -11,12 +12,76 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 
 const PORT = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
   res.send('Multilingual Report API');
+});
+
+function decodeDataUrl(dataUrl) {
+  const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error('Invalid image payload');
+  }
+  return {
+    contentType: match[1],
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
+function isAllowedStoragePath(path) {
+  const normalized = String(path || '').trim();
+  const reportPath = /^[0-9a-f-]{36}\/[^/]+\/main_\d+\.(jpg|jpeg|png|webp)$/i;
+  const carePath = /^care-records\/[0-9a-f-]{36}\/[^/]+\/[^/]+\.(jpg|jpeg|png|webp)$/i;
+  return reportPath.test(normalized) || carePath.test(normalized);
+}
+
+app.post('/storage/upload', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const { path, dataUrl } = req.body || {};
+
+  if (!token) {
+    return res.status(401).json({ error: 'Missing bearer token' });
+  }
+  if (!path || !dataUrl) {
+    return res.status(400).json({ error: 'path and dataUrl are required' });
+  }
+  if (!isAllowedStoragePath(path)) {
+    return res.status(400).json({ error: 'Path not allowed' });
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient();
+  if (!supabaseAdmin) {
+    return res.status(500).json({ error: 'Missing SUPABASE_SERVICE_ROLE_KEY' });
+  }
+
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return res.status(401).json({ error: 'Invalid auth token' });
+  }
+
+  try {
+    const { contentType, buffer } = decodeDataUrl(dataUrl);
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('report-assets')
+      .upload(path, buffer, {
+        contentType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabaseAdmin.storage.from('report-assets').getPublicUrl(path);
+    return res.json({ url: data.publicUrl });
+  } catch (e) {
+    console.error('Storage Upload Error:', e);
+    return res.status(500).json({ error: e.message || 'Upload failed' });
+  }
 });
 
 app.post('/translate', async (req, res) => {
