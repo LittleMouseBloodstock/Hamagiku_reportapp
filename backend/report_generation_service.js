@@ -41,6 +41,18 @@ async function buildMonthlyPromptContext(prompt) {
     searchSimilarReports({ prompt, limit: 2 }),
   ]);
 
+  console.log(JSON.stringify({
+    event: 'rag.monthly_context',
+    promptLength: String(prompt || '').length,
+    knowledgeSource: knowledge?._ragMeta?.source || 'unknown',
+    knowledgeCount: knowledge?._ragMeta?.count ?? knowledge.length ?? 0,
+    knowledgeReason: knowledge?._ragMeta?.reason || null,
+    similarReportsSource: similarReports?._ragMeta?.source || 'unknown',
+    similarReportsCount: similarReports?._ragMeta?.count ?? similarReports.length ?? 0,
+    similarReportsReason: similarReports?._ragMeta?.reason || null,
+    translationRuleCount: translationRules?._ragMeta?.count ?? translationRules.length ?? 0,
+  }));
+
   return {
     knowledgeContext: buildKnowledgeContext(knowledge),
     translationRuleContext: buildTranslationRuleContext(translationRules),

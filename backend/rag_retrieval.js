@@ -47,6 +47,12 @@ function buildQueryText(params) {
   });
 }
 
+function attachRagMeta(items, meta) {
+  const result = Array.isArray(items) ? items : [];
+  result._ragMeta = meta;
+  return result;
+}
+
 async function safeSelect(queryBuilder) {
   try {
     const { data, error } = await queryBuilder;
@@ -136,7 +142,13 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
 
 async function searchKnowledge(params = {}) {
   const supabase = createAdminClient();
-  if (!supabase) return [];
+  if (!supabase) {
+    return attachRagMeta([], {
+      source: 'unavailable',
+      count: 0,
+      reason: 'missing_supabase_admin',
+    });
+  }
 
   const queryText = buildQueryText(params);
   const embeddedQuery = await tryEmbedQueryText(queryText);
@@ -150,29 +162,44 @@ async function searchKnowledge(params = {}) {
     });
 
     if (semanticRows.length) {
-      return semanticRows;
+      return attachRagMeta(semanticRows, {
+        source: 'semantic',
+        count: semanticRows.length,
+      });
     }
   }
 
-  return searchKnowledgeLexical(supabase, params, queryText);
+  const lexicalRows = await searchKnowledgeLexical(supabase, params, queryText);
+  return attachRagMeta(lexicalRows, {
+    source: 'lexical',
+    count: lexicalRows.length,
+    reason: embeddedQuery ? 'semantic_empty' : 'embedding_unavailable',
+  });
 }
 
 async function loadTranslationRules() {
   const supabase = createAdminClient();
-  if (!supabase) return [];
+  if (!supabase) return attachRagMeta([], { count: 0, reason: 'missing_supabase_admin' });
 
-  return safeSelect(
+  const rows = await safeSelect(
     supabase
       .from('translation_rules')
       .select('id, source_phrase, target_phrase, priority, rule_type, metadata')
       .order('priority', { ascending: true })
       .limit(30)
   );
+  return attachRagMeta(rows, { count: rows.length });
 }
 
 async function searchSimilarReports(params = {}) {
   const supabase = createAdminClient();
-  if (!supabase) return [];
+  if (!supabase) {
+    return attachRagMeta([], {
+      source: 'unavailable',
+      count: 0,
+      reason: 'missing_supabase_admin',
+    });
+  }
 
   const queryText = buildQueryText(params);
   const embeddedQuery = await tryEmbedQueryText(queryText);
@@ -186,11 +213,19 @@ async function searchSimilarReports(params = {}) {
     });
 
     if (semanticRows.length) {
-      return semanticRows;
+      return attachRagMeta(semanticRows, {
+        source: 'semantic',
+        count: semanticRows.length,
+      });
     }
   }
 
-  return searchSimilarReportsLexical(supabase, params, queryText);
+  const lexicalRows = await searchSimilarReportsLexical(supabase, params, queryText);
+  return attachRagMeta(lexicalRows, {
+    source: 'lexical',
+    count: lexicalRows.length,
+    reason: embeddedQuery ? 'semantic_empty' : 'embedding_unavailable',
+  });
 }
 
 module.exports = {
