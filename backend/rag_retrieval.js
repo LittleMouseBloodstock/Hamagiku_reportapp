@@ -53,6 +53,27 @@ function attachRagMeta(items, meta) {
   return result;
 }
 
+function dedupeTranslationRules(items = []) {
+  const seen = new Set();
+  const result = [];
+
+  for (const item of items) {
+    const scope = String(item?.metadata?.scope || '');
+    const key = [
+      String(item?.source_phrase || '').trim().toLowerCase(),
+      String(item?.target_phrase || '').trim().toLowerCase(),
+      String(item?.rule_type || '').trim().toLowerCase(),
+      scope.trim().toLowerCase(),
+    ].join('::');
+
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+
+  return result;
+}
+
 function matchesCategoryFilters(item, params = {}) {
   const category = item?.category || null;
   const include = Array.isArray(params.categories) ? params.categories.filter(Boolean) : [];
@@ -219,8 +240,9 @@ async function loadTranslationRules() {
       .order('priority', { ascending: true })
       .limit(30)
   );
-  return attachRagMeta(result.data, {
-    count: result.data.length,
+  const deduped = dedupeTranslationRules(result.data);
+  return attachRagMeta(deduped, {
+    count: deduped.length,
     reason: result.error,
   });
 }
