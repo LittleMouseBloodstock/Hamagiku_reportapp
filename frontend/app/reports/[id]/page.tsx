@@ -8,6 +8,7 @@ import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertC
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const stripDraftImagePayload = <T extends ReportData | DepartureReportData>(data: T): T => {
     if (!data || typeof data !== 'object') return data;
@@ -80,6 +81,18 @@ export default function ReportEditor() {
         };
     };
 
+    const getRestHeadersFromToken = (token: string, prefer: string = 'return=representation') => {
+        if (!supabaseUrl || !supabaseAnonKey || !token) {
+            throw new Error('Missing env vars or access token for REST');
+        }
+        return {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Prefer': prefer
+        };
+    };
+
     const draftKey = useMemo(() => {
         const safeId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : 'unknown';
         const horsePart = horseId || 'no-horse';
@@ -98,12 +111,49 @@ export default function ReportEditor() {
         };
     };
 
+    const refreshAccessToken = useCallback(async () => {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error || !data.session?.access_token) {
+            throw error || new Error('Failed to refresh session');
+        }
+        return data.session.access_token;
+    }, []);
+
+    const fetchRestWithRetry = useCallback(async (
+        url: string,
+        init: RequestInit = {},
+        prefer: string = 'return=representation'
+    ) => {
+        const execute = async (token: string) => fetch(url, {
+            ...init,
+            headers: {
+                ...getRestHeadersFromToken(token, prefer),
+                ...(init.headers || {})
+            }
+        });
+
+        if (!session?.access_token) {
+            throw new Error('Missing access token for REST');
+        }
+
+        let response = await execute(session.access_token);
+        if (response.status !== 401) {
+            return response;
+        }
+
+        const refreshedToken = await refreshAccessToken();
+        response = await execute(refreshedToken);
+        return response;
+    }, [session?.access_token, refreshAccessToken]);
+
     const fetchRemoteDraft = async () => {
         if (!session?.access_token) return null;
         if (!horseId && id === 'new') return null;
-        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`, {
-            headers: getDraftHeaders()
-        });
+        const res = await fetchRestWithRetry(
+            `${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`,
+            {},
+            'return=representation,resolution=merge-duplicates'
+        );
         if (!res.ok) return null;
         const data = await res.json();
         return data?.[0] ?? null;
@@ -123,11 +173,10 @@ export default function ReportEditor() {
             data: draftData,
             updated_at: new Date().toISOString()
         };
-        const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?on_conflict=draft_key`, {
+        const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/report_drafts?on_conflict=draft_key`, {
             method: 'POST',
-            headers: getDraftHeaders(),
             body: JSON.stringify(payload)
-        });
+        }, 'return=representation,resolution=merge-duplicates');
         if (!res.ok) {
             const text = await res.text();
             console.warn('Remote draft save failed:', text);
@@ -141,18 +190,19 @@ export default function ReportEditor() {
     const deleteRemoteDraft = async () => {
         if (!session?.access_token) return;
         if (!draftKey) return;
-        await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`, {
-            method: 'DELETE',
-            headers: getDraftHeaders()
-        });
+        await fetchRestWithRetry(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(draftKey)}`, {
+            method: 'DELETE'
+        }, 'return=representation,resolution=merge-duplicates');
     };
 
     const fetchCareRecords = async (targetHorseId: string): Promise<CareRecord[]> => {
         if (!session?.access_token || !targetHorseId) return [];
         try {
-            const res = await fetch(`${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(`care-records:${targetHorseId}`)}&select=data`, {
-                headers: getDraftHeaders()
-            });
+            const res = await fetchRestWithRetry(
+                `${supabaseUrl}/rest/v1/report_drafts?draft_key=eq.${encodeURIComponent(`care-records:${targetHorseId}`)}&select=data`,
+                {},
+                'return=representation,resolution=merge-duplicates'
+            );
             if (!res.ok) return [];
             const rows = await res.json();
             const records = rows?.[0]?.data?.records;
@@ -163,9 +213,7 @@ export default function ReportEditor() {
     };
 
     const restGet = async (path: string) => {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-            headers: getRestHeaders()
-        });
+        const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/${path}`);
         if (!res.ok) {
             const text = await res.text();
             throw new Error(`REST GET failed: ${res.status} ${text}`);
@@ -1204,11 +1252,9 @@ export default function ReportEditor() {
                 let newReportId: string | null = null;
                 const controller = new AbortController();
                 const abortId = window.setTimeout(() => controller.abort(), 8000);
-                const headers = getRestHeaders();
                 if (isNew) {
-                    const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
+                    const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports`, {
                         method: 'POST',
-                        headers,
                         body: JSON.stringify(payload),
                         signal: controller.signal
                     });
@@ -1220,9 +1266,8 @@ export default function ReportEditor() {
                     const data = await res.json();
                     newReportId = data?.[0]?.id ?? null;
                 } else {
-                    const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                    const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                         method: 'PATCH',
-                        headers,
                         body: JSON.stringify(payload),
                         signal: controller.signal
                     });
@@ -1311,11 +1356,9 @@ export default function ReportEditor() {
             let newReportId: string | null = null;
             const controller = new AbortController();
             const abortId = window.setTimeout(() => controller.abort(), 8000);
-            const headers = getRestHeaders();
             if (isNew) {
-                const res = await fetch(`${supabaseUrl}/rest/v1/reports`, {
+                const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports`, {
                     method: 'POST',
-                    headers,
                     body: JSON.stringify(payload),
                     signal: controller.signal
                 });
@@ -1327,9 +1370,8 @@ export default function ReportEditor() {
                 const data = await res.json();
                 newReportId = data?.[0]?.id ?? null;
             } else {
-                const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+                const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                     method: 'PATCH',
-                    headers,
                     body: JSON.stringify(payload),
                     signal: controller.signal
                 });
@@ -1367,9 +1409,8 @@ export default function ReportEditor() {
             };
             const horseUpdateController = new AbortController();
             const horseUpdateAbortId = window.setTimeout(() => horseUpdateController.abort(), 8000);
-            fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
+            fetchRestWithRetry(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
                 method: 'PATCH',
-                headers: getRestHeaders(),
                 body: JSON.stringify(horsePayload),
                 signal: horseUpdateController.signal
             }).catch((horseUpdateError) => {
