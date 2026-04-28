@@ -6,6 +6,7 @@ const { createSupabaseAdminClient } = require('./supabase_admin');
 const {
   generateMonthlyReport,
   generateDepartureReport,
+  translateReportText,
 } = require('./report_generation_service');
 const { indexReport } = require('./semantic_indexer');
 require('dotenv').config();
@@ -92,30 +93,8 @@ app.post('/translate', async (req, res) => {
     return res.status(500).json({ error: 'API Key not configured' });
   }
 
-  const dynamicGenAI = new GoogleGenerativeAI(apiKey);
-
   try {
-    const model = dynamicGenAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    const instruction = targetLang === 'ja'
-      ? [
-        '以下のテキストを、日本の競馬レポート向けの自然な日本語に翻訳してください。',
-        '出力は翻訳文のみ。',
-        '解説、補足、注釈、見出し、箇条書き、引用符、前置き、後書きは一切不要です。',
-        '入力が1段落なら出力も1段落にしてください。'
-      ].join('\n')
-      : [
-        'Translate the following text into natural English for a horse racing report.',
-        'Return only the translated text.',
-        'Do not add explanations, notes, headings, bullet points, quotation marks, or extra commentary.',
-        'If the input is a single paragraph, return a single paragraph.'
-      ].join('\n');
-
-    const prompt = `${instruction}\n\nText: ${text}`;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const translatedText = response.text().trim();
-
-    res.json({ translatedText });
+    res.json(await translateReportText({ text, targetLang, apiKey }));
   } catch (e) {
     console.error('Translation Error:', e);
     res.status(500).json({ error: e.message });
