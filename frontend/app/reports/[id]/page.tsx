@@ -23,6 +23,18 @@ const stripDraftImagePayload = <T extends ReportData | DepartureReportData>(data
 
 const isReportSelectableHorse = (horse: { horse_status?: string | null }) => !['Retired', 'Sold'].includes(horse.horse_status || '');
 
+const resolvePedigreeFields = (
+    horse?: { sire?: string | null; sire_en?: string | null; dam?: string | null; dam_en?: string | null } | null,
+    source?: { sire?: string | null; sireJp?: string | null; sireEn?: string | null; dam?: string | null; damJp?: string | null; damEn?: string | null } | null
+) => ({
+    sire: horse?.sire || source?.sire || source?.sireJp || '',
+    sireJp: horse?.sire || source?.sireJp || source?.sire || '',
+    sireEn: horse?.sire_en || source?.sireEn || '',
+    dam: horse?.dam || source?.dam || source?.damJp || '',
+    damJp: horse?.dam || source?.damJp || source?.dam || '',
+    damEn: horse?.dam_en || source?.damEn || '',
+});
+
 export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
@@ -261,6 +273,40 @@ export default function ReportEditor() {
         } as ReportData;
     };
 
+    const mergeLatestHorsePedigree = useCallback(async (
+        draftData: ReportData | DepartureReportData | null | undefined,
+        draftType?: 'monthly' | 'departure' | null
+    ) => {
+        if (!draftData || !horseId) return draftData;
+        try {
+            const horseArr = await restGet(`horses?id=eq.${horseId}&select=sire,sire_en,dam,dam_en`);
+            const horse = horseArr?.[0];
+            const pedigree = resolvePedigreeFields(horse, draftData);
+            if (draftType === 'departure') {
+                const depDraft = draftData as DepartureReportData;
+                return {
+                    ...depDraft,
+                    sireJp: pedigree.sireJp,
+                    sireEn: pedigree.sireEn,
+                    damJp: pedigree.damJp,
+                    damEn: pedigree.damEn
+                };
+            }
+            const monthlyDraft = draftData as ReportData;
+            return {
+                ...monthlyDraft,
+                sire: pedigree.sire,
+                sireJp: pedigree.sireJp,
+                sireEn: pedigree.sireEn,
+                dam: pedigree.dam,
+                damJp: pedigree.damJp,
+                damEn: pedigree.damEn
+            };
+        } catch {
+            return draftData;
+        }
+    }, [horseId, session?.access_token]);
+
     const getMonthInfo = (value?: string | null) => {
         if (!value) return null;
         const parts = value.replace(/-/g, '.').split('.');
@@ -421,6 +467,7 @@ export default function ReportEditor() {
                         );
 
                         if (nextReportType === 'departure') {
+                            const pedigree = resolvePedigreeFields(horse);
                             const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                             setInitialData({
                                 reportDate: new Date().toISOString().slice(0, 10),
@@ -428,10 +475,10 @@ export default function ReportEditor() {
                                 horseNameEn: horse?.name_en || '',
                                 sexAgeJp: formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
                                 sexAgeEn: formatSexAge(horse?.sex, horse?.birth_date, 'en'),
-                                sireJp: horse?.sire || '',
-                                sireEn: horse?.sire_en || '',
-                                damJp: horse?.dam || '',
-                                damEn: horse?.dam_en || '',
+                                sireJp: pedigree.sireJp,
+                                sireEn: pedigree.sireEn,
+                                damJp: pedigree.damJp,
+                                damEn: pedigree.damEn,
                                 ownerName: horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -453,16 +500,17 @@ export default function ReportEditor() {
                                 showLogo: defaultOutputMode !== 'print'
                             });
                         } else {
+                            const pedigree = resolvePedigreeFields(horse);
                             setInitialData({
                                 reportDate: defaultDate,
                                 horseNameJp: horse?.name || '',
                                 horseNameEn: horse?.name_en || '',
-                                sire: horse?.sire || '',
-                                sireEn: horse?.sire_en || '',
-                                sireJp: horse?.sire || '',
-                                dam: horse?.dam || '',
-                                damEn: horse?.dam_en || '',
-                                damJp: horse?.dam || '',
+                                sire: pedigree.sire,
+                                sireEn: pedigree.sireEn,
+                                sireJp: pedigree.sireJp,
+                                dam: pedigree.dam,
+                                damEn: pedigree.damEn,
+                                damJp: pedigree.damJp,
                                 ownerName: horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -521,6 +569,7 @@ export default function ReportEditor() {
 
                     // Map DB to ReportData
                     if (reportTypeFromMetrics === 'departure') {
+                        const pedigree = resolvePedigreeFields(horse, metrics);
                         const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                         const metricsOutputMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
                             ? metrics.outputMode
@@ -534,10 +583,10 @@ export default function ReportEditor() {
                             horseNameEn: metrics.horseNameEn || horse?.name_en || '',
                             sexAgeJp: metrics.sexAgeJp || formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
                             sexAgeEn: metrics.sexAgeEn || formatSexAge(horse?.sex, horse?.birth_date, 'en'),
-                            sireJp: metrics.sireJp || horse?.sire || '',
-                            sireEn: metrics.sireEn || horse?.sire_en || '',
-                            damJp: metrics.damJp || horse?.dam || '',
-                            damEn: metrics.damEn || horse?.dam_en || '',
+                            sireJp: pedigree.sireJp,
+                            sireEn: pedigree.sireEn,
+                            damJp: pedigree.damJp,
+                            damEn: pedigree.damEn,
                             ownerName: metrics.ownerName || horse?.clients?.name || '',
                             trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
                             trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
@@ -559,6 +608,7 @@ export default function ReportEditor() {
                             showLogo: metricsShowLogo
                         });
                     } else {
+                        const pedigree = resolvePedigreeFields(horse, metrics);
                         const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                         const reportMonthKey = report.title || report.created_at;
                         const baseHistory = Array.isArray(metrics.weightHistory) ? metrics.weightHistory : [];
@@ -573,12 +623,12 @@ export default function ReportEditor() {
                             reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                             horseNameJp: metrics.horseNameJp || horse?.name || '',
                             horseNameEn: metrics.horseNameEn || horse?.name_en || '',
-                            sire: horse?.sire || '',
-                            sireEn: metrics.sireEn || horse?.sire_en || '',
-                            sireJp: metrics.sireJp || horse?.sire || '',
-                            dam: horse?.dam || '',
-                            damEn: metrics.damEn || horse?.dam_en || '',
-                            damJp: metrics.damJp || horse?.dam || '',
+                            sire: pedigree.sire,
+                            sireEn: pedigree.sireEn,
+                            sireJp: pedigree.sireJp,
+                            dam: pedigree.dam,
+                            damEn: pedigree.damEn,
+                            damJp: pedigree.damJp,
                             conditionJp: metrics.conditionJp || report.condition || '',
                             conditionEn: metrics.conditionEn || '',
                             ownerName: horse?.clients?.name || '',
@@ -685,16 +735,17 @@ export default function ReportEditor() {
                                     );
 
                                     if (isMounted) {
+                                        const pedigree = resolvePedigreeFields(horse);
                                         setInitialData({
                                             reportDate: defaultDate,
                                             horseNameJp: horse?.name || '',
                                             horseNameEn: horse?.name_en || '',
-                                            sire: horse?.sire || '',
-                                            sireEn: horse?.sire_en || '',
-                                            sireJp: horse?.sire || '',
-                                            dam: horse?.dam || '',
-                                            damEn: horse?.dam_en || '',
-                                            damJp: horse?.dam || '',
+                                            sire: pedigree.sire,
+                                            sireEn: pedigree.sireEn,
+                                            sireJp: pedigree.sireJp,
+                                            dam: pedigree.dam,
+                                            damEn: pedigree.damEn,
+                                            damJp: pedigree.damJp,
                                             conditionJp: '',
                                             conditionEn: '',
                                             ownerName: horse?.clients?.name || '',
@@ -747,6 +798,7 @@ export default function ReportEditor() {
                             if (isMounted) {
                                 setHorseId(report.horse_id);
                                 const metrics = report.metrics_json || {};
+                                const pedigree = resolvePedigreeFields(horse, metrics);
                                 const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                                 const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                                 const mergedHistory = mergeWeightHistory(
@@ -759,12 +811,12 @@ export default function ReportEditor() {
                                     reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                                     horseNameJp: metrics.horseNameJp || horse?.name || '',
                                     horseNameEn: metrics.horseNameEn || horse?.name_en || '',
-                                    sire: horse?.sire || '',
-                                    sireEn: metrics.sireEn || horse?.sire_en || '',
-                                    sireJp: metrics.sireJp || horse?.sire || '',
-                                    dam: horse?.dam || '',
-                                    damEn: metrics.damEn || horse?.dam_en || '',
-                                    damJp: metrics.damJp || horse?.dam || '',
+                                    sire: pedigree.sire,
+                                    sireEn: pedigree.sireEn,
+                                    sireJp: pedigree.sireJp,
+                                    dam: pedigree.dam,
+                                    damEn: pedigree.damEn,
+                                    damJp: pedigree.damJp,
                                     conditionJp: metrics.conditionJp || report.condition || '',
                                     conditionEn: metrics.conditionEn || '',
                                     ownerName: horse?.clients?.name || '',
@@ -849,18 +901,22 @@ export default function ReportEditor() {
                     latestCareRecords,
                     chosenType === 'departure' || chosenType === 'monthly' ? chosenType : null
                 );
+                const mergedDraftWithPedigree = await mergeLatestHorsePedigree(
+                    mergedDraftData as ReportData | DepartureReportData | null | undefined,
+                    chosenType === 'departure' || chosenType === 'monthly' ? chosenType : null
+                );
                 if (chosenType === 'departure' || chosenType === 'monthly') {
                     setReportType(chosenType);
                 }
-                setInitialData(mergedDraftData || {});
-                reportDataRef.current = mergedDraftData || null;
+                setInitialData(mergedDraftWithPedigree || {});
+                reportDataRef.current = mergedDraftWithPedigree || null;
                 setIsDirty(true);
             }
             setDraftPromptedKey(draftKey);
         };
 
         load().catch(() => setDraftPromptedKey(draftKey));
-    }, [draftKey, draftPromptedKey, loading]);
+    }, [draftKey, draftPromptedKey, loading, horseId, mergeLatestHorsePedigree]);
 
     const handleSelectHorse = async (selectedHorseId: string) => {
         setHorseId(selectedHorseId);
@@ -896,16 +952,17 @@ export default function ReportEditor() {
         );
 
         if (reportType === 'departure') {
+            const pedigree = resolvePedigreeFields(horse);
             setInitialData({
                 reportDate: new Date().toISOString().slice(0, 10),
                 horseNameJp: horse?.name || '',
                 horseNameEn: horse?.name_en || '',
                 sexAgeJp: formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
                 sexAgeEn: formatSexAge(horse?.sex, horse?.birth_date, 'en'),
-                sireJp: horse?.sire || '',
-                sireEn: horse?.sire_en || '',
-                damJp: horse?.dam || '',
-                damEn: horse?.dam_en || '',
+                sireJp: pedigree.sireJp,
+                sireEn: pedigree.sireEn,
+                damJp: pedigree.damJp,
+                damEn: pedigree.damEn,
                 ownerName: horse?.clients?.name || '',
                 trainerNameJp: horse?.trainers?.trainer_name || '',
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
@@ -925,16 +982,17 @@ export default function ReportEditor() {
                 commentEn: ''
             });
         } else {
+            const pedigree = resolvePedigreeFields(horse);
             setInitialData({
                 reportDate: defaultDate,
                 horseNameJp: horse?.name || '',
                 horseNameEn: horse?.name_en || '',
-                sire: horse?.sire || '',
-                sireEn: horse?.sire_en || '',
-                sireJp: horse?.sire || '',
-                dam: horse?.dam || '',
-                damEn: horse?.dam_en || '',
-                damJp: horse?.dam || '',
+                sire: pedigree.sire,
+                sireEn: pedigree.sireEn,
+                sireJp: pedigree.sireJp,
+                dam: pedigree.dam,
+                damEn: pedigree.damEn,
+                damJp: pedigree.damJp,
                 ownerName: horse?.clients?.name || '',
                 trainerNameJp: horse?.trainers?.trainer_name || '',
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
