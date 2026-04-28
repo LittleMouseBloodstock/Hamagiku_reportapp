@@ -1250,15 +1250,11 @@ export default function ReportEditor() {
                 };
 
                 let newReportId: string | null = null;
-                const controller = new AbortController();
-                const abortId = window.setTimeout(() => controller.abort(), 8000);
                 if (isNew) {
                     const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports`, {
                         method: 'POST',
-                        body: JSON.stringify(payload),
-                        signal: controller.signal
+                        body: JSON.stringify(payload)
                     });
-                    window.clearTimeout(abortId);
                     if (!res.ok) {
                         const text = await res.text();
                         throw new Error(`REST insert failed: ${res.status} ${text}`);
@@ -1268,10 +1264,8 @@ export default function ReportEditor() {
                 } else {
                     const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                         method: 'PATCH',
-                        body: JSON.stringify(payload),
-                        signal: controller.signal
+                        body: JSON.stringify(payload)
                     });
-                    window.clearTimeout(abortId);
                     if (!res.ok) {
                         const text = await res.text();
                         throw new Error(`REST update failed: ${res.status} ${text}`);
@@ -1354,15 +1348,11 @@ export default function ReportEditor() {
         };
 
             let newReportId: string | null = null;
-            const controller = new AbortController();
-            const abortId = window.setTimeout(() => controller.abort(), 8000);
             if (isNew) {
                 const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports`, {
                     method: 'POST',
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
+                    body: JSON.stringify(payload)
                 });
-                window.clearTimeout(abortId);
                 if (!res.ok) {
                     const text = await res.text();
                     throw new Error(`REST insert failed: ${res.status} ${text}`);
@@ -1372,10 +1362,8 @@ export default function ReportEditor() {
             } else {
                 const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                     method: 'PATCH',
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
+                    body: JSON.stringify(payload)
                 });
-                window.clearTimeout(abortId);
                 if (!res.ok) {
                     const text = await res.text();
                     throw new Error(`REST update failed: ${res.status} ${text}`);
@@ -1407,16 +1395,11 @@ export default function ReportEditor() {
                 photo_url: mainPhotoUrl,
                 updated_at: new Date().toISOString()
             };
-            const horseUpdateController = new AbortController();
-            const horseUpdateAbortId = window.setTimeout(() => horseUpdateController.abort(), 8000);
             fetchRestWithRetry(`${supabaseUrl}/rest/v1/horses?id=eq.${horseId}`, {
                 method: 'PATCH',
-                body: JSON.stringify(horsePayload),
-                signal: horseUpdateController.signal
+                body: JSON.stringify(horsePayload)
             }).catch((horseUpdateError) => {
                 console.warn('Horse update failed:', horseUpdateError);
-            }).finally(() => {
-                window.clearTimeout(horseUpdateAbortId);
             });
         }
 
@@ -1447,10 +1430,8 @@ export default function ReportEditor() {
 
         setSaving(true);
         try {
-            const headers = getRestHeaders();
-            const res = await fetch(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
+            const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, {
                 method: 'PATCH',
-                headers,
                 body: JSON.stringify({ review_status: newStatus })
             });
             if (!res.ok) {
