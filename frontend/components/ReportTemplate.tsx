@@ -45,6 +45,8 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         box-shadow: none !important;
         transform: none !important;
         border: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode {
@@ -63,10 +65,11 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
-        height: 104px !important;
+        height: 142px !important;
         padding-top: 0 !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 10mm !important;
         border-bottom-color: transparent !important;
+        border-bottom-width: 0 !important;
       }`}
 
       /* Print Mode Compression */
@@ -100,17 +103,20 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         min-height: 50px !important;
         display: flex !important;
         align-items: center !important;
-        transform: translateY(16mm) !important;
+        transform: translateY(10mm) !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .owner-line {
         height: 34px !important;
-        margin-top: 16mm !important;
+        margin-top: 10mm !important;
         margin-bottom: 6px !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;
         overflow: hidden !important;
         white-space: nowrap !important;
+        line-height: 1.15 !important;
+        font-size: 13px !important;
+        border-color: #d1d5db !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .data-section {
@@ -124,6 +130,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         min-height: 86px !important;
         max-height: 86px !important;
         overflow: visible !important;
+        border-color: #555 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text {
@@ -651,8 +658,8 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
-    const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.7rem' : primaryNameLength > 11 ? '1.85rem' : '2rem';
-    const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1rem' : secondaryNameLength > 16 ? '1.05rem' : '1.125rem';
+    const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.95rem' : primaryNameLength > 11 ? '2.1rem' : '2.3rem';
+    const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1.08rem' : secondaryNameLength > 16 ? '1.16rem' : '1.24rem';
     const showLogoPrimaryFontSize = lang === 'ja'
         ? (primaryNameLength > 14 ? '1.58rem' : primaryNameLength > 11 ? '1.72rem' : '1.9rem')
         : noLogoPrimaryFontSize;
@@ -1544,7 +1551,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         } : undefined}
                     >
                     {/* Header */}
-                    <header className={`report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4' : 'mb-1 h-[104px] pt-0'}`}>
+                    <header className={`report-header flex justify-between items-center pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4 border-b-2 border-[#c5a059]' : 'mb-[10mm] h-[142px] pt-0 border-b-0'}`}>
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
@@ -1572,6 +1579,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 {formatReportMonth(data.reportDate, lang)}
                             </div>
                         </div>
+                        {!showLogo && (
+                            <div className="absolute left-0 right-0 h-[2px] bg-[#c5a059]" style={{ bottom: '-10mm' }} />
+                        )}
                     </header>
 
                     {/* Old Watermark Position (Removed) */}

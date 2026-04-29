@@ -534,6 +534,8 @@ export default function ClientBatchReports() {
                         overflow: visible !important;
                         transform: none !important;
                         transform-origin: top center !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                         /* page break handled by wrapper */
                     }
                     .batch-report-page .report-preview.no-logo {
@@ -548,6 +550,7 @@ export default function ClientBatchReports() {
                     }
                     .batch-report-page .report-preview.no-logo .report-header {
                         border-bottom-color: transparent !important;
+                        border-bottom-width: 0 !important;
                     }
                     .batch-report-page .horse-name-primary {
                         font-size: 34px !important;
@@ -561,10 +564,16 @@ export default function ClientBatchReports() {
                         font-size: 13px !important;
                     }
                     .batch-report-page .report-preview.no-logo .sire-dam-line {
-                        transform: translateY(16mm) !important;
+                        transform: translateY(10mm) !important;
                     }
                     .batch-report-page .report-preview.no-logo .owner-line {
-                        margin-top: 16mm !important;
+                        margin-top: 10mm !important;
+                        line-height: 1.15 !important;
+                        font-size: 13px !important;
+                        border-color: #d1d5db !important;
+                    }
+                    .batch-report-page .report-preview.no-logo .comment-box {
+                        border-color: #555 !important;
                     }
                 }
             `}</style>
