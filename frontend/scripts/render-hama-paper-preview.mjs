@@ -117,7 +117,7 @@ async function drawOverlay(baseCanvas) {
   const rightPad = pageWidth - mm(8.5);
 
   const overlay = {
-    headerY: mm(55),
+    headerY: mm(48),
     horseNameY: mm(66),
     horseNameSubY: mm(76),
     pedigreeX: mm(134),

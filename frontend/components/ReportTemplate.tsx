@@ -67,7 +67,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .report-header {
         height: 142px !important;
         padding-top: 0 !important;
-        margin-bottom: 10mm !important;
+        margin-bottom: 4px !important;
         border-bottom-color: transparent !important;
         border-bottom-width: 0 !important;
       }`}
@@ -1551,7 +1551,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         } : undefined}
                     >
                     {/* Header */}
-                    <header className={`report-header flex justify-between items-center pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4 border-b-2 border-[#c5a059]' : 'mb-[10mm] h-[142px] pt-0 border-b-0'}`}>
+                    <header className={`report-header flex justify-between items-center pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4 border-b-2 border-[#c5a059]' : 'mb-1 h-[142px] pt-0 border-b-0'}`}>
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
@@ -1580,7 +1580,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
                         {!showLogo && (
-                            <div className="absolute left-0 right-0 h-[2px] bg-[#c5a059]" style={{ bottom: '-10mm' }} />
+                            <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-[#c5a059]" />
                         )}
                     </header>
 
