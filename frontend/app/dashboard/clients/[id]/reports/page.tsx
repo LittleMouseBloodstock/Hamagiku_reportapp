@@ -552,6 +552,26 @@ export default function ClientBatchReports() {
                         border-bottom-color: transparent !important;
                         border-bottom-width: 0 !important;
                     }
+                    .batch-report-page .report-preview.print-mode .main-photo {
+                        height: 98mm !important;
+                        margin-bottom: 4px !important;
+                    }
+                    .batch-report-page .report-preview.print-mode .data-section {
+                        height: 100px !important;
+                        margin-bottom: 4px !important;
+                    }
+                    .batch-report-page .report-preview.print-mode .comment-box {
+                        margin-top: 1px !important;
+                    }
+                    .batch-report-page .report-preview.print-mode .comment-text-ja {
+                        font-size: 13.5px !important;
+                        line-height: 1.58 !important;
+                    }
+                    .batch-report-page .report-preview.print-mode .stat-value-print {
+                        font-size: 15px !important;
+                        line-height: 1.2 !important;
+                        white-space: normal !important;
+                    }
                     .batch-report-page .horse-name-primary {
                         font-size: 34px !important;
                         line-height: 1.1 !important;

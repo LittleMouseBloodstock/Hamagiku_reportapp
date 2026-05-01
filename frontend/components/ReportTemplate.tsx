@@ -88,9 +88,9 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .main-photo {
         width: 132mm !important;
-        height: 99mm !important;
+        height: 98mm !important;
         max-width: none !important;
-        margin-bottom: 6px !important;
+        margin-bottom: 4px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .main-photo {
@@ -146,13 +146,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
-        height: 105px !important;
-        margin-bottom: 6px !important;
+        height: 100px !important;
+        margin-bottom: 4px !important;
         gap: 14px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
-        margin-top: 2px !important;
+        margin-top: 1px !important;
         min-height: 82px !important;
         padding: 12px !important;
       }`}
@@ -160,6 +160,17 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
         font-size: 14px !important;
         line-height: 1.42 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text-ja {
+        font-size: 13.5px !important;
+        line-height: 1.58 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .stat-value-print {
+        font-size: 15px !important;
+        line-height: 1.2 !important;
+        white-space: normal !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
@@ -1552,6 +1563,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     >
                     {/* Header */}
                     <header className={`report-header flex justify-between items-center pb-0 relative ${showLogo ? 'mb-2 h-[140px] pt-4 border-b-2 border-[#c5a059]' : 'mb-1 h-[142px] pt-0 border-b-0'}`}>
+                        {showLogo && (
+                            <div className="absolute left-1/2 bottom-0 z-[1] h-[12px] w-[188px] -translate-x-1/2 bg-white" />
+                        )}
                         <div className="flex flex-col justify-center items-start z-10">
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
                             <div className="font-serif-en font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
@@ -1560,7 +1574,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         {/* Centered Watermark Logo - 150px (Reduced size as requested) */}
                         {/* Centered Watermark Logo - 150px (Reduced size as requested, Moved Up) */}
                         {showLogo && (
-                            <div className="absolute left-1/2 top-[40%] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-75 pointer-events-none logo-container">
+                            <div className="absolute left-1/2 top-[40%] z-[2] transform -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] opacity-75 pointer-events-none logo-container">
                                 <Image
                                     src="/hamagiku-logo.png"
                                     alt="Logo"
@@ -1687,9 +1701,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         <div className={`data-section flex ${showLogo ? 'gap-6 mb-4 h-[120px]' : 'gap-[14px] mb-[6px] h-[105px]'}`}>
                             {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
-                                <div className="bg-[#f4f7f6] p-3 flex flex-col justify-center border-t-[3px] border-[#ddd]">
+                                <div className="bg-[#f4f7f6] p-3 flex min-h-0 flex-col justify-center border-t-[3px] border-[#ddd]">
                                     <span className="text-[10px] text-[#666] uppercase mb-1">{t('training')}</span>
-                                    <span className={`text-[#333] font-serif-jp leading-tight whitespace-nowrap ${showLogo ? 'text-base' : 'text-[15px] tracking-[-0.02em]'}`}>
+                                    <span className={`stat-value-print text-[#333] font-serif-jp ${showLogo ? 'text-[15px] leading-[1.2] whitespace-normal break-keep' : 'text-[15px] leading-tight whitespace-nowrap tracking-[-0.02em]'}`}>
                                         {lang === 'ja' ? (data.trainingStatusJp || '-') : (data.trainingStatusEn || '-')}
                                     </span>
                                 </div>
@@ -1723,11 +1737,11 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 {t('trainersComment')}
                             </span>
                             {lang === 'ja' ? (
-                                <div className={`comment-text text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold ${showLogo ? 'text-[15px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
+                                <div className={`comment-text comment-text-ja text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold ${showLogo ? 'text-[15px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className={`comment-text text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
+                                <div className={`comment-text comment-text-en text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
                                     {data.commentEn || ''}
                                 </div>
                             )}
