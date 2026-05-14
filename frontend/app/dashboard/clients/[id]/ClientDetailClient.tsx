@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 export default function ClientDetailClient({ id }: { id: string }) {
     const router = useRouter();
     const { t } = useLanguage();
+    const { workspaceId } = useWorkspace();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -28,7 +30,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
     const { user, session } = useAuth(); // Add useAuth
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !workspaceId) return;
 
         let isMounted = true;
         const fetchClient = async (retryCount = 0) => {
@@ -36,6 +38,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                 const { data, error } = await supabase
                     .from('clients')
                     .select('*')
+                    .eq('workspace_id', workspaceId)
                     .eq('id', id)
                     .single();
 
@@ -67,7 +70,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
                         if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
-                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?workspace_id=eq.${workspaceId}&id=eq.${id}&select=*`, {
                             headers: {
                                 'apikey': anonKey,
                                 'Authorization': `Bearer ${session.access_token}`
@@ -103,7 +106,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
         fetchClient();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, user?.id, session?.access_token]);
+    }, [id, user?.id, session?.access_token, workspaceId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -112,7 +115,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
         try {
             const { error } = await supabase
                 .from('clients')
-                .update({
+                    .update({
                     name: formData.name,
                     contact_email: formData.contact_email,
                     contact_phone: formData.contact_phone,
@@ -122,14 +125,15 @@ export default function ClientDetailClient({ id }: { id: string }) {
                     address_street: formData.address_street,
                     representative_name: formData.representative_name,
                     notes: formData.notes
-                })
-                .eq('id', id);
+                    })
+                    .eq('workspace_id', workspaceId)
+                    .eq('id', id);
 
             if (error) throw error;
             router.push('/dashboard/clients');
             router.refresh();
         } catch (error: unknown) {
-            alert('Error updating client: ' + (error as Error).message);
+            alert(t('errorUpdatingClient') + (error as Error).message);
         } finally {
             setSaving(false);
         }
@@ -145,14 +149,14 @@ export default function ClientDetailClient({ id }: { id: string }) {
                         <Link href="/dashboard/clients" className="text-stone-500 hover:text-stone-800">
                             <span className="material-symbols-outlined">arrow_back</span>
                         </Link>
-                        <h1 className="text-2xl font-bold text-stone-800">{t('editClient')}: {formData.name}</h1>
+                        <h1 className="dashboard-page-title text-2xl">{t('editClient')}: {formData.name}</h1>
                     </div>
                     <Link
                         href={`/dashboard/clients/${id}/reports`}
                         className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200 transition-colors font-medium border border-stone-200"
                     >
                         <span className="material-symbols-outlined text-lg">print</span>
-                        <span>Monthly Reports</span>
+                        <span>{t('monthlyReports')}</span>
                     </Link>
                 </div>
 
@@ -160,7 +164,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Basic Info */}
                         <section>
-                            <h2 className="text-lg font-bold text-[#1a3c34] mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
+                            <h2 className="text-primary text-lg font-bold mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-lg">badge</span>
                                 {t('clientBasicInfo')}
                             </h2>
@@ -170,7 +174,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <input
                                         required
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     />
@@ -179,7 +183,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('representativeName')}</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.representative_name}
                                         onChange={e => setFormData({ ...formData, representative_name: e.target.value })}
                                     />
@@ -189,7 +193,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
                         {/* Contact Info */}
                         <section>
-                            <h2 className="text-lg font-bold text-[#1a3c34] mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
+                            <h2 className="text-primary text-lg font-bold mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-lg">contact_mail</span>
                                 {t('contactInfo')}
                             </h2>
@@ -198,7 +202,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('email')}</label>
                                     <input
                                         type="email"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.contact_email}
                                         onChange={e => setFormData({ ...formData, contact_email: e.target.value })}
                                     />
@@ -207,7 +211,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('phone')}</label>
                                     <input
                                         type="tel"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.contact_phone}
                                         onChange={e => setFormData({ ...formData, contact_phone: e.target.value })}
                                     />
@@ -217,7 +221,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
                         {/* Address */}
                         <section>
-                            <h2 className="text-lg font-bold text-[#1a3c34] mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
+                            <h2 className="text-primary text-lg font-bold mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-lg">location_on</span>
                                 {t('address')}
                             </h2>
@@ -226,7 +230,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('zipCode')}</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         placeholder="000-0000"
                                         value={formData.zip_code}
                                         onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
@@ -236,7 +240,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('prefecture')}</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.address_prefecture}
                                         onChange={e => setFormData({ ...formData, address_prefecture: e.target.value })}
                                     />
@@ -245,7 +249,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('city')}</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.address_city}
                                         onChange={e => setFormData({ ...formData, address_city: e.target.value })}
                                     />
@@ -254,7 +258,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('street')}</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                         value={formData.address_street}
                                         onChange={e => setFormData({ ...formData, address_street: e.target.value })}
                                     />
@@ -264,14 +268,14 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
                         {/* Notes */}
                         <section>
-                            <h2 className="text-lg font-bold text-[#1a3c34] mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
+                            <h2 className="text-primary text-lg font-bold mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-lg">description</span>
                                 {t('notes')}
                             </h2>
                             <div>
                                 <textarea
                                     rows={4}
-                                    className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                    className="input-brand w-full rounded-lg border-stone-300 shadow-sm"
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                 />
@@ -285,7 +289,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="px-5 py-2.5 bg-[#1a3c34] text-white rounded-lg font-medium hover:bg-[#122b25] shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                                className="bg-primary hover:bg-primary-dark px-5 py-2.5 text-white rounded-lg font-medium shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
                             >
                                 {saving ? t('saving') : t('saveChanges')}
                             </button>

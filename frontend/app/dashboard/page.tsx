@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
     const { language, setLanguage, t } = useLanguage();
+    const { branding } = useBranding();
+    const { workspaceId } = useWorkspace();
     const { user, session } = useAuth(); // Get user and session from AuthContext
     const router = useRouter();
 
@@ -17,10 +21,10 @@ export default function Dashboard() {
         title: string;
         created: string;
         author: string;
-        status: string;
         languages: string[];
         horses?: { name: string; name_en: string; };
         horse_id?: string;
+        reportType?: 'monthly' | 'departure';
     }
 
     const [reports, setReports] = useState<DashboardReport[]>([]);
@@ -28,12 +32,11 @@ export default function Dashboard() {
     const [stats, setStats] = useState({
         totalReports: 0,
         activeHorses: 0,
-        clients: 0,
-        pendingReview: 0
+        clients: 0
     });
 
     useEffect(() => {
-        if (!user) return; // Optional: Don't fetch if no user (though RLS handles it, this saves a call)
+        if (!user || !workspaceId) return; // Optional: Don't fetch if no user/workspace
 
         let isMounted = true;
         const fetchReports = async (retryCount = 0) => {
@@ -42,36 +45,30 @@ export default function Dashboard() {
                 const { data, error } = await supabase
                     .from('reports')
                     .select('*, horse_id, horses(name, name_en)')
+                    .eq('workspace_id', workspaceId)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
                 // 2. Fetch Stats Counts
-                const { count: reportsCount, error: err1 } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+                const { count: reportsCount, error: err1 } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
                 if (err1) throw err1;
 
-                const { count: horsesCount, error: err2 } = await supabase.from('horses').select('*', { count: 'exact', head: true });
+                const { count: horsesCount, error: err2 } = await supabase.from('horses').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
                 if (err2) throw err2;
 
-                const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true });
+                const { count: clientsCount, error: err3 } = await supabase.from('clients').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId);
                 if (err3) throw err3;
-
-                // Pending Review: Check 'status_training' or simply count recent ones if no explicit review status exists
-                // We'll trust the 'status_training' column or 'metrics_json' for now.
-                // Since 'review_status' might not exist, we'll avoid querying it directly for now or stick to a simpler check.
-                // Let's count reports that are "Training" as 'active'? Or just 0 for now to prevent error.
-                const pendingCount = 0;
 
                 if (isMounted) {
                     setStats({
                         totalReports: reportsCount || 0,
                         activeHorses: horsesCount || 0,
-                        clients: clientsCount || 0,
-                        pendingReview: pendingCount || 0
+                        clients: clientsCount || 0
                     });
 
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const formatted = data?.map((r: any) => {
+                    const formatted: DashboardReport[] = data?.map((r: any) => {
                         // Determine title
                         const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
                         // Determine languages
@@ -80,19 +77,15 @@ export default function Dashboard() {
                         if (r.metrics_json?.commentEn) langs.push('EN');
                         if (langs.length === 0) langs.push('JP');
 
-                        // Safe Status logic
-                        // Fallback to 'status_training' or default 'draft'
-                        const statusRaw = r.status_training || 'draft';
-
                         return {
                             id: r.id,
                             title: title,
                             created: r.created_at ? new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
                             author: 'You',
-                            status: statusRaw,
                             languages: langs,
                             horses: r.horses,
-                            horse_id: r.horse_id
+                            horse_id: r.horse_id,
+                            reportType: r.metrics_json?.reportType === 'departure' ? 'departure' : 'monthly',
                         };
                     }) || [];
                     setReports(formatted);
@@ -114,7 +107,7 @@ export default function Dashboard() {
                             if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
                             // 1. Reports Fetch
-                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,horse_id,horses(name,name_en)&order=created_at.desc`, {
+                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?select=*,horse_id,horses(name,name_en)&workspace_id=eq.${workspaceId}&order=created_at.desc`, {
                                 headers: {
                                     'apikey': anonKey,
                                     'Authorization': `Bearer ${session.access_token}`
@@ -125,15 +118,15 @@ export default function Dashboard() {
 
                             // 2. Stats Fetch (Raw HEAD requests)
                             const [reportsHead, horsesHead, clientsHead] = await Promise.all([
-                                fetch(`${supabaseUrl}/rest/v1/reports?select=*`, {
+                                fetch(`${supabaseUrl}/rest/v1/reports?select=*&workspace_id=eq.${workspaceId}`, {
                                     method: 'HEAD',
                                     headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
                                 }),
-                                fetch(`${supabaseUrl}/rest/v1/horses?select=*`, {
+                                fetch(`${supabaseUrl}/rest/v1/horses?select=*&workspace_id=eq.${workspaceId}`, {
                                     method: 'HEAD',
                                     headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
                                 }),
-                                fetch(`${supabaseUrl}/rest/v1/clients?select=*`, {
+                                fetch(`${supabaseUrl}/rest/v1/clients?select=*&workspace_id=eq.${workspaceId}`, {
                                     method: 'HEAD',
                                     headers: { 'apikey': anonKey, 'Authorization': `Bearer ${session.access_token}`, 'Prefer': 'count=exact' }
                                 })
@@ -147,27 +140,25 @@ export default function Dashboard() {
                                 setStats({
                                     totalReports: Number(reportsCount),
                                     activeHorses: Number(horsesCount),
-                                    clients: Number(clientsCount),
-                                    pendingReview: 0 // Keep 0 for now as it requires complex filtering
+                                    clients: Number(clientsCount)
                                 });
                                 // Format data
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const formatted = rawData?.map((r: any) => {
+                                const formatted: DashboardReport[] = rawData?.map((r: any) => {
                                     const title = r.title || (language === 'ja' ? r.horses?.name : r.horses?.name_en) || 'Untitled';
                                     const langs = [];
                                     if (r.body) langs.push('JP');
                                     if (r.metrics_json?.commentEn) langs.push('EN');
                                     if (langs.length === 0) langs.push('JP');
-                                    const statusRaw = r.status_training || 'draft';
                                     return {
                                         id: r.id,
                                         title: title,
                                         created: r.created_at ? new Date(r.created_at).toLocaleDateString(language === 'ja' ? 'ja-JP' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
                                         author: 'You',
-                                        status: statusRaw,
                                         languages: langs,
                                         horses: r.horses,
-                                        horse_id: r.horse_id
+                                        horse_id: r.horse_id,
+                                        reportType: r.metrics_json?.reportType === 'departure' ? 'departure' : 'monthly',
                                     };
                                 }) || [];
                                 setReports(formatted);
@@ -185,13 +176,14 @@ export default function Dashboard() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [language, user?.id, session?.access_token]);
+    }, [language, user?.id, session?.access_token, workspaceId]);
 
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
+        if (!workspaceId) return;
 
         try {
-            const { error } = await supabase.from('reports').delete().eq('id', reportId);
+            const { error } = await supabase.from('reports').delete().eq('workspace_id', workspaceId).eq('id', reportId);
 
             if (error) throw error;
 
@@ -207,21 +199,21 @@ export default function Dashboard() {
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative font-serif">
-            <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-[#FDFCF8] border-b border-stone-200 gap-3 sm:gap-0">
-                <div className="text-xl font-bold text-[#1a3c34] flex items-center gap-2 font-display">
+            <header className="app-shell hidden flex-col justify-between gap-3 border-b border-stone-200 px-4 py-4 sm:h-16 sm:flex-row sm:items-center sm:gap-0 sm:px-6 sm:py-0 lg:flex">
+                <div className="text-primary flex items-center gap-2 font-display text-xl font-bold">
                     <span className="material-symbols-outlined">dashboard</span>
                     {t('dashboard')}
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
                     <button
                         onClick={() => setLanguage(language === 'ja' ? 'en' : 'ja')}
-                        className="px-3 py-1 text-sm font-medium text-[#1a3c34] border border-[#1a3c34] rounded hover:bg-[#1a3c34] hover:text-white transition-colors"
+                        className="rounded border border-primary bg-white px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary-soft"
                     >
                         {language === 'ja' ? 'English' : '日本語'}
                     </button>
                     <Link
                         href="/reports/new"
-                        className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"
+                        className="btn-primary ring-brand flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm ring-1 transition-all sm:px-4"
                     >
                         <span className="material-symbols-outlined text-sm">add</span>
                         <span className="text-sm font-medium">{t('newReport')}</span>
@@ -229,44 +221,41 @@ export default function Dashboard() {
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-6 bg-[#FDFCF8]">
+            <main className="app-shell flex-1 overflow-y-auto p-4 pb-28 sm:p-6 sm:pb-28 lg:pb-6">
+                <div className="mb-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+                    <div className="text-primary text-sm font-semibold uppercase tracking-[0.24em]">{branding.farmName}</div>
+                    <h1 className="dashboard-page-title mt-3 text-3xl">{t('dashboardWelcomeTitle')}</h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-7 text-stone-600">{t('dashboardWelcomeBody')}</p>
+                </div>
+
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-8">
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">description</span>
+                            <div className="bg-primary-soft rounded-lg p-2">
+                                <span className="material-symbols-outlined text-primary">description</span>
                             </div>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Total Reports</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.totalReports}</p>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('totalReports')}</h3>
+                        <p className="text-primary mt-1 font-display text-3xl font-bold">{stats.totalReports}</p>
                     </div>
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">format_list_bulleted</span>
+                            <div className="bg-primary-soft rounded-lg p-2">
+                                <span className="material-symbols-outlined text-primary">format_list_bulleted</span>
                             </div>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Active Horses</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.activeHorses}</p>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('activeHorses')}</h3>
+                        <p className="text-primary mt-1 font-display text-3xl font-bold">{stats.activeHorses}</p>
                     </div>
                     <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
                         <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">group</span>
+                            <div className="bg-primary-soft rounded-lg p-2">
+                                <span className="material-symbols-outlined text-primary">group</span>
                             </div>
                         </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Clients</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.clients}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-[#1a3c34]/5 rounded-lg">
-                                <span className="material-symbols-outlined text-[#1a3c34]">schedule</span>
-                            </div>
-                        </div>
-                        <h3 className="text-stone-500 text-sm font-medium font-sans">Pending Review</h3>
-                        <p className="text-3xl font-bold text-[#1a3c34] mt-1 font-display">{stats.pendingReview}</p>
+                        <h3 className="text-stone-500 text-sm font-medium font-sans">{t('totalClients')}</h3>
+                        <p className="text-primary mt-1 font-display text-3xl font-bold">{stats.clients}</p>
                     </div>
                 </div>
 
@@ -284,49 +273,46 @@ export default function Dashboard() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('horseName')}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('reportTitle')}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('date')}</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('status')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">{t('language')}</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
                                 {reports.map((report) => (
-                                    <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(`/reports/${report.id}`)}>
+                                    <tr key={report.id} className="hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => router.push(report.reportType === 'departure' ? `/departure-reports/${report.id}` : `/reports/${report.id}`)}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-stone-300 mr-3"></div>
                                                 <div className="text-sm font-medium text-stone-900">
-                                                    {language === 'ja' ? report.horses?.name : report.horses?.name_en || 'Unknown Horse'}
+                                            {language === 'ja' ? report.horses?.name : report.horses?.name_en || 'Unknown Horse'}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                                            {report.title}
+                                            <div className="flex items-center gap-2">
+                                                <span>{report.title}</span>
+                                                {report.reportType === 'departure' && (
+                                                    <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800">
+                                                        {language === 'ja' ? '退厩' : 'Departure'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                                             {/* Date */}
                                             {report.created}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                (report.status === 'pending_jp_check' || report.status === 'pending_en_check') ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {(() => {
-                                                    const s = (report.status || '').trim();
-                                                    // Exact matches (after trim)
-                                                    if (s === 'pending_jp_check' || s === 'pending_en_check') return t('status_InReview');
-                                                    if (s.toLowerCase() === 'approved') return t('status_Approved');
-                                                    if (s.toLowerCase() === 'draft') return t('status_Draft');
-                                                    if (s === 'Training') return t('status_Training');
-                                                    if (s === 'Resting') return t('status_Resting');
-                                                    if (s === 'Spelling') return t('status_Spelling');
-
-                                                    // Handle "調整中" or other variations if needed
-                                                    if (s === '調整中') return language === 'en' ? 'Training' : s; // Or map to 'Training' translation if desired
-
-                                                    return s;
-                                                })()}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                {report.languages.map((langCode) => (
+                                                    <span
+                                                        key={langCode}
+                                                        className="inline-flex rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-700"
+                                                    >
+                                                        {langCode}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex items-center justify-end gap-3">
@@ -350,7 +336,7 @@ export default function Dashboard() {
                                 {reports.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-8 text-center text-stone-500 text-sm">
-                                            No recent reports found
+                                            {t('noReports')}
                                         </td>
                                     </tr>
                                 )}

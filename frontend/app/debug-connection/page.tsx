@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 export default function DebugConnectionPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,6 +10,7 @@ export default function DebugConnectionPage() {
     const [loading, setLoading] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [session, setSession] = useState<any>(null);
+    const { workspaceId } = useWorkspace();
 
     const checkConnection = async () => {
         setLoading(true);
@@ -22,6 +24,7 @@ export default function DebugConnectionPage() {
             const { data, error, count } = await supabase
                 .from('horses')
                 .select('*', { count: 'exact' })
+                .eq('workspace_id', workspaceId)
                 .limit(5);
 
             setResult({
@@ -29,7 +32,8 @@ export default function DebugConnectionPage() {
                 dataLength: data?.length,
                 totalCount: count,
                 firstItem: data?.[0],
-                sessionError: sessErr
+                sessionError: sessErr,
+                workspaceId
             });
 
         } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -46,11 +50,12 @@ export default function DebugConnectionPage() {
             <div className="mb-6 p-4 bg-gray-100 rounded text-gray-800 border border-gray-300">
                 <p><strong>URL:</strong> {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
                 <p><strong>Key:</strong> {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 10)}...</p>
+                <p><strong>Workspace:</strong> {workspaceId || 'none'}</p>
             </div>
 
             <button
                 onClick={checkConnection}
-                className="bg-blue-600 text-white px-4 py-2 rounded mb-6 hover:bg-blue-700"
+                className="btn-primary px-4 py-2 rounded mb-6"
                 disabled={loading}
             >
                 {loading ? 'Checking...' : 'Run Connection Test'}

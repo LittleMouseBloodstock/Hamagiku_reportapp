@@ -34,15 +34,72 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Monthly Report Generator",
-  description: "Multilingual Report App",
+  metadataBase: new URL("https://shinba.app"),
+  title: "Shinba Service | 馬の現場を支える業務サポート",
+  description: "Shinba Service は、競走馬牧場・獣医・馬主報告など馬の現場に合わせて、報告、記録、共有、引き継ぎの流れを相談から支援します。",
+  applicationName: "Shinba Service",
+  keywords: [
+    "Shinba Service",
+    "Shinba Report",
+    "馬 レポート サービス",
+    "競走馬 レポート 作成",
+    "牧場 月次レポート",
+    "海外オーナー 報告",
+    "競走馬 近況報告",
+    "馬 英語 レポート",
+    "牧場 報告書 作成",
+    "競走馬",
+    "競走馬牧場",
+    "牧場レポート",
+    "月次レポート",
+    "オーナーレポート",
+    "馬主レポート",
+    "racehorse farm reports",
+    "owner reporting",
+    "multilingual horse reports",
+  ],
+  alternates: {
+    canonical: "/",
+    languages: {
+      "ja-JP": "/",
+      "en-US": "/",
+    },
+  },
   icons: {
-    icon: '/icon.svg',
+    icon: [
+      { url: '/favicon.png?v=20260514a', type: 'image/png', sizes: '64x64' },
+      { url: '/apple-touch-icon.png?v=20260514a', type: 'image/png', sizes: '180x180' },
+    ],
+    shortcut: '/favicon.png?v=20260514a',
+    apple: '/apple-touch-icon.png?v=20260514a',
+  },
+  openGraph: {
+    title: "Shinba Service | 馬の現場を支える業務サポート",
+    description: "競走馬牧場・獣医・馬主報告の現場に合わせて、報告、記録、共有、引き継ぎの流れを個別相談から支援します。",
+    url: "https://shinba.app",
+    siteName: "Shinba Service",
+    locale: "ja_JP",
+    alternateLocale: ["en_US"],
+    type: "website",
+    images: [
+      {
+        url: "/shinba-service-logo-cropped.png",
+        alt: "Shinba Service",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Shinba Service | 馬の現場を支える業務サポート",
+    description: "競走馬牧場・獣医・馬主報告の現場に合わせた業務サポート。Shinba Reportの導入相談もこちらから。",
+    images: ["/shinba-service-logo-cropped.png"],
   },
 };
 
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import DemoInit from "@/components/DemoInit";
 import { Suspense } from "react";
 
@@ -56,17 +113,24 @@ export default function RootLayout({
       <head>
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
+        <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png?v=20260514a" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260514a" />
+        <link rel="shortcut icon" type="image/png" href="/favicon.png?v=20260514a" />
       </head>
 
       <body
-        className={`${newsreader.variable} ${noto.variable} ${notoJP.variable} ${cormorant.variable} ${shippori.variable} antialiased bg-background-light dark:bg-background-dark text-stone-850 dark:text-gray-100 font-sans overflow-hidden`}
+        className={`${newsreader.variable} ${noto.variable} ${notoJP.variable} ${cormorant.variable} ${shippori.variable} antialiased bg-background-light dark:bg-background-dark text-stone-850 dark:text-gray-100 font-sans overflow-x-hidden`}
       >
         <Suspense>
           <DemoInit />
         </Suspense>
         <AuthProvider>
           <LanguageProvider>
-            {children}
+            <WorkspaceProvider>
+              <BrandingProvider>
+                {children}
+              </BrandingProvider>
+            </WorkspaceProvider>
           </LanguageProvider>
         </AuthProvider>
       </body>

@@ -6,6 +6,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { resolveReportAssetUrl } from '@/lib/storage';
 
 export const runtime = 'edge';
 
@@ -46,9 +48,10 @@ export default function ClientBatchReports() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
     const { user, session } = useAuth(); // Add useAuth
+    const { workspaceId } = useWorkspace();
 
     useEffect(() => {
-        if (!id || !user) return; // Wait for user
+        if (!id || !user || !workspaceId) return; // Wait for user
 
         let isMounted = true;
         const fetchData = async (retryCount = 0) => {
@@ -56,12 +59,12 @@ export default function ClientBatchReports() {
 
             try {
                 // 1. Fetch Client
-                const { data: client, error: cError } = await supabase.from('clients').select('*').eq('id', id).single();
+                const { data: client, error: cError } = await supabase.from('clients').select('*').eq('workspace_id', workspaceId).eq('id', id).single();
                 if (cError) throw cError;
                 if (isMounted && client) setOwner(client);
 
                 // 2. Fetch Horses owned by client
-                const { data: horses, error: hError } = await supabase.from('horses').select('*').eq('owner_id', id);
+                const { data: horses, error: hError } = await supabase.from('horses').select('*').eq('workspace_id', workspaceId).eq('owner_id', id);
                 if (hError) throw hError;
 
                 if (horses && horses.length > 0) {
@@ -76,6 +79,7 @@ export default function ClientBatchReports() {
                     const { data: reportsData, error: rError } = await supabase
                         .from('reports')
                         .select('*')
+                        .eq('workspace_id', workspaceId)
                         .in('horse_id', horseIds)
                         .gte('created_at', startOfMonth)
                         .lt('created_at', endOfMonth)
@@ -84,11 +88,13 @@ export default function ClientBatchReports() {
                     if (rError) throw rError;
 
                     if (isMounted && reportsData) {
-                        const formattedReports = reportsData.map((r: Report) => {
+                        const monthlyReports = reportsData.filter((r: Report) => r.metrics_json?.reportType !== 'departure');
+                        const formattedReports = await Promise.all(monthlyReports.map(async (r: Report) => {
                             const horse = horses.find((h: Horse) => h.id === r.horse_id);
                             if (!horse) return null;
 
                             const metrics = r.metrics_json || {};
+                            const resolvedPhoto = await resolveReportAssetUrl(r.main_photo_url || horse.photo_url);
                             const rData: ReportData = {
                                 reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
                                 horseNameJp: horse.name,
@@ -110,11 +116,12 @@ export default function ClientBatchReports() {
                                 targetEn: metrics.targetEn || '',
                                 conditionJp: '', conditionEn: '',
                                 weightHistory: metrics.weightHistory || [],
-                                mainPhoto: r.main_photo_url || horse.photo_url || '',
+                                careRecords: metrics.careRecords || [],
+                                mainPhoto: resolvedPhoto || '',
                                 logo: null
                             };
                             return { report: r, horse: horse, data: rData };
-                        }).filter((item: { report: Report, horse: Horse, data: ReportData } | null) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                        })).then(items => items.filter((item: { report: Report, horse: Horse, data: ReportData } | null) => item !== null) as { report: Report, horse: Horse, data: ReportData }[]);
 
                         setReports(formattedReports);
                     } else if (isMounted) {
@@ -143,14 +150,14 @@ export default function ClientBatchReports() {
                         };
 
                         // 1. Fetch Client
-                        const clientRes = await fetch(`${supabaseUrl}/rest/v1/clients?id=eq.${id}&select=*`, { headers });
+                        const clientRes = await fetch(`${supabaseUrl}/rest/v1/clients?workspace_id=eq.${workspaceId}&id=eq.${id}&select=*`, { headers });
                         if (!clientRes.ok) throw new Error("Raw fetch client failed");
                         const clientData = await clientRes.json();
                         const client = clientData[0];
                         if (isMounted && client) setOwner(client);
 
                         // 2. Fetch Horses
-                        const horsesRes = await fetch(`${supabaseUrl}/rest/v1/horses?owner_id=eq.${id}&select=*`, { headers });
+                        const horsesRes = await fetch(`${supabaseUrl}/rest/v1/horses?workspace_id=eq.${workspaceId}&owner_id=eq.${id}&select=*`, { headers });
                         if (!horsesRes.ok) throw new Error("Raw fetch horses failed");
                         const horses = await horsesRes.json();
 
@@ -165,19 +172,21 @@ export default function ClientBatchReports() {
 
                             // 3. Fetch Reports (using 'in' operator format for REST is tricky, let's try standard)
                             // REST syntax for IN: column=in.(val1,val2)
-                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?horse_id=in.(${horseIds})&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`, { headers });
+                            const reportsRes = await fetch(`${supabaseUrl}/rest/v1/reports?workspace_id=eq.${workspaceId}&horse_id=in.(${horseIds})&created_at=gte.${startOfMonth}&created_at=lt.${endOfMonth}&order=horse_id`, { headers });
                             if (!reportsRes.ok) throw new Error("Raw fetch reports failed");
                             const reportsData = await reportsRes.json();
 
                             if (isMounted && reportsData) {
+                                const monthlyReports = reportsData.filter((r: Report) => r.metrics_json?.reportType !== 'departure');
 
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const formattedReports = reportsData.map((r: any) => {
+                                const formattedReports = await Promise.all(monthlyReports.map(async (r: any) => {
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     const horse = horses.find((h: any) => h.id === r.horse_id);
                                     if (!horse) return null;
 
                                     const metrics = r.metrics_json || {};
+                                    const resolvedPhoto = await resolveReportAssetUrl(r.main_photo_url || horse.photo_url);
                                     const rData: ReportData = {
                                         reportDate: r.title || r.created_at.slice(0, 10).replace(/-/g, '.'),
                                         horseNameJp: horse.name,
@@ -199,12 +208,13 @@ export default function ClientBatchReports() {
                                         targetEn: metrics.targetEn || '',
                                         conditionJp: '', conditionEn: '',
                                         weightHistory: metrics.weightHistory || [],
-                                        mainPhoto: r.main_photo_url || horse.photo_url || '',
+                                        careRecords: metrics.careRecords || [],
+                                        mainPhoto: resolvedPhoto || '',
                                         logo: null
                                     };
                                     return { report: r, horse: horse, data: rData };
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                }).filter((item: any) => item !== null) as { report: Report, horse: Horse, data: ReportData }[];
+                                })).then((items: any[]) => items.filter((item: any) => item !== null)) as { report: Report, horse: Horse, data: ReportData }[];
                                 setReports(formattedReports);
                             } else if (isMounted) setReports([]);
                         } else if (isMounted) setReports([]);
@@ -221,7 +231,7 @@ export default function ClientBatchReports() {
         fetchData();
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, selectedDate, user?.id, session?.access_token]);
+    }, [id, selectedDate, user?.id, session?.access_token, workspaceId]);
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
 
@@ -232,7 +242,7 @@ export default function ClientBatchReports() {
                 <div className="flex items-center gap-4">
                     <button onClick={() => router.back()} className="hover:text-gray-300"><ArrowLeft /></button>
                     <div>
-                        <h1 className="font-bold text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
+                        <h1 className="dashboard-page-title text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
                         <p className="text-xs text-gray-400">Total: {reports.length} reports</p>
                     </div>
                 </div>

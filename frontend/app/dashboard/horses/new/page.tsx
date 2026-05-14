@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function NewHorsePage() {
     interface Client {
@@ -12,6 +14,8 @@ export default function NewHorsePage() {
     }
 
     const router = useRouter();
+    const { workspaceId, isWorkspaceLoading, refreshWorkspace } = useWorkspace();
+    const { t, language } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [clients, setClients] = useState<Client[]>([]);
 
@@ -21,7 +25,9 @@ export default function NewHorsePage() {
         name_en: '',
         owner_id: '',
         sire: '',
-        dam: ''
+        dam: '',
+        birth_date: '',
+        sex: ''
     });
 
     const [ownerSearch, setOwnerSearch] = useState('');
@@ -34,17 +40,19 @@ export default function NewHorsePage() {
 
     useEffect(() => {
         const fetchClients = async () => {
-            const { data } = await supabase.from('clients').select('id, name').order('name');
+            if (!workspaceId) return;
+            const { data } = await supabase.from('clients').select('id, name').eq('workspace_id', workspaceId).order('name');
             if (data) setClients(data);
         };
         fetchClients();
-    }, []);
+    }, [workspaceId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
+            if (!workspaceId) throw new Error('No active workspace found.');
             let finalOwnerId = formData.owner_id;
 
             // If text is entered but no existing ID selected (or name changed), create new client
@@ -57,7 +65,7 @@ export default function NewHorsePage() {
                     // Create new client
                     const { data: newClient, error: clientError } = await supabase
                         .from('clients')
-                        .insert({ name: ownerSearch })
+                        .insert({ workspace_id: workspaceId, name: ownerSearch })
                         .select()
                         .single();
 
@@ -67,22 +75,52 @@ export default function NewHorsePage() {
             }
 
             const { error } = await supabase.from('horses').insert({
+                workspace_id: workspaceId,
                 name: formData.name,
                 name_en: formData.name_en,
                 owner_id: finalOwnerId || null,
                 sire: formData.sire,
-                dam: formData.dam
+                dam: formData.dam,
+                birth_date: formData.birth_date || null,
+                sex: formData.sex || null
             });
 
             if (error) throw error;
             router.push('/dashboard/horses');
             router.refresh();
         } catch (error: unknown) {
-            alert('Error creating horse: ' + (error as Error).message);
+            alert(`${t('addHorse')} error: ` + (error as Error).message);
         } finally {
             setLoading(false);
         }
     };
+
+    if (isWorkspaceLoading) {
+        return <div className="mx-auto flex min-h-[40vh] max-w-2xl items-center justify-center p-6 text-stone-500">{t('loadingWorkspace')}</div>;
+    }
+
+    if (!workspaceId) {
+        return (
+            <div className="max-w-2xl mx-auto p-6 lg:p-12">
+                <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 p-8 space-y-4">
+                    <h1 className="dashboard-page-title text-2xl">{t('workspaceSetupRequiredTitle')}</h1>
+                    <p className="text-sm leading-7 text-stone-600">{t('workspaceSetupRequiredBody')}</p>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => void refreshWorkspace()}
+                            className="bg-primary hover:bg-primary-dark rounded-lg px-5 py-2.5 font-medium text-white shadow-sm transition-all"
+                        >
+                            {t('retryWorkspaceLoad')}
+                        </button>
+                        <Link href="/dashboard" className="px-5 py-2.5 text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg font-medium transition-colors">
+                            {t('backToHome')}
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-2xl mx-auto p-6 lg:p-12">
@@ -90,28 +128,28 @@ export default function NewHorsePage() {
                 <Link href="/dashboard/horses" className="text-stone-500 hover:text-stone-800">
                     <span className="material-symbols-outlined">arrow_back</span>
                 </Link>
-                <h1 className="text-2xl font-bold text-stone-800">Register New Horse</h1>
+                <h1 className="dashboard-page-title text-2xl">{t('addHorse')}</h1>
             </div>
 
             <div className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 p-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Horse Name (JP)</label>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('horseNameJp')}</label>
                             <input
                                 required
                                 type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
-                                placeholder="例: ハマギクベガ"
+                                className="input-brand w-full px-3 py-2"
+                                placeholder="例: シンバベガ"
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Horse Name (EN)</label>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('horseNameEn')}</label>
                             <input
                                 type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                className="input-brand w-full px-3 py-2"
                                 placeholder="e.g. Demo Vega"
                                 value={formData.name_en}
                                 onChange={e => setFormData({ ...formData, name_en: e.target.value })}
@@ -120,12 +158,12 @@ export default function NewHorsePage() {
                     </div>
 
                     <div className="relative">
-                        <label className="block text-sm font-medium text-stone-700 mb-1">Owner (Client)</label>
+                        <label className="mb-1 block text-sm font-medium text-stone-700">{t('owner')}</label>
                         <div className="relative">
                             <input
                                 type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20 pl-10"
-                                placeholder="Search or create new owner..."
+                                className="input-brand w-full py-2 pl-10 pr-3"
+                                placeholder={t('searchOwnerPlaceholder')}
                                 value={ownerSearch}
                                 onChange={e => {
                                     setOwnerSearch(e.target.value);
@@ -155,8 +193,8 @@ export default function NewHorsePage() {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="px-4 py-2 text-sm text-[#1a3c34] bg-[#1a3c34]/5 font-medium">
-                                        New owner will be created: &quot;{ownerSearch}&quot;
+                                    <div className="bg-primary-soft text-primary px-4 py-2 text-sm font-medium">
+                                        {t('newOwnerWillBeCreated')} &quot;{ownerSearch}&quot;
                                     </div>
                                 )}
                             </div>
@@ -187,35 +225,61 @@ export default function NewHorsePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Sire</label>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('sire')}</label>
                             <input
                                 type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                className="input-brand w-full px-3 py-2"
                                 value={formData.sire}
                                 onChange={e => setFormData({ ...formData, sire: e.target.value })}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-stone-700 mb-1">Dam</label>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('dam')}</label>
                             <input
                                 type="text"
-                                className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                className="input-brand w-full px-3 py-2"
                                 value={formData.dam}
                                 onChange={e => setFormData({ ...formData, dam: e.target.value })}
                             />
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('birthDate')}</label>
+                            <input
+                                type="date"
+                                lang={language === 'ja' ? 'ja-JP' : 'en-GB'}
+                                className="input-brand w-full px-3 py-2"
+                                value={formData.birth_date}
+                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-stone-700">{t('sex')}</label>
+                            <select
+                                className="input-brand w-full px-3 py-2"
+                                value={formData.sex}
+                                onChange={e => setFormData({ ...formData, sex: e.target.value })}
+                            >
+                                <option value="">{t('selectCondition')}</option>
+                                <option value="male">{language === 'ja' ? '牡' : 'Male'}</option>
+                                <option value="female">{language === 'ja' ? '牝' : 'Female'}</option>
+                                <option value="gelding">{language === 'ja' ? '騸' : 'Gelding'}</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div className="pt-4 border-t border-stone-100 flex justify-end gap-3">
                         <Link href="/dashboard/horses" className="px-5 py-2.5 text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg font-medium transition-colors">
-                            Cancel
+                            {t('cancel')}
                         </Link>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-5 py-2.5 bg-[#1a3c34] text-white rounded-lg font-medium hover:bg-[#122b25] shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                            className="bg-primary hover:bg-primary-dark flex items-center gap-2 rounded-lg px-5 py-2.5 font-medium text-white shadow-sm transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Saving...' : 'Register Horse'}
+                            {loading ? t('saving') : t('addHorse')}
                         </button>
                     </div>
                 </form>

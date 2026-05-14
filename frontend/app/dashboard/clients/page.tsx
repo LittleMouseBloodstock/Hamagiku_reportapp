@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import Link from 'next/link';
 
 export default function ClientsPage() {
@@ -17,11 +18,12 @@ export default function ClientsPage() {
 
     const { t } = useLanguage();
     const { user, session } = useAuth();
+    const { workspaceId } = useWorkspace();
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !workspaceId) return;
 
         let isMounted = true;
         const fetchClients = async (retryCount = 0) => {
@@ -29,6 +31,7 @@ export default function ClientsPage() {
                 const { data, error } = await supabase
                     .from('clients')
                     .select('*')
+                    .eq('workspace_id', workspaceId)
                     .order('name');
 
                 if (error) throw error;
@@ -47,7 +50,7 @@ export default function ClientsPage() {
                         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
                         if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
-                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?select=*&order=name`, {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/clients?select=*&workspace_id=eq.${workspaceId}&order=name`, {
                             headers: {
                                 'apikey': anonKey,
                                 'Authorization': `Bearer ${session.access_token}`
@@ -71,13 +74,14 @@ export default function ClientsPage() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, session?.access_token]);
+    }, [user?.id, session?.access_token, workspaceId]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
+        if (!workspaceId) return;
 
         try {
-            const { data, error } = await supabase.from('clients').delete().eq('id', id).select();
+            const { data, error } = await supabase.from('clients').delete().eq('workspace_id', workspaceId).eq('id', id).select();
             if (error) throw error;
             if (!data || data.length === 0) {
                 // If RLS denies delete, it often returns no error but deletes 0 rows.
@@ -91,18 +95,18 @@ export default function ClientsPage() {
     };
 
     if (loading) {
-        return <div className="p-6 text-stone-500">Loading clients...</div>;
+        return <div className="p-6 text-stone-500">{t('loading')}</div>;
     }
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
-                <div className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                <div className="dashboard-page-title flex items-center gap-2 text-xl">
                     <span className="material-symbols-outlined">group</span>
                     {t('clients') || 'Clients'}
                 </div>
                 <div className="flex items-center gap-4 self-end sm:self-auto">
-                    <Link href="/dashboard/clients/new" className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all">
+                    <Link href="/dashboard/clients/new" className="bg-primary hover:bg-primary-dark flex items-center gap-2 rounded-lg px-3 py-2 text-white shadow-sm transition-all sm:px-4">
                         <span className="material-symbols-outlined text-sm">add</span>
                         <span className="text-sm font-medium">{t('addClient')}</span>
                     </Link>
@@ -115,10 +119,10 @@ export default function ClientsPage() {
                         <table className="w-full">
                             <thead className="bg-stone-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Email</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Phone</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('clientName')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('email')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('phone')}</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-stone-500">{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
@@ -126,7 +130,7 @@ export default function ClientsPage() {
                                     <tr key={client.id} className="hover:bg-stone-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs mr-3">
+                                                <div className="bg-primary-soft text-primary mr-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold">
                                                     {client.name?.charAt(0) || 'C'}
                                                 </div>
                                                 <div className="text-sm font-medium text-stone-900">
@@ -142,12 +146,12 @@ export default function ClientsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link href={`/dashboard/clients/${client.id}`} className="text-primary hover:text-primary-dark mr-4">
-                                                View
+                                                {t('view')}
                                             </Link>
                                             <button
                                                 onClick={() => handleDelete(client.id, client.name)}
                                                 className="text-stone-400 hover:text-red-500 transition-colors"
-                                                title="Delete"
+                                                title={t('deleteReport')}
                                             >
                                                 <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>

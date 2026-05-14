@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import Link from 'next/link';
 
 export default function HorsesPage() {
@@ -17,10 +18,11 @@ export default function HorsesPage() {
 
     const { t, language } = useLanguage();
     const { user, session } = useAuth();
+    const { workspaceId } = useWorkspace();
     const [horses, setHorses] = useState<Horse[]>([]);
 
     useEffect(() => {
-        if (!user) return; // Wait for user
+        if (!user || !workspaceId) return; // Wait for user
 
         let isMounted = true;
         const fetchHorses = async (retryCount = 0) => {
@@ -29,6 +31,7 @@ export default function HorsesPage() {
                 const { data, error } = await supabase
                     .from('horses')
                     .select('*, clients(name)')
+                    .eq('workspace_id', workspaceId)
                     .order('name');
 
                 if (error) {
@@ -37,6 +40,7 @@ export default function HorsesPage() {
                     const { data: simpleData, error: simpleError } = await supabase
                         .from('horses')
                         .select('*')
+                        .eq('workspace_id', workspaceId)
                         .order('name');
 
                     if (simpleError) throw simpleError;
@@ -59,7 +63,7 @@ export default function HorsesPage() {
                         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
                         if (!supabaseUrl || !anonKey) throw new Error('Missing env vars');
 
-                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name)&order=name`, {
+                        const res = await fetch(`${supabaseUrl}/rest/v1/horses?select=*,clients(name)&workspace_id=eq.${workspaceId}&order=name`, {
                             headers: {
                                 'apikey': anonKey,
                                 'Authorization': `Bearer ${session.access_token}`
@@ -87,13 +91,14 @@ export default function HorsesPage() {
 
         return () => { isMounted = false; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.id, session?.access_token]);
+    }, [user?.id, session?.access_token, workspaceId]);
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`${t('deleteConfirm') || 'Are you sure you want to delete'} "${name}"?`)) return;
+        if (!workspaceId) return;
 
         try {
-            const { data, error } = await supabase.from('horses').delete().eq('id', id).select();
+            const { data, error } = await supabase.from('horses').delete().eq('workspace_id', workspaceId).eq('id', id).select();
             if (error) throw error;
             if (!data || data.length === 0) {
                 throw new Error('Delete operation affected 0 rows. Check RLS policies.');
@@ -108,7 +113,7 @@ export default function HorsesPage() {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
             <header className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 sm:py-0 sm:h-16 bg-white border-b border-stone-200 gap-3 sm:gap-0">
-                <div className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                <div className="dashboard-page-title flex items-center gap-2 text-xl">
                     <span className="material-symbols-outlined">format_list_bulleted</span>
                     {t('horses') || 'Horses'}
                 </div>
@@ -126,10 +131,10 @@ export default function HorsesPage() {
                         <table className="w-full">
                             <thead className="bg-stone-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Name</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Owner</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('horseName')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('owner')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-stone-500">{t('horseStatusLabel')}</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-stone-500">{t('actions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-200">
@@ -152,18 +157,18 @@ export default function HorsesPage() {
                                             {horse.clients?.name || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                Active
+                                            <span className="bg-primary-soft text-primary inline-flex rounded-full px-2 text-xs font-semibold leading-5">
+                                                {t('horseStatusActive')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link href={`/dashboard/horses/${horse.id}`} className="text-primary hover:text-primary-dark mr-4">
-                                                View
+                                                {t('view')}
                                             </Link>
                                             <button
                                                 onClick={() => handleDelete(horse.id, language === 'ja' ? horse.name : horse.name_en)}
                                                 className="text-stone-400 hover:text-red-500 transition-colors"
-                                                title="Delete"
+                                                title={t('deleteReport')}
                                             >
                                                 <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
