@@ -5,13 +5,16 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
+  Database,
   FileText,
+  Languages,
   Mail,
   MessageCircle,
   MessagesSquare,
   Mic,
   PenTool,
   Route,
+  ShieldCheck,
   Stethoscope,
 } from "lucide-react";
 import PublicSiteFooter from "@/components/PublicSiteFooter";
@@ -82,8 +85,25 @@ export default function Home() {
       ? "Reporting, records, and communication. Start where the field gets stuck."
       : "報告、記録、共有。現場で詰まりやすい作業から始めます。",
     servicesBody: en
-      ? "Shinba Report is the first concrete service for monthly reporting. The wider Shinba Service activity also covers multilingual handoff communication, voice records, invoices, inventory, and other field-specific workflows."
-      : "Shinba Report は、私の活動の中で最初に形にしているサービスです。活動全体では、報告に限らず、多言語での申し送り、音声記録、請求、在庫など、現場ごとの困りごとに合わせて必要な仕組みを扱います。",
+      ? "Shinba Report is the first concrete service for monthly reporting. The wider Shinba Service activity also covers multilingual handoff communication, voice records, and the future foundation for decision-ready horse data."
+      : "Shinba Report は、私の活動の中で最初に形にしているサービスです。活動全体では、報告に限らず、多言語での申し送り、音声記録、将来的な馬ごとの判断材料の蓄積まで、現場ごとの困りごとに合わせて必要な仕組みを扱います。",
+    purposeEyebrow: en ? "Purpose" : "Purpose",
+    purposeTitle: en
+      ? "Turn fragmented field information into trusted reports, handoffs, and decisions."
+      : "現場に散らばる情報を、信頼できる報告・共有・判断へ変える。",
+    purposeBody: en
+      ? "Racehorse operations rely on conversations, photos, notes, LINE messages, spreadsheets, and memory. Shinba Service is not a generic translation app or task manager. It organizes field information so veterinarians, farm staff, managers, owners, trainers, and overseas partners can act with fewer misunderstandings."
+      : "競走馬の現場では、口頭、写真、LINE、紙のメモ、Excel、個人の記憶に情報が分散しがちです。Shinba Service は、単なる翻訳アプリやタスク管理ではなく、獣医師、牧場スタッフ、マネージャー、馬主、調教師、海外関係者が、誤解を減らして次の判断に使える形へ情報を整えるための活動です。",
+    purposeNote: en
+      ? "The aim is Data Input + Expert Interpretation: technology supports professional judgment, but does not replace it."
+      : "目指すのは、Data Input + Expert Interpretation。テクノロジーは専門家の判断を置き換えるのではなく、判断に必要な情報を整えるために使います。",
+    trustEyebrow: en ? "Design principles" : "Design principles",
+    trustTitle: en
+      ? "Built for trust before automation."
+      : "自動化より先に、信頼できる運用をつくる。",
+    trustBody: en
+      ? "In this field, a poor translation, missing instruction, or unclear responsibility can matter. Shinba is designed around original records, confirmations, and practical workflows that fit the field."
+      : "競走馬ビジネスでは、誤訳、伝達漏れ、確認漏れ、責任範囲の曖昧さが大きな問題になり得ます。だからShinbaでは、原文、確認、履歴、現場で使える軽さを大切にします。",
     reportTitle: en ? "Prepare monthly and international owner reports faster." : "月次報告や海外オーナー向けレポートを、短時間で整えます。",
     reportBody: en
       ? "Shinba Report handles the monthly reporting part of Shinba Service. It organizes photos, weight, comments, and observations into reports that can be shared with owners and overseas partners."
@@ -124,6 +144,28 @@ export default function Home() {
   const consultationStepsToShow = en
     ? ["Review the current reporting, LINE, Excel, and photo workflow", "Separate what can be streamlined from what should remain field judgment", "Use one sample or demo screen to confirm the future workflow", "If it fits, set up the right service or templates"]
     : consultationSteps;
+  const trustCardsToShow = en
+    ? [
+        { icon: FileText, title: "Owner reporting", body: "Convert notes, photos, weight, and observations into reports owners can understand without losing field nuance." },
+        { icon: Languages, title: "Multilingual handoff", body: "Separate seen, understood, done, reported, and confirmed, so multilingual teams can reduce missed instructions." },
+        { icon: Database, title: "Decision-ready data", body: "Build toward structured histories for treatment, training, reporting, risk, sales, breeding, and bloodstock decisions." },
+      ]
+    : [
+        { icon: FileText, title: "馬主向け報告", body: "メモ、写真、体重、所見を、現場のニュアンスを失わず馬主が理解しやすい報告へ整えます。" },
+        { icon: Languages, title: "多言語Handoff", body: "「見た」「理解した」「作業した」「完了報告した」「管理者が確認した」を分け、伝達漏れを減らします。" },
+        { icon: Database, title: "判断に使えるデータ", body: "治療、調教、報告、リスク、売買、繁殖、出資判断に使える履歴として、将来的に蓄積できる形を目指します。" },
+      ];
+  const principlesToShow = en
+    ? [
+        { icon: ShieldCheck, title: "Keep originals and confirmation", body: "Reports and handoffs should preserve source records, edits, and who confirmed what." },
+        { icon: Stethoscope, title: "Do not replace specialists", body: "Shinba supports veterinarians, staff, managers, and owners by organizing information for better judgment." },
+        { icon: MessageCircle, title: "Reduce field burden", body: "Smartphone-first, lightweight workflows matter more than adding heavy management screens." },
+      ]
+    : [
+        { icon: ShieldCheck, title: "原文と確認を残す", body: "報告や申し送りでは、元情報、修正、誰が何を確認したかが残ることを重視します。" },
+        { icon: Stethoscope, title: "専門家の判断を置き換えない", body: "獣医師、スタッフ、マネージャー、馬主の判断を支えるために、情報を整理します。" },
+        { icon: MessageCircle, title: "現場負担を増やさない", body: "重い管理画面より、スマホで短時間に使える軽い運用を優先します。" },
+      ];
   const productsToShow = en
     ? [
         {
@@ -158,6 +200,14 @@ export default function Home() {
           title: "Small tools shaped around the actual operation",
           body: "Supports handoffs, invoices, inventory, schedules, and other field workflows without forcing a full system replacement.",
         },
+        {
+          name: "Bloodstock Intelligence",
+          label: "Future vision",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
+          icon: Database,
+          title: "Decision support for sales, breeding, and risk review",
+          body: "A future foundation for structuring treatment history, body information, pedigree, development records, and reporting history for expert interpretation.",
+        },
       ]
     : [
         {
@@ -191,6 +241,14 @@ export default function Home() {
           icon: PenTool,
           title: "現場に合わせた小さな業務ツールを作る",
           body: "引き継ぎ、請求、在庫、予定管理など、既存の運用を崩さずに小さく始められる形にします。",
+        },
+        {
+          name: "Bloodstock Intelligence",
+          label: "将来構想",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
+          icon: Database,
+          title: "購買・売却・繁殖・リスク判断に使える情報基盤へ",
+          body: "治療履歴、馬体情報、血統、育成過程、報告履歴を、専門家がより良い判断をするための補助線として構造化していく構想です。",
         },
       ];
 
@@ -346,6 +404,41 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
+              {copy.purposeEyebrow}
+            </p>
+            <h2 className="mt-4 max-w-[720px] font-display text-[2.85rem] leading-none text-[#183c32]">
+              {copy.purposeTitle}
+            </h2>
+            <p className="mt-5 text-sm leading-8 text-stone-700">
+              {copy.purposeBody}
+            </p>
+            <p className="mt-5 rounded-md border border-[#e3d3b8] bg-[#fffaf1] px-4 py-4 text-sm font-medium leading-7 text-[#234a40]">
+              {copy.purposeNote}
+            </p>
+          </div>
+          <div className="grid gap-4">
+            {trustCardsToShow.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article key={item.title} className="grid gap-4 rounded-lg border border-[#e3d3b8] bg-white p-5 shadow-[0_20px_54px_-46px_rgba(54,40,20,0.45)] sm:grid-cols-[48px_minmax(0,1fr)]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#183c32] text-white">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-2xl text-[#183c32]">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-stone-700">{item.body}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       <section id="services" className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
         <div className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
           <div>
@@ -394,6 +487,34 @@ export default function Home() {
                 <a key={product.name} href={product.href} className={className}>
                   {content}
                 </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#fffaf1]">
+        <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 md:px-8 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
+              {copy.trustEyebrow}
+            </p>
+            <h2 className="mt-4 font-display text-[2.75rem] leading-none text-[#183c32]">
+              {copy.trustTitle}
+            </h2>
+            <p className="mt-5 text-sm leading-8 text-stone-700">
+              {copy.trustBody}
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {principlesToShow.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article key={item.title} className="rounded-lg border border-[#e3d3b8] bg-white p-5">
+                  <Icon className="h-6 w-6 text-[#a56a32]" />
+                  <h3 className="mt-4 font-display text-2xl leading-tight text-[#183c32]">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-stone-700">{item.body}</p>
+                </article>
               );
             })}
           </div>

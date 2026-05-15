@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 
 export const metadata: Metadata = {
-  title: "Shinba Service | 馬の現場を支える業務サポート",
+  title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
   description:
-    "Shinba Service は、現役競走馬獣医師が現場経験をもとに、競走馬牧場・獣医・馬主報告の報告、記録、共有、引き継ぎを相談から支援します。",
+    "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援するプロダクト群です。",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Shinba Service | 馬の現場を支える業務サポート",
+    title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
     description:
-      "現役競走馬獣医師が、馬の現場に合う報告・記録・共有の仕組みを整えます。Shinba Reportの導入相談もこちらから。",
+      "現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
     url: "https://shinba.app",
     siteName: "Shinba Service",
     type: "website",
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Shinba Service | 馬の現場を支える業務サポート",
+    title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
     description:
-      "現役競走馬獣医師が、馬の現場に合う報告・記録・共有の仕組みを整えます。",
+      "競走馬の現場に散らばる情報を、信頼できる報告・共有・判断へ整えます。",
     images: ["/shinba-service-logo-cropped.png"],
   },
 };

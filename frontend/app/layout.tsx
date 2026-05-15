@@ -35,8 +35,8 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://shinba.app"),
-  title: "Shinba Service | 馬の現場を支える業務サポート",
-  description: "Shinba Service は、競走馬牧場・獣医・馬主報告など馬の現場に合わせて、報告、記録、共有、引き継ぎの流れを相談から支援します。",
+  title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
+  description: "Shinba Service は、競走馬牧場・獣医・馬主報告など馬の現場に合わせて、報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
   applicationName: "Shinba Service",
   keywords: [
     "Shinba Service",
@@ -74,8 +74,8 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png?v=20260514a',
   },
   openGraph: {
-    title: "Shinba Service | 馬の現場を支える業務サポート",
-    description: "競走馬牧場・獣医・馬主報告の現場に合わせて、報告、記録、共有、引き継ぎの流れを個別相談から支援します。",
+    title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
+    description: "競走馬牧場・獣医・馬主報告の現場に合わせて、報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
     url: "https://shinba.app",
     siteName: "Shinba Service",
     locale: "ja_JP",
@@ -90,8 +90,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Shinba Service | 馬の現場を支える業務サポート",
-    description: "競走馬牧場・獣医・馬主報告の現場に合わせた業務サポート。Shinba Reportの導入相談もこちらから。",
+    title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
+    description: "競走馬の現場に散らばる情報を、信頼できる報告・共有・判断へ整えます。",
     images: ["/shinba-service-logo-cropped.png"],
   },
 };
