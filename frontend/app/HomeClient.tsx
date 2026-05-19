@@ -5,14 +5,13 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
+  ClipboardCheck,
   Database,
   FileText,
   Languages,
   Mail,
   MessageCircle,
   MessagesSquare,
-  Mic,
-  PenTool,
   Route,
   ShieldCheck,
   Stethoscope,
@@ -21,235 +20,163 @@ import PublicSiteFooter from "@/components/PublicSiteFooter";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const consultationSteps = [
-  "今の報告文、LINE、Excel、写真管理の流れを確認します",
-  "すぐ整えられる作業と、現場で判断すべき作業を切り分けます",
-  "1件分のサンプルや画面デモで、導入後の使い方を確認します",
-  "合いそうであれば、必要なサービスやテンプレートを設定します",
-];
-
-const situations = [
-  "海外オーナー向けの英語報告に時間がかかる",
-  "スタッフごとに報告文の品質や表現がばらつく",
-  "馬ごとの写真・体重・コメントが散らばっている",
-  "既製品の管理システムでは現場の流れに合わない",
-  "まずは相談しながら、小さく試してみたい",
-];
-
-const values = [
-  {
-    icon: Stethoscope,
-    title: "現場の言葉に合わせる",
-    body: "競走馬、牧場、獣医、馬主報告の言葉と流れを前提に、無理なく使える形へ整えます。",
-  },
-  {
-    icon: MessageCircle,
-    title: "話を聞いてから始める",
-    body: "いきなり契約ではなく、現在の報告や記録の流れを見て、合う形を確認してから進めます。",
-  },
-  {
-    icon: Route,
-    title: "必要なところから整える",
-    body: "大きなシステム導入ではなく、今月の報告や日々の記録など、効果が見えやすい範囲から始めます。",
-  },
-];
-
 export default function Home() {
   const { language } = useLanguage();
   const en = language === "en";
+
   const copy = {
-    consult: en ? "Contact" : "相談する",
-    eyebrow: en ? "Equine Service Studio" : "Equine Service Studio",
-    headline: en ? "Connect trust. Move the future." : "信頼をつなぎ、未来を動かす。",
+    contact: en ? "Contact" : "相談する",
+    navWhy: en ? "Why now" : "課題",
+    navProducts: en ? "Products" : "プロダクト",
+    navFounder: en ? "Founder" : "背景",
+    eyebrow: en ? "Racehorse operations, reporting, and handoff" : "Racehorse operations, reporting, and handoff",
+    headline: en
+      ? "Turn field information into trusted reports, handoffs, and decisions."
+      : "現場に散らばる情報を、信頼できる報告・共有・判断へ。",
     lead: en
-      ? "Shinba Service is led by an active racehorse veterinarian and shaped by firsthand experience with reporting, records, communication, and handover work in equine operations."
-      : "Shinba Service は、現役競走馬獣医師が現場で見てきた報告、記録、共有、引き継ぎの課題をもとに、馬の現場に合う仕組みを整える活動です。",
-    lead2: en
-      ? "Shinba Report is one service within that work, focused on monthly updates and owner reporting."
-      : "Shinba Report はその中のひとつで、月次報告や海外オーナー向けレポートを支えます。",
+      ? "Shinba Service is a product group started from the field experience of an active racehorse veterinarian. It supports reporting, records, multilingual handoff, and future decision-ready data for racehorse operations."
+      : "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援するプロダクト群です。",
+    subLead: en
+      ? "It is not a generic AI app, translation tool, or task manager. The goal is to reduce misunderstanding and help people make better decisions around horses."
+      : "単なるAIアプリ、翻訳ツール、タスク管理ではありません。馬に関わる人たちが、誤解を減らし、より良い判断をするための情報基盤を目指します。",
     primary: en ? "Request consultation" : "個別相談をする",
-    secondary: en ? "View Report service" : "Reportサービスを見る",
-    note: en
-      ? "Start by showing the current reporting or recordkeeping flow. We identify where a practical improvement would actually help."
-      : "まずは現在の報告文や記録方法を見ながら、どこから整えると良いかを一緒に確認します。",
-    profileLabel: en ? "Veterinarian-led work" : "現役競走馬獣医師の現場経験から",
-    profileCard: en ? "From field conversations to usable workflows." : "現場の会話から、使える形へ。",
-    profileEyebrow: en ? "Activity profile" : "Activity profile",
-    profileTitle: en
-      ? "Shinba Service is a professional activity led by an active racehorse veterinarian, turning field experience into practical workflows."
-      : "Shinba Serviceは、現役競走馬獣医師が現場経験を活かして、仕組みにしづらい作業を整えていく活動です。",
-    profileBody: en
-      ? "Report writing, English updates, voice notes, handovers, photos, and weight records all vary by farm and team. Off-the-shelf systems often do not fit cleanly. Shinba Service starts by listening to the current operation, then shapes only the necessary parts into something usable."
-      : "報告文の作成、英語での近況共有、音声メモ、引き継ぎ、写真や体重の整理。こうした業務は、現場ごとのやり方が強く、既製品を入れるだけではうまく収まりにくいことがあります。だから最初に今の運用を聞き、必要な部分だけを使いやすい形に整えます。",
-    servicesTitle: en
-      ? "Reporting, records, and communication. Start where the field gets stuck."
-      : "報告、記録、共有。現場で詰まりやすい作業から始めます。",
-    servicesBody: en
-      ? "Shinba Report is the first concrete service for monthly reporting. The wider Shinba Service activity also covers multilingual handoff communication, voice records, and the future foundation for decision-ready horse data."
-      : "Shinba Report は、私の活動の中で最初に形にしているサービスです。活動全体では、報告に限らず、多言語での申し送り、音声記録、将来的な馬ごとの判断材料の蓄積まで、現場ごとの困りごとに合わせて必要な仕組みを扱います。",
-    purposeEyebrow: en ? "Purpose" : "Purpose",
-    purposeTitle: en
-      ? "Turn fragmented field information into trusted reports, handoffs, and decisions."
-      : "現場に散らばる情報を、信頼できる報告・共有・判断へ変える。",
-    purposeBody: en
-      ? "Racehorse operations rely on conversations, photos, notes, LINE messages, spreadsheets, and memory. Shinba Service is not a generic translation app or task manager. It organizes field information so veterinarians, farm staff, managers, owners, trainers, and overseas partners can act with fewer misunderstandings."
-      : "競走馬の現場では、口頭、写真、LINE、紙のメモ、Excel、個人の記憶に情報が分散しがちです。Shinba Service は、単なる翻訳アプリやタスク管理ではなく、獣医師、牧場スタッフ、マネージャー、馬主、調教師、海外関係者が、誤解を減らして次の判断に使える形へ情報を整えるための活動です。",
-    purposeNote: en
-      ? "The aim is Data Input + Expert Interpretation: technology supports professional judgment, but does not replace it."
-      : "目指すのは、Data Input + Expert Interpretation。テクノロジーは専門家の判断を置き換えるのではなく、判断に必要な情報を整えるために使います。",
-    trustEyebrow: en ? "Design principles" : "Design principles",
-    trustTitle: en
-      ? "Built for trust before automation."
-      : "自動化より先に、信頼できる運用をつくる。",
-    trustBody: en
-      ? "In this field, a poor translation, missing instruction, or unclear responsibility can matter. Shinba is designed around original records, confirmations, and practical workflows that fit the field."
-      : "競走馬ビジネスでは、誤訳、伝達漏れ、確認漏れ、責任範囲の曖昧さが大きな問題になり得ます。だからShinbaでは、原文、確認、履歴、現場で使える軽さを大切にします。",
-    reportTitle: en ? "Prepare monthly and international owner reports faster." : "月次報告や海外オーナー向けレポートを、短時間で整えます。",
-    reportBody: en
-      ? "Shinba Report handles the monthly reporting part of Shinba Service. It organizes photos, weight, comments, and observations into reports that can be shared with owners and overseas partners."
-      : "Shinba Report は、私の活動の中で月次報告を担当するサービスです。写真・体重・コメント・所見をまとめ、馬主や海外オーナーへ送れるレポートに整えます。",
-    reportCta: en ? "View Shinba Report" : "Shinba Reportを見る",
-    discussOne: en ? "Discuss one report" : "1件分で相談する",
-    consultationTitle: en ? "First, check whether it fits the current work." : "まずは、今の業務に合うかを一緒に確認します。",
-    consultationBody: en
-      ? "The first step is not a subscription. We review the current records and reports, then identify where improvement would make a real difference. Only if it fits do we move into Shinba Report or tailored templates."
-      : "いきなり月額契約を前提にするのではなく、今の記録方法や報告文を見ながら、どこを整えると効果が出るかを整理します。合いそうな場合だけ、Reportサービスや個別テンプレートの導入へ進みます。",
-    nextTitle: en ? "Start by showing one current report." : "今の報告業務を、まず1件だけ見せてください。",
-    nextBody: en
-      ? "With existing notes, photos, reports, or messages, we identify where Shinba Service should begin. If it fits, we can move into a monthly plan or a setup-supported rollout."
-      : "既存のメモ、写真、レポート、LINE文面を見ながら、Shinba Serviceでどこから整えるべきかを確認します。相談後に合いそうであれば、月額プランや個別設定込みの導入へ進めます。",
-    details: en ? "Report service details" : "Reportサービス詳細へ",
+    secondary: en ? "View Shinba Report" : "Shinba Reportを見る",
+    heroNote: en
+      ? "Start small: one current report, one handoff flow, or one field workflow."
+      : "最初は小さく。今の報告書1件、申し送りの流れ1つ、現場業務1つから確認します。",
+    whyEyebrow: en ? "Why now" : "Why now",
+    whyTitle: en ? "The issue is not lack of effort. It is fragmented information." : "課題は、努力不足ではなく、情報が分散してしまうこと。",
+    whyBody: en
+      ? "Racehorse operations depend on careful people and fast communication. Yet important details often stay in conversations, photos, LINE messages, paper notes, Excel, and memory."
+      : "競走馬の現場は、丁寧な人の判断と速い連携で成り立っています。一方で、重要な情報は口頭、写真、LINE、紙のメモ、Excel、個人の記憶に分散しがちです。",
+    missionEyebrow: en ? "Vision / Mission" : "Vision / Mission",
+    missionTitle: en ? "Preserve field knowledge and make it usable across language, role, and border." : "現場知を失わせず、言語・職種・国境を越えて使える形へ。",
+    missionBody: en
+      ? "Japan's racehorse industry has strong practical knowledge, careful management, and high-quality horsemanship. Shinba aims to make that value visible, transferable, and useful for the next generation without replacing expert judgment."
+      : "日本の競走馬産業には、高い現場技術、丁寧な管理、優れた馬づくりの文化があります。Shinbaは、その価値を失わせるのではなく、可視化し、伝達し、次世代に残すための仕組みを作ります。",
+    missionNote: en
+      ? "Data Input + Expert Interpretation. Technology supports judgment; it does not replace the specialist."
+      : "Data Input + Expert Interpretation。テクノロジーは専門家の判断を置き換えるのではなく、判断に必要な情報を整えるために使います。",
+    productsEyebrow: en ? "Product pillars" : "Product pillars",
+    productsTitle: en ? "Three pillars, one trust layer." : "3つの柱を、ひとつの信頼基盤へ。",
+    productsBody: en
+      ? "The hub explains the vision. Each product can go deeper into its own use case, workflow, and implementation."
+      : "ハブLPではShinba全体の思想を伝え、各サービスページではユースケースと具体的な導入方法を深掘りします。",
+    principlesEyebrow: en ? "Design principles" : "Design principles",
+    principlesTitle: en ? "Trust comes before automation." : "自動化より先に、信頼できる運用をつくる。",
+    principlesBody: en
+      ? "In racehorse operations, poor translation, missing instructions, unclear completion, or overconfident generated text can damage trust. Shinba is designed around source records, confirmation, and human responsibility."
+      : "競走馬ビジネスでは、誤訳、伝達漏れ、完了確認の曖昧さ、過剰な自動生成が信頼を損なう可能性があります。Shinbaでは、原文、確認、履歴、人の責任を中心に設計します。",
+    founderEyebrow: en ? "Founder story" : "Founder story",
+    founderTitle: en
+      ? "Built from conversations in the field, not from a generic SaaS template."
+      : "汎用SaaSの型ではなく、現場の会話から作る。",
+    founderBody: en
+      ? "Report writing, English updates, voice notes, treatment records, handoff, photos, and weight records all vary by farm and team. Shinba starts by listening to the current operation, then shapes only the necessary parts into practical workflows."
+      : "報告文の作成、英語での近況共有、音声メモ、治療記録、申し送り、写真や体重の整理。こうした業務は現場ごとのやり方が強く、既製品を入れるだけではうまく収まりにくいことがあります。だから最初に今の運用を聞き、必要な部分だけを使いやすい形に整えます。",
+    ctaEyebrow: en ? "Next action" : "Next action",
+    ctaTitle: en ? "Show one real workflow first." : "まずは、今の業務を1つだけ見せてください。",
+    ctaBody: en
+      ? "With existing notes, reports, photos, messages, or handoff routines, we identify where Shinba should begin. If it fits, we can move into Shinba Report, Handoff preparation, or a tailored small workflow."
+      : "既存のメモ、レポート、写真、LINE文面、申し送りの流れを見ながら、Shinbaでどこから整えるべきかを確認します。合いそうであれば、Shinba Report、Handoff準備、個別の小さな仕組みづくりへ進めます。",
   };
-  const valuesToShow = en
+
+  const whyItems = en
     ? [
-        { icon: Stethoscope, title: "Built around field language", body: "The work starts from the language and flow used by racehorse farms, veterinarians, and owner reporting teams." },
-        { icon: MessageCircle, title: "Start with a conversation", body: "No forced subscription first. We review the current workflow and confirm what would fit before moving forward." },
-        { icon: Route, title: "Improve the right part first", body: "Instead of a large system rollout, we begin with areas where the benefit is easy to see, such as this month’s report or daily records." },
-      ]
-    : values;
-  const steps = en
-    ? [
-        ["Discuss", "Review the current workflow and pain points"],
-        ["Prototype", "Test with one sample or a small screen"],
-        ["Operate", "Continue through Shinba Report or a tailored tool"],
+        { icon: FileText, title: "Information gaps", body: "Important details remain across LINE, paper, spreadsheets, photos, and individual memory." },
+        { icon: Languages, title: "Language gaps", body: "Foreign staff and overseas owners need communication that preserves meaning, not rough instruction." },
+        { icon: Route, title: "Judgment gaps", body: "Treatment history, condition changes, and reporting history are hard to reuse for future decisions." },
       ]
     : [
-        ["相談", "現場の流れと困りごとを確認"],
-        ["試作", "1件分のサンプルや小さな画面で検証"],
-        ["運用", "Reportや個別ツールとして継続利用"],
+        { icon: FileText, title: "情報格差", body: "LINE、紙、Excel、写真、個人の記憶に重要情報が分散し、あとから確認しにくくなります。" },
+        { icon: Languages, title: "言語格差", body: "外国人スタッフや海外馬主には、片言ではなく、意味が保たれたコミュニケーションが必要です。" },
+        { icon: Route, title: "判断格差", body: "治療履歴、状態変化、報告履歴が、将来の判断材料として再利用しにくいことがあります。" },
       ];
-  const situationsToShow = en
-    ? ["English owner reports take too much time", "Report quality and wording vary by staff member", "Photos, weight, and comments are scattered across tools", "Generic systems do not match the field workflow", "You want to start small through consultation"]
-    : situations;
-  const consultationStepsToShow = en
-    ? ["Review the current reporting, LINE, Excel, and photo workflow", "Separate what can be streamlined from what should remain field judgment", "Use one sample or demo screen to confirm the future workflow", "If it fits, set up the right service or templates"]
-    : consultationSteps;
-  const trustCardsToShow = en
-    ? [
-        { icon: FileText, title: "Owner reporting", body: "Convert notes, photos, weight, and observations into reports owners can understand without losing field nuance." },
-        { icon: Languages, title: "Multilingual handoff", body: "Separate seen, understood, done, reported, and confirmed, so multilingual teams can reduce missed instructions." },
-        { icon: Database, title: "Decision-ready data", body: "Build toward structured histories for treatment, training, reporting, risk, sales, breeding, and bloodstock decisions." },
-      ]
-    : [
-        { icon: FileText, title: "馬主向け報告", body: "メモ、写真、体重、所見を、現場のニュアンスを失わず馬主が理解しやすい報告へ整えます。" },
-        { icon: Languages, title: "多言語Handoff", body: "「見た」「理解した」「作業した」「完了報告した」「管理者が確認した」を分け、伝達漏れを減らします。" },
-        { icon: Database, title: "判断に使えるデータ", body: "治療、調教、報告、リスク、売買、繁殖、出資判断に使える履歴として、将来的に蓄積できる形を目指します。" },
-      ];
-  const principlesToShow = en
-    ? [
-        { icon: ShieldCheck, title: "Keep originals and confirmation", body: "Reports and handoffs should preserve source records, edits, and who confirmed what." },
-        { icon: Stethoscope, title: "Do not replace specialists", body: "Shinba supports veterinarians, staff, managers, and owners by organizing information for better judgment." },
-        { icon: MessageCircle, title: "Reduce field burden", body: "Smartphone-first, lightweight workflows matter more than adding heavy management screens." },
-      ]
-    : [
-        { icon: ShieldCheck, title: "原文と確認を残す", body: "報告や申し送りでは、元情報、修正、誰が何を確認したかが残ることを重視します。" },
-        { icon: Stethoscope, title: "専門家の判断を置き換えない", body: "獣医師、スタッフ、マネージャー、馬主の判断を支えるために、情報を整理します。" },
-        { icon: MessageCircle, title: "現場負担を増やさない", body: "重い管理画面より、スマホで短時間に使える軽い運用を優先します。" },
-      ];
-  const productsToShow = en
+
+  const productPillars = en
     ? [
         {
           name: "Shinba Report",
-          label: "Main service",
+          label: "Live",
           href: "/report",
           icon: FileText,
-          title: "Monthly and international owner reports",
-          body: "Organizes photos, weight, comments, and observations into Japanese, English, or bilingual reports that can be shared with owners.",
+          title: "Owner reporting",
+          body: "Convert notes, photos, weight, and observations into Japanese, English, or bilingual reports without losing field nuance.",
+          cta: "View details",
         },
         {
           name: "Shinba Handoff",
           label: "Preparing",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Handoff%20Consultation",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Handoff%20Pilot",
           icon: MessagesSquare,
-          title: "Multilingual communication for farm teams",
-          body: "A communication workflow in preparation so staff with different native languages can share instructions, cautions, and horse updates in their own language, with translation supporting smoother daily care. In the future, it aims to handle farm-specific words, names, and expressions through a dedicated knowledge layer.",
-        },
-        {
-          name: "Voice & Vet Notes",
-          label: "In discussion",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Consultation",
-          icon: Mic,
-          title: "Turn voice notes and veterinary notes into usable records",
-          body: "Organizes care, treatment, training, and handover notes into records that can be reviewed later.",
-        },
-        {
-          name: "Workflow Build",
-          label: "Tailored work",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Workflow%20Consultation",
-          icon: PenTool,
-          title: "Small tools shaped around the actual operation",
-          body: "Supports handoffs, invoices, inventory, schedules, and other field workflows without forcing a full system replacement.",
+          title: "Multilingual handoff",
+          body: "Support seen, understood, done, completion reported, and manager confirmed across staff with different native languages.",
+          cta: "Discuss pilot",
         },
         {
           name: "Bloodstock Intelligence",
           label: "Future vision",
           href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
           icon: Database,
-          title: "Decision support for sales, breeding, and risk review",
-          body: "A future foundation for structuring treatment history, body information, pedigree, development records, and reporting history for expert interpretation.",
+          title: "Decision-ready data",
+          body: "Structure treatment history, body information, pedigree, development records, risk factors, and reporting history for expert interpretation.",
+          cta: "Discuss vision",
         },
       ]
     : [
         {
           name: "Shinba Report",
-          label: "主力サービス",
+          label: "公開中",
           href: "/report",
           icon: FileText,
-          title: "月次レポート・海外オーナー報告を整える",
-          body: "写真、体重、コメント、所見をまとめ、馬主へ送れる日本語・英語・日英併記のレポートにします。",
+          title: "Owner Reporting",
+          body: "メモ、写真、体重、所見を、現場のニュアンスを失わず、馬主や海外関係者が理解しやすい報告へ整えます。",
+          cta: "詳細を見る",
         },
         {
           name: "Shinba Handoff",
           label: "準備中",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Handoff%20%E7%9B%B8%E8%AB%87",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Handoff%20%E3%83%91%E3%82%A4%E3%83%AD%E3%83%83%E3%83%88%E7%9B%B8%E8%AB%87",
           icon: MessagesSquare,
-          title: "母国語の違うスタッフ同士でも、伝わる現場コミュニケーションへ",
-          body: "日本語や英語が得意でないスタッフにも、片言の指示ではなく、それぞれの母国語で注意事項、申し送り、馬の状態を共有できる仕組みを準備中です。将来的には牧場独自の固有名詞や言い回しにも対応し、大切な馬の管理レベルを上げるコミュニケーション基盤を目指します。",
-        },
-        {
-          name: "Voice & Vet Notes",
-          label: "相談受付中",
-          href: "mailto:contact@shinba.app?subject=Shinba%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87",
-          icon: Mic,
-          title: "音声メモや獣医共有メモを記録に変える",
-          body: "診療、ケア、調教、申し送りの音声やメモを、あとから確認しやすい業務記録へ整理します。",
-        },
-        {
-          name: "Workflow Build",
-          label: "個別開発",
-          href: "mailto:contact@shinba.app?subject=Shinba%20%E6%A5%AD%E5%8B%99%E3%83%84%E3%83%BC%E3%83%AB%E7%9B%B8%E8%AB%87",
-          icon: PenTool,
-          title: "現場に合わせた小さな業務ツールを作る",
-          body: "引き継ぎ、請求、在庫、予定管理など、既存の運用を崩さずに小さく始められる形にします。",
+          title: "Multilingual Handoff",
+          body: "母国語の異なるスタッフ間で、「見た」「理解した」「作業した」「完了報告した」「管理者が確認した」を分けて扱います。",
+          cta: "パイロット相談",
         },
         {
           name: "Bloodstock Intelligence",
           label: "将来構想",
           href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
           icon: Database,
-          title: "購買・売却・繁殖・リスク判断に使える情報基盤へ",
-          body: "治療履歴、馬体情報、血統、育成過程、報告履歴を、専門家がより良い判断をするための補助線として構造化していく構想です。",
+          title: "Decision-ready Data",
+          body: "治療履歴、馬体情報、血統、育成過程、リスク要因、報告履歴を、専門家の判断を支える補助線として構造化します。",
+          cta: "構想を相談",
         },
+      ];
+
+  const principles = en
+    ? [
+        { icon: MessageCircle, title: "Reduce field burden", body: "Smartphone-first, short input, voice, photos, templates, and one-tap actions." },
+        { icon: ShieldCheck, title: "Preserve responsibility", body: "Keep originals, edits, confirmations, and the human responsible for final judgment." },
+        { icon: Stethoscope, title: "Support specialists", body: "Organize information for veterinarians, staff, managers, owners, and experts. Do not replace them." },
+        { icon: ClipboardCheck, title: "Make status explicit", body: "Do not mix seen, understood, done, reported, and confirmed." },
+      ]
+    : [
+        { icon: MessageCircle, title: "現場負担を増やさない", body: "スマホ前提、短い入力、音声、写真、定型文、ワンタップ操作を優先します。" },
+        { icon: ShieldCheck, title: "責任の所在を残す", body: "原文、修正、確認、最終判断を行う人がわかる形を重視します。" },
+        { icon: Stethoscope, title: "専門家を支える", body: "獣医師、スタッフ、管理者、馬主、専門家の判断を置き換えず、情報を整理します。" },
+        { icon: ClipboardCheck, title: "状態を混同しない", body: "見た、理解した、作業した、完了報告した、管理者が確認した、を分けて扱います。" },
+      ];
+
+  const startSteps = en
+    ? [
+        "Share one current report, handoff routine, or field message flow.",
+        "Separate what can be structured from what must remain expert judgment.",
+        "Test with one sample before moving into a monthly plan or pilot.",
+      ]
+    : [
+        "今の報告書、申し送り、LINE文面などを1つ確認します。",
+        "仕組み化できる部分と、専門家が判断すべき部分を切り分けます。",
+        "1件分のサンプルで確認してから、月額運用やパイロットへ進みます。",
       ];
 
   return (
@@ -262,26 +189,20 @@ export default function Home() {
           priority
           className="pointer-events-none object-cover opacity-20 mix-blend-screen"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(128deg,rgba(8,30,28,0.96)_0%,rgba(18,58,50,0.9)_42%,rgba(7,25,23,0.98)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(128deg,rgba(8,30,28,0.97)_0%,rgba(18,58,50,0.9)_42%,rgba(7,25,23,0.98)_100%)]" />
         <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(115deg,transparent_0%,rgba(224,189,115,0.12)_26%,transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.08)_0,transparent_18%,transparent_100%)]" />
-        <div className="absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:72px_72px]" />
+        <div className="absolute inset-0 opacity-[0.14] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:72px_72px]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e0bd73]/70 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-[#f8f3ea]" />
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-[#f8f3ea]" />
 
         <header className="relative z-10 mx-auto flex w-full max-w-[1200px] items-center justify-between px-5 py-5 md:px-8">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="font-display text-3xl text-white">Shinba Service</span>
+          <Link href="/" className="font-display text-3xl text-white">
+            Shinba Service
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-white/88 md:flex">
-            <a href="#services" className="transition hover:text-white">
-              Services
-            </a>
-            <a href="#consultation" className="transition hover:text-white">
-              Consultation
-            </a>
-            <Link href="/report" className="transition hover:text-white">
-              Shinba Report
-            </Link>
+            <a href="#why" className="transition hover:text-white">{copy.navWhy}</a>
+            <a href="#products" className="transition hover:text-white">{copy.navProducts}</a>
+            <a href="#founder" className="transition hover:text-white">{copy.navFounder}</a>
           </nav>
           <div className="flex items-center gap-2">
             <div className="rounded-md bg-white/92 px-2 py-1">
@@ -292,28 +213,29 @@ export default function Home() {
               className="inline-flex items-center gap-2 rounded-md bg-[#e0bd73] px-4 py-2 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
             >
               <Mail className="h-4 w-4" />
-              {copy.consult}
+              {copy.contact}
             </a>
           </div>
         </header>
 
-        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-10 px-5 pb-32 pt-12 md:px-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(420px,0.78fr)] lg:items-center lg:pb-40 lg:pt-20">
-          <div className="max-w-[780px]">
+        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-10 px-5 pb-32 pt-12 md:px-8 lg:grid-cols-[minmax(0,0.98fr)_minmax(420px,0.72fr)] lg:items-center lg:pb-40 lg:pt-20">
+          <div className="max-w-[820px]">
             <p className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f1cf83]">
               <span className="h-px w-10 bg-[#e0bd73]" />
               {copy.eyebrow}
             </p>
-            <h1 className="mt-5 text-balance font-display text-[3.25rem] leading-[1.02] text-white sm:text-[4.2rem] lg:text-[5rem]">
+            <h1 className="mt-5 max-w-[680px] text-balance font-display text-[2.65rem] leading-[1.08] text-white sm:text-[3.35rem] lg:text-[3.9rem]">
               {copy.headline}
             </h1>
-            <p className="mt-6 max-w-[700px] text-lg leading-9 text-white/88">
+            <p className="mt-6 max-w-[760px] text-lg leading-9 text-white/88">
               {copy.lead}
-              <br />
-              {copy.lead2}
+            </p>
+            <p className="mt-4 max-w-[760px] text-sm leading-7 text-white/72">
+              {copy.subLead}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href="mailto:contact@shinba.app?subject=Shinba%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87&body=%E7%8F%BE%E5%9C%A8%E3%81%AE%E5%A0%B1%E5%91%8A%E6%A5%AD%E5%8B%99%E3%82%84%E8%A8%98%E9%8C%B2%E9%81%8B%E7%94%A8%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6%E7%9B%B8%E8%AB%87%E3%81%97%E3%81%9F%E3%81%84%E3%81%A7%E3%81%99%E3%80%82"
+                href="mailto:contact@shinba.app?subject=Shinba%20Service%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87"
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
               >
                 {copy.primary}
@@ -327,13 +249,11 @@ export default function Home() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <p className="mt-5 text-sm leading-7 text-white/76">
-              {copy.note}
-            </p>
+            <p className="mt-5 text-sm leading-7 text-white/76">{copy.heroNote}</p>
           </div>
 
-          <div className="relative rounded-lg border border-white/22 bg-[#fffdf8] p-2 shadow-[0_28px_90px_-42px_rgba(0,0,0,0.6)]">
-            <div className="relative aspect-[920/734] overflow-hidden rounded-md bg-[#fffdf8]">
+          <div className="relative w-full max-w-[520px] justify-self-center rounded-lg border border-white/22 bg-[#fffdf8] p-2 shadow-[0_28px_90px_-42px_rgba(0,0,0,0.6)]">
+            <div className="relative overflow-hidden rounded-md bg-[#fffdf8]" style={{ aspectRatio: "920 / 734" }}>
               <Image
                 src="/shinba-service-logo-cropped.png"
                 alt="Shinba Service"
@@ -346,59 +266,25 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative z-20 mx-auto -mt-6 w-full max-w-[1200px] px-5 md:px-8">
-        <div className="grid gap-4 rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-4 shadow-[0_24px_70px_-48px_rgba(54,40,20,0.5)] md:grid-cols-3 md:p-5">
-          {valuesToShow.map((value) => {
-            const Icon = value.icon;
-            return (
-              <article key={value.title} className="rounded-md bg-white p-5">
-                <Icon className="h-6 w-6 text-[#a56a32]" />
-                <h2 className="mt-4 font-display text-2xl text-[#183c32]">{value.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-stone-600">{value.body}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
-        <div className="grid gap-8 rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-5 shadow-[0_24px_70px_-56px_rgba(54,40,20,0.45)] md:p-8 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-center">
-          <div className="overflow-hidden rounded-lg border border-[#d9c49c] bg-[#183c32] p-5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
-              <div className="relative mx-auto aspect-[920/734] max-w-[300px] overflow-hidden rounded-md bg-[#fffdf8]">
-              <Image
-                src="/shinba-service-logo-cropped.png"
-                alt="Shinba Service"
-                fill
-                className="object-contain"
-              />
+      <section id="why" className="relative z-20 mx-auto -mt-6 w-full max-w-[1200px] px-5 md:px-8">
+        <div className="rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-5 shadow-[0_24px_70px_-48px_rgba(54,40,20,0.5)] md:p-7">
+          <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)]">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.whyEyebrow}</p>
+              <h2 className="mt-4 font-display text-[2.7rem] leading-none text-[#183c32]">{copy.whyTitle}</h2>
+              <p className="mt-5 text-sm leading-8 text-stone-700">{copy.whyBody}</p>
             </div>
-            <div className="mt-5 border-t border-white/15 pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#e0bd73]">
-                {copy.profileLabel}
-              </p>
-              <p className="mt-3 font-display text-3xl leading-tight">{copy.profileCard}</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-              {copy.profileEyebrow}
-            </p>
-            <h2 className="mt-4 max-w-[760px] font-display text-[2.75rem] leading-none text-[#183c32]">
-              {copy.profileTitle}
-            </h2>
-            <p className="mt-5 max-w-[820px] text-sm leading-8 text-stone-700">
-              {copy.profileBody}
-            </p>
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              {steps.map(([label, body]) => (
-                <div key={label} className="rounded-md border border-[#e3d3b8] bg-white px-4 py-4">
-                  <p className="font-display text-2xl text-[#183c32]">{label}</p>
-                  <p className="mt-2 text-xs leading-6 text-stone-600">
-                    {body}
-                  </p>
-                </div>
-              ))}
+            <div className="grid gap-4 md:grid-cols-3">
+              {whyItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article key={item.title} className="rounded-md bg-white p-5">
+                    <Icon className="h-6 w-6 text-[#a56a32]" />
+                    <h3 className="mt-4 font-display text-2xl text-[#183c32]">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-stone-600">{item.body}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -407,107 +293,83 @@ export default function Home() {
       <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-              {copy.purposeEyebrow}
-            </p>
-            <h2 className="mt-4 max-w-[720px] font-display text-[2.85rem] leading-none text-[#183c32]">
-              {copy.purposeTitle}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.missionEyebrow}</p>
+            <h2 className="mt-4 max-w-[760px] font-display text-[2.9rem] leading-none text-[#183c32]">
+              {copy.missionTitle}
             </h2>
-            <p className="mt-5 text-sm leading-8 text-stone-700">
-              {copy.purposeBody}
-            </p>
+            <p className="mt-5 text-sm leading-8 text-stone-700">{copy.missionBody}</p>
             <p className="mt-5 rounded-md border border-[#e3d3b8] bg-[#fffaf1] px-4 py-4 text-sm font-medium leading-7 text-[#234a40]">
-              {copy.purposeNote}
+              {copy.missionNote}
             </p>
           </div>
-          <div className="grid gap-4">
-            {trustCardsToShow.map((item) => {
-              const Icon = item.icon;
-              return (
-                <article key={item.title} className="grid gap-4 rounded-lg border border-[#e3d3b8] bg-white p-5 shadow-[0_20px_54px_-46px_rgba(54,40,20,0.45)] sm:grid-cols-[48px_minmax(0,1fr)]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#183c32] text-white">
-                    <Icon className="h-6 w-6" />
+          <div className="rounded-lg border border-[#d9c49c] bg-[#183c32] p-5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+            <div className="relative mx-auto max-w-[310px] overflow-hidden rounded-md bg-[#fffdf8]" style={{ aspectRatio: "920 / 734" }}>
+              <Image src="/shinba-service-logo-cropped.png" alt="Shinba Service" fill className="object-contain" />
+            </div>
+            <div className="mt-5 grid gap-3 border-t border-white/15 pt-5">
+              {startSteps.map((step, index) => (
+                <div key={step} className="grid grid-cols-[36px_minmax(0,1fr)] gap-3 rounded-md bg-white/8 p-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#e0bd73] font-display text-lg text-[#13251f]">
+                    {index + 1}
                   </div>
-                  <div>
-                    <h3 className="font-display text-2xl text-[#183c32]">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-stone-700">{item.body}</p>
-                  </div>
-                </article>
-              );
-            })}
+                  <p className="self-center text-sm leading-6 text-white/82">{step}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="services" className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
-        <div className="grid gap-8 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-              Services
-            </p>
-            <h2 className="mt-4 font-display text-[2.75rem] leading-none text-[#183c32]">
-              {copy.servicesTitle}
-            </h2>
-            <p className="mt-5 text-sm leading-8 text-stone-700">
-              {copy.servicesBody}
-            </p>
+      <section id="products" className="bg-[#fffaf1]">
+        <div className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
+          <div className="max-w-[760px]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.productsEyebrow}</p>
+            <h2 className="mt-4 font-display text-[2.9rem] leading-none text-[#183c32]">{copy.productsTitle}</h2>
+            <p className="mt-5 text-sm leading-8 text-stone-700">{copy.productsBody}</p>
           </div>
 
-          <div className="grid gap-4">
-            {productsToShow.map((product) => {
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {productPillars.map((product) => {
               const Icon = product.icon;
               const isInternal = product.href.startsWith("/");
               const content = (
                 <>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#183c32] text-white">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-display text-3xl leading-tight text-[#183c32]">{product.name}</h3>
-                      <span className="rounded-full bg-[#e9ddc6] px-3 py-1 text-[11px] font-semibold text-[#79501f]">
-                        {product.label}
-                      </span>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#183c32] text-white">
+                      <Icon className="h-6 w-6" />
                     </div>
-                    <p className="mt-2 font-semibold text-[#2d6156]">{product.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-stone-700">{product.body}</p>
+                    <span className="rounded-full bg-[#e9ddc6] px-3 py-1 text-[11px] font-semibold text-[#79501f]">{product.label}</span>
                   </div>
-                  <ArrowRight className="mt-2 h-5 w-5 shrink-0 text-[#a56a32]" />
+                  <h3 className="mt-5 font-display text-3xl leading-tight text-[#183c32]">{product.name}</h3>
+                  <p className="mt-2 font-semibold text-[#2d6156]">{product.title}</p>
+                  <p className="mt-3 min-h-[112px] text-sm leading-7 text-stone-700">{product.body}</p>
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#8a5b24]">
+                    {product.cta}
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
                 </>
               );
 
-              const className =
-                "group flex gap-4 rounded-lg border border-[#e3d3b8] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#c99b52] hover:shadow-[0_22px_60px_-44px_rgba(54,40,20,0.55)]";
-
+              const className = "group block rounded-lg border border-[#e3d3b8] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#c99b52] hover:shadow-[0_22px_60px_-44px_rgba(54,40,20,0.55)]";
               return isInternal ? (
-                <Link key={product.name} href={product.href} className={className}>
-                  {content}
-                </Link>
+                <Link key={product.name} href={product.href} className={className}>{content}</Link>
               ) : (
-                <a key={product.name} href={product.href} className={className}>
-                  {content}
-                </a>
+                <a key={product.name} href={product.href} className={className}>{content}</a>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#fffaf1]">
-        <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 md:px-8 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
+        <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-              {copy.trustEyebrow}
-            </p>
-            <h2 className="mt-4 font-display text-[2.75rem] leading-none text-[#183c32]">
-              {copy.trustTitle}
-            </h2>
-            <p className="mt-5 text-sm leading-8 text-stone-700">
-              {copy.trustBody}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.principlesEyebrow}</p>
+            <h2 className="mt-4 font-display text-[2.75rem] leading-none text-[#183c32]">{copy.principlesTitle}</h2>
+            <p className="mt-5 text-sm leading-8 text-stone-700">{copy.principlesBody}</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {principlesToShow.map((item) => {
+          <div className="grid gap-4 md:grid-cols-2">
+            {principles.map((item) => {
               const Icon = item.icon;
               return (
                 <article key={item.title} className="rounded-lg border border-[#e3d3b8] bg-white p-5">
@@ -521,91 +383,49 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden border-y border-[#d8c39d] bg-[#193d36] text-white">
+      <section id="founder" className="relative overflow-hidden border-y border-[#d8c39d] bg-[#193d36] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#0f302c_0%,#1f4c42_46%,#102d29_100%)]" />
         <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(120deg,transparent_0%,rgba(224,189,115,0.16)_24%,transparent_43%),linear-gradient(180deg,rgba(255,255,255,0.07)_0,transparent_28%)]" />
         <div className="absolute inset-0 opacity-[0.13] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:64px_64px]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e0bd73]/70 to-transparent" />
-        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
+        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,0.95fr)_420px] lg:items-center">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f1cf83]">
-              Shinba Report
-            </p>
-            <h2 className="mt-4 font-display text-[2.8rem] leading-none text-white">
-              {copy.reportTitle}
-            </h2>
-            <p className="mt-5 max-w-[720px] text-sm leading-8 text-white/82">
-              {copy.reportBody}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f1cf83]">{copy.founderEyebrow}</p>
+            <h2 className="mt-4 max-w-[780px] font-display text-[2.8rem] leading-none text-white">{copy.founderTitle}</h2>
+            <p className="mt-5 max-w-[760px] text-sm leading-8 text-white/82">{copy.founderBody}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/report"
+              <a
+                href="mailto:contact@shinba.app?subject=Shinba%20Service%20Consultation"
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
               >
-                {copy.reportCta}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="mailto:contact@shinba.app?subject=Shinba%20Report%20%E5%B0%8E%E5%85%A5%E7%9B%B8%E8%AB%87"
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/16"
-              >
-                {copy.discussOne}
+                {copy.primary}
                 <Mail className="h-4 w-4" />
               </a>
+              <Link
+                href="/report"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/16"
+              >
+                {copy.secondary}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <div className="overflow-hidden rounded-lg border border-[#d9c49c] bg-white shadow-[0_24px_70px_-50px_rgba(54,40,20,0.5)]">
-              <div className="border-b border-[#e7d8bd] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-700">
-                Shinba Report preview
-              </div>
-              <Image
-                src="/lp-report-shot.png"
-                alt="Shinba Reportのレポート作成画面"
-                width={1270}
-                height={846}
-                className="aspect-[1270/846] w-full object-cover object-top"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="consultation" className="mx-auto grid w-full max-w-[1200px] gap-10 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-            Consultation
-          </p>
-          <h2 className="mt-4 font-display text-[2.75rem] leading-none text-[#183c32]">
-            {copy.consultationTitle}
-          </h2>
-          <p className="mt-5 text-sm leading-8 text-stone-700">
-            {copy.consultationBody}
-          </p>
-          <ul className="mt-6 grid gap-3">
-            {situationsToShow.map((item) => (
-              <li key={item} className="flex gap-3 text-sm leading-7 text-stone-700">
-                <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-[#a56a32]" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-lg border border-[#e3d3b8] bg-white p-6 shadow-[0_24px_70px_-52px_rgba(54,40,20,0.45)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">
-            How it starts
-          </p>
-          <div className="mt-6 grid gap-4">
-            {consultationStepsToShow.map((step, index) => (
-              <div key={step} className="grid grid-cols-[44px_minmax(0,1fr)] gap-4 rounded-md bg-[#f8f3ea] p-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#183c32] font-display text-xl text-white">
-                  {String(index + 1).padStart(2, "0")}
-                </div>
-                <p className="self-center text-sm font-medium leading-7 text-stone-700">{step}</p>
-              </div>
-            ))}
+          <div className="rounded-lg border border-white/18 bg-white/8 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f1cf83]">
+              Shinba Service
+            </p>
+            <ul className="mt-5 grid gap-3 text-sm leading-7 text-white/82">
+              {(en
+                ? ["Veterinarian-led field perspective", "Owner reporting first", "Handoff and decision data next"]
+                : ["現役競走馬獣医師の現場視点", "まずは馬主向け報告から", "次にHandoffと判断データへ"]
+              ).map((item) => (
+                <li key={item} className="flex gap-3">
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-[#e0bd73]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -616,19 +436,13 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:68px_68px]" />
         <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 text-white md:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#e0bd73]">
-              Next action
-            </p>
-            <h2 className="mt-4 font-display text-[3rem] leading-none">
-              {copy.nextTitle}
-            </h2>
-            <p className="mt-5 max-w-[760px] text-sm leading-8 text-white/72">
-              {copy.nextBody}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#e0bd73]">{copy.ctaEyebrow}</p>
+            <h2 className="mt-4 font-display text-[3rem] leading-none">{copy.ctaTitle}</h2>
+            <p className="mt-5 max-w-[760px] text-sm leading-8 text-white/72">{copy.ctaBody}</p>
           </div>
           <div className="flex flex-col gap-3">
             <a
-              href="mailto:contact@shinba.app?subject=Shinba%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87"
+              href="mailto:contact@shinba.app?subject=Shinba%20Service%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
             >
               {copy.primary}
@@ -638,7 +452,7 @@ export default function Home() {
               href="/report"
               className="inline-flex items-center justify-center gap-2 rounded-md border border-white/40 bg-white/8 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/14"
             >
-              {copy.details}
+              {copy.secondary}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

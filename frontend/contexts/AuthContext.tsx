@@ -134,7 +134,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
-            {isLoading ? (
+            {isLoading && !isPublicRoute ? (
                 <div className="flex items-center justify-center min-h-screen bg-[#FDFCF8]">
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-12 h-12 border-4 border-[#1a3c34]/20 border-t-[#1a3c34] rounded-full animate-spin"></div>
