@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
-  Database,
   FileText,
   Languages,
   Mail,
@@ -31,11 +30,11 @@ export default function Home() {
     navFounder: en ? "Founder" : "背景",
     eyebrow: en ? "Racehorse operations, reporting, and handoff" : "Racehorse operations, reporting, and handoff",
     headline: en
-      ? "Turn field information into trusted reports, handoffs, and decisions."
+      ? "Turn field information into trusted reports and handoffs."
       : "現場に散らばる情報を、信頼できる報告・共有・判断へ。",
     lead: en
-      ? "Shinba Service is a product group started from the field experience of an active racehorse veterinarian. It supports reporting, records, multilingual handoff, and future decision-ready data for racehorse operations."
-      : "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援するプロダクト群です。",
+      ? "Shinba Service is a product group started from the field experience of an active racehorse veterinarian. It supports reporting, records, multilingual handoff, and practical workflow design for racehorse operations."
+      : "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、現場ごとの業務設計を支援するプロダクト群です。",
     subLead: en
       ? "It is not a generic AI app, translation tool, or task manager. The goal is to reduce misunderstanding and help people make better decisions around horses."
       : "単なるAIアプリ、翻訳ツール、タスク管理ではありません。馬に関わる人たちが、誤解を減らし、より良い判断をするための情報基盤を目指します。",
@@ -58,7 +57,7 @@ export default function Home() {
       ? "Data Input + Expert Interpretation. Technology supports judgment; it does not replace the specialist."
       : "Data Input + Expert Interpretation。テクノロジーは専門家の判断を置き換えるのではなく、判断に必要な情報を整えるために使います。",
     productsEyebrow: en ? "Product pillars" : "Product pillars",
-    productsTitle: en ? "Three pillars, one trust layer." : "3つの柱を、ひとつの信頼基盤へ。",
+    productsTitle: en ? "Start with the visible pain points." : "まずは、見えている課題から整える。",
     productsBody: en
       ? "The hub explains the vision. Each product can go deeper into its own use case, workflow, and implementation."
       : "ハブLPではShinba全体の思想を伝え、各サービスページではユースケースと具体的な導入方法を深掘りします。",
@@ -85,12 +84,12 @@ export default function Home() {
     ? [
         { icon: FileText, title: "Information gaps", body: "Important details remain across LINE, paper, spreadsheets, photos, and individual memory." },
         { icon: Languages, title: "Language gaps", body: "Foreign staff and overseas owners need communication that preserves meaning, not rough instruction." },
-        { icon: Route, title: "Judgment gaps", body: "Treatment history, condition changes, and reporting history are hard to reuse for future decisions." },
+        { icon: Route, title: "Workflow gaps", body: "Important routines depend on individual habits and are hard to hand over consistently." },
       ]
     : [
         { icon: FileText, title: "情報格差", body: "LINE、紙、Excel、写真、個人の記憶に重要情報が分散し、あとから確認しにくくなります。" },
         { icon: Languages, title: "言語格差", body: "外国人スタッフや海外馬主には、片言ではなく、意味が保たれたコミュニケーションが必要です。" },
-        { icon: Route, title: "判断格差", body: "治療履歴、状態変化、報告履歴が、将来の判断材料として再利用しにくいことがあります。" },
+        { icon: Route, title: "運用格差", body: "大切な業務が人ごとのやり方に依存し、同じ品質で引き継ぎにくいことがあります。" },
       ];
 
   const productPillars = en
@@ -114,13 +113,13 @@ export default function Home() {
           cta: "Discuss pilot",
         },
         {
-          name: "Bloodstock Intelligence",
-          label: "Future vision",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
-          icon: Database,
-          title: "Decision-ready data",
-          body: "Structure treatment history, body information, pedigree, development records, risk factors, and reporting history for expert interpretation.",
-          cta: "Discuss vision",
+          name: "Custom Workflow",
+          label: "By consultation",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Service%20Workflow%20Consultation",
+          icon: Route,
+          title: "Small workflow design",
+          body: "After understanding the current operation, shape only the necessary parts of reporting, records, and handoff into a practical workflow.",
+          cta: "Discuss workflow",
         },
       ]
     : [
@@ -143,13 +142,13 @@ export default function Home() {
           cta: "パイロット相談",
         },
         {
-          name: "Bloodstock Intelligence",
-          label: "将来構想",
-          href: "mailto:contact@shinba.app?subject=Shinba%20Bloodstock%20Intelligence",
-          icon: Database,
-          title: "Decision-ready Data",
-          body: "治療履歴、馬体情報、血統、育成過程、リスク要因、報告履歴を、専門家の判断を支える補助線として構造化します。",
-          cta: "構想を相談",
+          name: "Custom Workflow",
+          label: "個別相談",
+          href: "mailto:contact@shinba.app?subject=Shinba%20Service%20%E5%80%8B%E5%88%A5%E6%A5%AD%E5%8B%99%E8%A8%AD%E8%A8%88",
+          icon: Route,
+          title: "小さな業務設計",
+          body: "今の運用を確認したうえで、報告・記録・申し送りのうち、必要な部分だけを現場で使える形に整えます。",
+          cta: "業務を相談",
         },
       ];
 
@@ -388,10 +387,10 @@ export default function Home() {
         <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(120deg,transparent_0%,rgba(224,189,115,0.16)_24%,transparent_43%),linear-gradient(180deg,rgba(255,255,255,0.07)_0,transparent_28%)]" />
         <div className="absolute inset-0 opacity-[0.13] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:64px_64px]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e0bd73]/70 to-transparent" />
-        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,0.95fr)_420px] lg:items-center">
+        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-10 px-5 py-20 md:px-8 lg:grid-cols-[minmax(0,0.95fr)_420px] lg:items-center">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f1cf83]">{copy.founderEyebrow}</p>
-            <h2 className="mt-4 max-w-[780px] font-display text-[2.8rem] leading-none text-white">{copy.founderTitle}</h2>
+            <h2 className="mt-4 max-w-[720px] font-display text-[2.45rem] leading-[1.12] text-white sm:text-[3rem]">{copy.founderTitle}</h2>
             <p className="mt-5 max-w-[760px] text-sm leading-8 text-white/82">{copy.founderBody}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <a
@@ -417,8 +416,8 @@ export default function Home() {
             </p>
             <ul className="mt-5 grid gap-3 text-sm leading-7 text-white/82">
               {(en
-                ? ["Veterinarian-led field perspective", "Owner reporting first", "Handoff and decision data next"]
-                : ["現役競走馬獣医師の現場視点", "まずは馬主向け報告から", "次にHandoffと判断データへ"]
+                ? ["Veterinarian-led field perspective", "Owner reporting first", "Handoff and field workflow next"]
+                : ["現役競走馬獣医師の現場視点", "まずは馬主向け報告から", "次にHandoffと現場業務の整備へ"]
               ).map((item) => (
                 <li key={item} className="flex gap-3">
                   <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-[#e0bd73]" />
@@ -430,15 +429,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-[#183c32]">
-        <div className="absolute inset-0 bg-[linear-gradient(140deg,#0d2b27_0%,#1f4a3f_52%,#0b2724_100%)]" />
-        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(118deg,transparent_0%,rgba(224,189,115,0.14)_28%,transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.08)_0,transparent_32%)]" />
-        <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:68px_68px]" />
-        <div className="relative z-10 mx-auto grid w-full max-w-[1200px] gap-8 px-5 py-16 text-white md:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center">
+      <section className="relative bg-[#f8f3ea] px-5 py-16 md:px-8">
+        <div className="mx-auto grid w-full max-w-[1200px] gap-8 rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-6 shadow-[0_26px_80px_-58px_rgba(54,40,20,0.55)] md:p-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#e0bd73]">{copy.ctaEyebrow}</p>
-            <h2 className="mt-4 font-display text-[3rem] leading-none">{copy.ctaTitle}</h2>
-            <p className="mt-5 max-w-[760px] text-sm leading-8 text-white/72">{copy.ctaBody}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.ctaEyebrow}</p>
+            <h2 className="mt-4 max-w-[760px] font-display text-[2.45rem] leading-[1.12] text-[#183c32] sm:text-[3rem]">{copy.ctaTitle}</h2>
+            <p className="mt-5 max-w-[760px] text-sm leading-8 text-stone-700">{copy.ctaBody}</p>
           </div>
           <div className="flex flex-col gap-3">
             <a
@@ -450,7 +446,7 @@ export default function Home() {
             </a>
             <Link
               href="/report"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-white/40 bg-white/8 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/14"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-[#d9c49c] bg-white px-6 py-3 text-sm font-semibold text-[#183c32] transition hover:border-[#c99b52]"
             >
               {copy.secondary}
               <ArrowRight className="h-4 w-4" />
