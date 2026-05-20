@@ -180,7 +180,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f8f3ea] text-[#172e2a]">
-      <section className="relative overflow-hidden bg-[#102f2b] text-white">
+      <section className="relative overflow-hidden bg-[#102f2b] text-white" data-analytics-section="hero">
         <Image
           src="/shinba-nature.svg"
           alt=""
@@ -199,9 +199,9 @@ export default function Home() {
             Shinba Service
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-white/88 md:flex">
-            <a href="#why" className="transition hover:text-white">{copy.navWhy}</a>
-            <a href="#products" className="transition hover:text-white">{copy.navProducts}</a>
-            <a href="#founder" className="transition hover:text-white">{copy.navFounder}</a>
+            <a href="#why" className="transition hover:text-white" data-analytics-event="nav_click" data-analytics-label="why">{copy.navWhy}</a>
+            <a href="#products" className="transition hover:text-white" data-analytics-event="nav_click" data-analytics-label="products">{copy.navProducts}</a>
+            <a href="#founder" className="transition hover:text-white" data-analytics-event="nav_click" data-analytics-label="founder">{copy.navFounder}</a>
           </nav>
           <div className="flex items-center gap-2">
             <div className="rounded-md bg-white/92 px-2 py-1">
@@ -210,6 +210,8 @@ export default function Home() {
             <a
               href="mailto:contact@shinba.app?subject=Shinba%20Service%20Consultation"
               className="inline-flex items-center gap-2 rounded-md bg-[#e0bd73] px-4 py-2 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
+              data-analytics-event="contact_click"
+              data-analytics-label="header_contact"
             >
               <Mail className="h-4 w-4" />
               {copy.contact}
@@ -236,6 +238,8 @@ export default function Home() {
               <a
                 href="mailto:contact@shinba.app?subject=Shinba%20Service%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87"
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
+                data-analytics-event="contact_click"
+                data-analytics-label="hero_contact"
               >
                 {copy.primary}
                 <ArrowRight className="h-4 w-4" />
@@ -243,6 +247,8 @@ export default function Home() {
               <Link
                 href="/report"
                 className="inline-flex items-center justify-center gap-2 rounded-md border border-white/35 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/16"
+                data-analytics-event="report_click"
+                data-analytics-label="hero_report"
               >
                 {copy.secondary}
                 <ArrowRight className="h-4 w-4" />
@@ -265,7 +271,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="why" className="relative z-20 mx-auto -mt-6 w-full max-w-[1200px] px-5 md:px-8">
+      <section id="why" className="relative z-20 mx-auto -mt-6 w-full max-w-[1200px] px-5 md:px-8" data-analytics-section="why">
         <div className="rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-5 shadow-[0_24px_70px_-48px_rgba(54,40,20,0.5)] md:p-7">
           <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)]">
             <div>
@@ -289,7 +295,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
+      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8" data-analytics-section="mission">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.missionEyebrow}</p>
@@ -319,7 +325,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="products" className="bg-[#fffaf1]">
+      <section id="products" className="bg-[#fffaf1]" data-analytics-section="products">
         <div className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
           <div className="max-w-[760px]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.productsEyebrow}</p>
@@ -351,16 +357,16 @@ export default function Home() {
 
               const className = "group block rounded-lg border border-[#e3d3b8] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#c99b52] hover:shadow-[0_22px_60px_-44px_rgba(54,40,20,0.55)]";
               return isInternal ? (
-                <Link key={product.name} href={product.href} className={className}>{content}</Link>
+                <Link key={product.name} href={product.href} className={className} data-analytics-event="product_click" data-analytics-label={product.name}>{content}</Link>
               ) : (
-                <a key={product.name} href={product.href} className={className}>{content}</a>
+                <a key={product.name} href={product.href} className={className} data-analytics-event="product_click" data-analytics-label={product.name}>{content}</a>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8">
+      <section className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8" data-analytics-section="principles">
         <div className="grid gap-8 lg:grid-cols-[360px_minmax(0,1fr)]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.principlesEyebrow}</p>
@@ -382,7 +388,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="founder" className="relative overflow-hidden border-y border-[#d8c39d] bg-[#193d36] text-white">
+      <section id="founder" className="relative overflow-hidden border-y border-[#d8c39d] bg-[#193d36] text-white" data-analytics-section="founder">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#0f302c_0%,#1f4c42_46%,#102d29_100%)]" />
         <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(120deg,transparent_0%,rgba(224,189,115,0.16)_24%,transparent_43%),linear-gradient(180deg,rgba(255,255,255,0.07)_0,transparent_28%)]" />
         <div className="absolute inset-0 opacity-[0.13] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:64px_64px]" />
@@ -396,6 +402,8 @@ export default function Home() {
               <a
                 href="mailto:contact@shinba.app?subject=Shinba%20Service%20Consultation"
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
+                data-analytics-event="contact_click"
+                data-analytics-label="founder_contact"
               >
                 {copy.primary}
                 <Mail className="h-4 w-4" />
@@ -403,6 +411,8 @@ export default function Home() {
               <Link
                 href="/report"
                 className="inline-flex items-center justify-center gap-2 rounded-md border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/16"
+                data-analytics-event="report_click"
+                data-analytics-label="founder_report"
               >
                 {copy.secondary}
                 <ArrowRight className="h-4 w-4" />
@@ -429,7 +439,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative bg-[#f8f3ea] px-5 py-16 md:px-8">
+      <section className="relative bg-[#f8f3ea] px-5 py-16 md:px-8" data-analytics-section="next_action">
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 rounded-lg border border-[#e3d3b8] bg-[#fffaf1] p-6 shadow-[0_26px_80px_-58px_rgba(54,40,20,0.55)] md:p-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#a56a32]">{copy.ctaEyebrow}</p>
@@ -440,6 +450,8 @@ export default function Home() {
             <a
               href="mailto:contact@shinba.app?subject=Shinba%20Service%20%E5%80%8B%E5%88%A5%E7%9B%B8%E8%AB%87"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#e0bd73] px-6 py-3 text-sm font-semibold text-[#13251f] transition hover:brightness-105"
+              data-analytics-event="contact_click"
+              data-analytics-label="final_contact"
             >
               {copy.primary}
               <Mail className="h-4 w-4" />
@@ -447,6 +459,8 @@ export default function Home() {
             <Link
               href="/report"
               className="inline-flex items-center justify-center gap-2 rounded-md border border-[#d9c49c] bg-white px-6 py-3 text-sm font-semibold text-[#183c32] transition hover:border-[#c99b52]"
+              data-analytics-event="report_click"
+              data-analytics-label="final_report"
             >
               {copy.secondary}
               <ArrowRight className="h-4 w-4" />

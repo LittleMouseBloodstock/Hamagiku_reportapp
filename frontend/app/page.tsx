@@ -4,14 +4,14 @@ import HomeClient from "./HomeClient";
 export const metadata: Metadata = {
   title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
   description:
-    "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援するプロダクト群です。",
+    "Shinba Service は、現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、現場ごとの業務設計を支援するプロダクト群です。",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
     description:
-      "現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
+      "現役競走馬獣医師の現場経験を起点に、競走馬の報告、記録、多言語Handoff、現場ごとの業務設計を支援します。",
     url: "https://shinba.app",
     siteName: "Shinba Service",
     type: "website",

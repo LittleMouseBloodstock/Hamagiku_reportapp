@@ -36,7 +36,7 @@ const newsreader = Newsreader({
 export const metadata: Metadata = {
   metadataBase: new URL("https://shinba.app"),
   title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
-  description: "Shinba Service は、競走馬牧場・獣医・馬主報告など馬の現場に合わせて、報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
+  description: "Shinba Service は、競走馬牧場・獣医・馬主報告など馬の現場に合わせて、報告、記録、多言語Handoff、現場ごとの業務設計を支援します。",
   applicationName: "Shinba Service",
   keywords: [
     "Shinba Service",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Shinba Service | 競走馬の現場情報を、信頼できる報告・共有・判断へ",
-    description: "競走馬牧場・獣医・馬主報告の現場に合わせて、報告、記録、多言語Handoff、将来的な判断材料の蓄積を支援します。",
+    description: "競走馬牧場・獣医・馬主報告の現場に合わせて、報告、記録、多言語Handoff、現場ごとの業務設計を支援します。",
     url: "https://shinba.app",
     siteName: "Shinba Service",
     locale: "ja_JP",
@@ -101,6 +101,7 @@ import { BrandingProvider } from "@/contexts/BrandingContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import DemoInit from "@/components/DemoInit";
+import PublicAnalytics from "@/components/PublicAnalytics";
 import { Suspense } from "react";
 
 export default function RootLayout({
@@ -121,6 +122,7 @@ export default function RootLayout({
       <body
         className={`${newsreader.variable} ${noto.variable} ${notoJP.variable} ${cormorant.variable} ${shippori.variable} antialiased bg-background-light dark:bg-background-dark text-stone-850 dark:text-gray-100 font-sans overflow-x-hidden`}
       >
+        <PublicAnalytics />
         <Suspense>
           <DemoInit />
         </Suspense>
