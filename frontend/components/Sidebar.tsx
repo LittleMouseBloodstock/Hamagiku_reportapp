@@ -23,9 +23,9 @@ export default function Sidebar() {
     }
 
     return (
-        <aside className="hidden lg:flex w-64 shrink-0 flex-col justify-between border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
-            <div className="h-24 flex items-center justify-center lg:justify-start lg:px-6 relative">
-                <div className="relative w-full h-16 lg:h-20 max-w-[180px]">
+        <aside className="hidden lg:flex h-screen min-h-0 w-64 shrink-0 flex-col border-r border-stone-200 bg-[#F5F4F0] backdrop-blur-sm transition-all duration-300">
+            <div className="shrink-0 px-6 pt-4 pb-4 border-b border-stone-200">
+                <div className="relative w-full h-14 max-w-[150px] mb-3">
                     <Image
                         src="/HamagikuLogoSVG.svg"
                         alt="Hamagiku Farm"
@@ -34,8 +34,9 @@ export default function Sidebar() {
                         priority
                     />
                 </div>
+                <LanguageToggle />
             </div>
-            <nav className="flex-1 px-4 flex flex-col gap-2 py-4">
+            <nav className="min-h-0 flex-1 overflow-y-auto px-4 flex flex-col gap-2 py-4">
                 {dashboardNavItems.map((item) => (
                     <Link
                         key={item.href}
@@ -47,15 +48,17 @@ export default function Sidebar() {
                     </Link>
                 ))}
             </nav>
-            <div className="p-2 lg:p-4 mt-auto border-t border-stone-200 flex flex-col gap-4 justify-center lg:block">
+            <div className="shrink-0 border-t border-stone-200 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-3">
                 <button
                     onClick={() => signOut()}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-red-600 hover:bg-red-50 transition-colors group mb-2"
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-stone-600 hover:text-red-600 hover:bg-red-50 transition-colors group"
                 >
                     <span className="material-symbols-outlined group-hover:fill-1 transition-all">logout</span>
                     <span className="hidden lg:block text-sm font-medium">Original Sign Out</span>
                 </button>
-                <LanguageToggle />
+                <div className="flex justify-start">
+                    <LanguageToggle />
+                </div>
             </div>
         </aside >
     );

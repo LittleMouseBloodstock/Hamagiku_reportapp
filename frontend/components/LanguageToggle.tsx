@@ -4,34 +4,35 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LanguageToggle() {
     const { language, setLanguage } = useLanguage();
+    const options = [
+        { value: 'ja' as const, label: 'JP', ariaLabel: 'Switch to Japanese' },
+        { value: 'en' as const, label: 'EN', ariaLabel: 'Switch to English' },
+    ];
 
     return (
-        <div className="flex flex-row items-center justify-center gap-0 lg:gap-1 p-0 lg:p-1 no-print">
-            <button
-                onClick={() => setLanguage('en')}
-                className={`px-2 py-1 text-xs lg:text-sm font-medium transition-colors relative ${language === 'en'
-                    ? 'text-[#1a3c34]'
-                    : 'text-stone-400 hover:text-[#1a3c34]'
-                    }`}
-            >
-                EN
-                {language === 'en' && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1a3c34]" />
-                )}
-            </button>
-            <span className="hidden lg:inline text-stone-300">/</span>
-            <button
-                onClick={() => setLanguage('ja')}
-                className={`px-2 py-1 text-xs lg:text-sm font-medium transition-colors relative ${language === 'ja'
-                    ? 'text-[#1a3c34]'
-                    : 'text-stone-400 hover:text-[#1a3c34]'
-                    }`}
-            >
-                JP
-                {language === 'ja' && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1a3c34]" />
-                )}
-            </button>
+        <div
+            className="inline-flex items-center rounded-md border border-stone-200 bg-white p-0.5 shadow-sm no-print"
+            role="group"
+            aria-label="Language"
+        >
+            {options.map((option) => {
+                const active = language === option.value;
+                return (
+                    <button
+                        key={option.value}
+                        type="button"
+                        aria-label={option.ariaLabel}
+                        aria-pressed={active}
+                        onClick={() => setLanguage(option.value)}
+                        className={`min-w-9 rounded px-2.5 py-1.5 text-xs font-semibold leading-none transition-colors ${active
+                            ? 'bg-[#1a3c34] text-white shadow-sm'
+                            : 'text-stone-500 hover:bg-stone-50 hover:text-[#1a3c34]'
+                            }`}
+                    >
+                        {option.label}
+                    </button>
+                );
+            })}
         </div>
     );
 }

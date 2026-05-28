@@ -9,6 +9,7 @@ const {
   translateReportText,
 } = require('./report_generation_service');
 const { indexReport } = require('./semantic_indexer');
+const { GENERATION_MODEL } = require('./gemini_model_config');
 require('dotenv').config();
 
 const app = express();
@@ -157,7 +158,7 @@ app.post('/translate-name', async (req, res) => {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: GENERATION_MODEL });
     const prompt = `
     Translate or transliterate the racehorse name "${name}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
     Return ONLY the translated name as a string. No JSON, no explanations.

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useResumeRefresh from '@/hooks/useResumeRefresh';
 import { buildRestHeaders, restCount, restDelete, restGet, restPost, restPatch } from '@/lib/restClient';
+import LanguageToggle from '@/components/LanguageToggle';
 
 export default function Dashboard() {
     const { language, t } = useLanguage();
@@ -407,7 +408,10 @@ export default function Dashboard() {
                     <span className="material-symbols-outlined">dashboard</span>
                     {t('dashboard')}
                 </div>
-                <div className="flex items-center gap-4 self-end sm:self-auto">
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                    <div className="hidden lg:block">
+                        <LanguageToggle />
+                    </div>
                     <Link
                         href="/reports/new"
                         className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-[#1a3c34] text-white rounded-lg shadow-sm hover:bg-[#122b25] transition-all ring-1 ring-[#1a3c34]/20"

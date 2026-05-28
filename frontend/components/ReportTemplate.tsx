@@ -129,7 +129,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         margin-top: 4px !important;
         min-height: 86px !important;
         max-height: 86px !important;
-        overflow: visible !important;
+        overflow: hidden !important;
         border-color: #555 !important;
       }`}
 
@@ -138,6 +138,16 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         line-height: 1.42 !important;
         max-height: 62px !important;
         overflow: hidden !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text-en.comment-text-compact {
+        font-size: 12.5px !important;
+        line-height: 1.32 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text-en.comment-text-dense {
+        font-size: 11.5px !important;
+        line-height: 1.25 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .footer-text {
@@ -160,6 +170,16 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
         font-size: 14px !important;
         line-height: 1.42 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text-en.comment-text-compact {
+        font-size: 13px !important;
+        line-height: 1.34 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text-en.comment-text-dense {
+        font-size: 12px !important;
+        line-height: 1.28 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text-ja {
@@ -537,6 +557,13 @@ export type ReportData = {
     logo: string | null;
     originalPhoto?: string | null; // Keep original for re-cropping
 };
+
+function getEnglishCommentDensityClass(comment = '') {
+    const normalized = comment.trim();
+    if (normalized.length >= 430) return 'comment-text-dense';
+    if (normalized.length >= 300) return 'comment-text-compact';
+    return '';
+}
 
 // --- Utility: Create Cropped Image ---
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -1732,7 +1759,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Comment Section */}
-                        <div className={`comment-box border-2 border-[#555] relative bg-white flex-shrink ${showLogo ? 'p-5 min-h-[140px] mt-4' : 'p-3 min-h-[86px] max-h-[86px] mt-1 overflow-visible'}`}>
+                        <div className={`comment-box border-2 border-[#555] relative bg-white flex-shrink overflow-hidden ${showLogo ? 'p-5 min-h-[140px] mt-4' : 'p-3 min-h-[86px] max-h-[86px] mt-1'}`}>
                             <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide">
                                 {t('trainersComment')}
                             </span>
@@ -1741,7 +1768,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className={`comment-text comment-text-en text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
+                                <div className={`comment-text comment-text-en ${getEnglishCommentDensityClass(data.commentEn)} text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words [overflow-wrap:anywhere] hyphens-auto font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
                                     {data.commentEn || ''}
                                 </div>
                             )}

@@ -13,6 +13,7 @@ const {
   buildBaseTerminologyGuard,
   buildRelevantTerminologyContext,
 } = require('./equine_terminology');
+const { GENERATION_MODEL } = require('./gemini_model_config');
 
 function buildKnowledgeContext(items = []) {
   return items
@@ -144,7 +145,7 @@ async function generateMonthlyReport({ prompt, apiKey }) {
   const dynamicGenAI = new GoogleGenerativeAI(apiKey);
   const context = await buildMonthlyPromptContext(prompt);
   const model = dynamicGenAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: GENERATION_MODEL,
     generationConfig: { responseMimeType: 'application/json' },
   });
 
@@ -189,7 +190,7 @@ async function generateDepartureReport({ notes, apiKey }) {
 
   const dynamicGenAI = new GoogleGenerativeAI(apiKey);
   const model = dynamicGenAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: GENERATION_MODEL,
     generationConfig: { responseMimeType: 'application/json' },
   });
 
@@ -243,7 +244,7 @@ async function translateReportText({ text, targetLang, apiKey }) {
   if (!apiKey) throw new Error('API Key not configured in Environment Variables');
 
   const dynamicGenAI = new GoogleGenerativeAI(apiKey);
-  const model = dynamicGenAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = dynamicGenAI.getGenerativeModel({ model: GENERATION_MODEL });
   const context = await buildTranslationPromptContext(text, targetLang);
 
   const instruction = targetLang === 'ja'
