@@ -132,19 +132,19 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 throw new Error(`Server Error (${res.status}): ${errorText}`);
             }
             const json = await res.json();
-            if (!json?.ja || !json?.en) return;
+            if (!json?.ja) return;
             setData(prev => ({
                 ...prev,
                 farrierJp: prev.farrierJp || json.ja.farrier || '',
-                farrierEn: prev.farrierEn || json.en.farrier || '',
+                farrierEn: isJa ? prev.farrierEn : prev.farrierEn || json.en?.farrier || '',
                 wormingJp: prev.wormingJp || json.ja.worming || '',
-                wormingEn: prev.wormingEn || json.en.worming || '',
+                wormingEn: isJa ? prev.wormingEn : prev.wormingEn || json.en?.worming || '',
                 feedingJp: prev.feedingJp || json.ja.feeding || '',
-                feedingEn: prev.feedingEn || json.en.feeding || '',
+                feedingEn: isJa ? prev.feedingEn : prev.feedingEn || json.en?.feeding || '',
                 exerciseJp: prev.exerciseJp || json.ja.exercise || '',
-                exerciseEn: prev.exerciseEn || json.en.exercise || '',
+                exerciseEn: isJa ? prev.exerciseEn : prev.exerciseEn || json.en?.exercise || '',
                 commentJp: prev.commentJp || json.ja.comment || '',
-                commentEn: prev.commentEn || json.en.comment || ''
+                commentEn: isJa ? prev.commentEn : prev.commentEn || json.en?.comment || ''
             }));
         } catch (e) {
             console.error(e);
@@ -180,7 +180,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             disabled={isGenerating}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
                         >
-                            <span>{isGenerating ? 'Generating...' : 'Generate En & Jp'}</span>
+                            <span>{isGenerating ? 'Generating...' : (isJa ? 'Generate Japanese' : 'Generate En & Jp')}</span>
                         </button>
                     </div>
                 </div>
@@ -218,15 +218,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('horseNameEn')}</label>
-                        <input
-                            type="text"
-                            value={data.horseNameEn}
-                            onChange={e => handleChange('horseNameEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('horseNameEn')}</label>
+                            <input
+                                type="text"
+                                value={data.horseNameEn}
+                                onChange={e => handleChange('horseNameEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                            />
+                        </div>
+                    )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -248,15 +250,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         />
                     </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('trainer')} (EN)</label>
-                    <input
-                        type="text"
-                        value={data.trainerNameEn}
-                        onChange={e => handleChange('trainerNameEn', e.target.value)}
-                        className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                    />
-                </div>
+                {!isJa && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('trainer')} (EN)</label>
+                        <input
+                            type="text"
+                            value={data.trainerNameEn}
+                            onChange={e => handleChange('trainerNameEn', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -269,16 +273,18 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             placeholder="牡2歳"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('sexAge')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.sexAgeEn}
-                            onChange={e => handleChange('sexAgeEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            placeholder="Colt 2yo"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('sexAge')} (EN)</label>
+                            <input
+                                type="text"
+                                value={data.sexAgeEn}
+                                onChange={e => handleChange('sexAgeEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                                placeholder="Colt 2yo"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -291,15 +297,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('sireEn')}</label>
-                        <input
-                            type="text"
-                            value={data.sireEn}
-                            onChange={e => handleChange('sireEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('sireEn')}</label>
+                            <input
+                                type="text"
+                                value={data.sireEn}
+                                onChange={e => handleChange('sireEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                            />
+                        </div>
+                    )}
                     <div>
                         <label className="block text-xs font-medium text-gray-700">{t('damJp')}</label>
                         <input
@@ -309,15 +317,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('damEn')}</label>
-                        <input
-                            type="text"
-                            value={data.damEn}
-                            onChange={e => handleChange('damEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('damEn')}</label>
+                            <input
+                                type="text"
+                                value={data.damEn}
+                                onChange={e => handleChange('damEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -352,15 +362,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.farrierEn}
-                            onChange={e => handleChange('farrierEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (EN)</label>
+                            <input
+                                type="text"
+                                value={data.farrierEn}
+                                onChange={e => handleChange('farrierEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                            />
+                        </div>
+                    )}
                     <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} {t('date')}</label>
                         <input
@@ -382,15 +394,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.wormingEn}
-                            onChange={e => handleChange('wormingEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
+                    {!isJa && (
+                        <div>
+                            <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (EN)</label>
+                            <input
+                                type="text"
+                                value={data.wormingEn}
+                                onChange={e => handleChange('wormingEn', e.target.value)}
+                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                            />
+                        </div>
+                    )}
                     <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} {t('date')}</label>
                         <input
@@ -411,15 +425,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('feeding')} (EN)</label>
-                    <textarea
-                        rows={3}
-                        value={data.feedingEn}
-                        onChange={e => handleChange('feedingEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
+                {!isJa && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('feeding')} (EN)</label>
+                        <textarea
+                            rows={3}
+                            value={data.feedingEn}
+                            onChange={e => handleChange('feedingEn', e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                        />
+                    </div>
+                )}
 
                 <div>
                     <label className="block text-xs font-medium text-gray-700">{t('exercise')} (JP)</label>
@@ -430,15 +446,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('exercise')} (EN)</label>
-                    <textarea
-                        rows={4}
-                        value={data.exerciseEn}
-                        onChange={e => handleChange('exerciseEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
+                {!isJa && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('exercise')} (EN)</label>
+                        <textarea
+                            rows={4}
+                            value={data.exerciseEn}
+                            onChange={e => handleChange('exerciseEn', e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                        />
+                    </div>
+                )}
 
                 <div>
                     <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
@@ -449,21 +467,23 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
-                    <textarea
-                        rows={3}
-                        value={data.commentEn}
-                        onChange={e => handleChange('commentEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
+                {!isJa && (
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
+                        <textarea
+                            rows={3}
+                            value={data.commentEn}
+                            onChange={e => handleChange('commentEn', e.target.value)}
+                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="departure-preview-wrap hidden md:flex print:flex flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto justify-center items-start h-auto md:h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
                 <div
                     id="report-preview"
-                    className={`departure-preview relative bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}`}
+                    className={`departure-preview relative bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
                     style={{ padding: '20px 30px 10px 30px', boxSizing: 'border-box' }}
                 >
                     <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[120px] pt-4">
@@ -555,14 +575,18 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         height: 285mm !important;
                         min-height: 0 !important;
                         margin: 0 !important;
-                        padding: 32px 30px 8px 30px !important;
+                        padding: 20mm 30px 8px 30px !important;
                         box-shadow: none !important;
                         border: none !important;
                         overflow: hidden !important;
                     }
                     .departure-preview.print-mode {
-                        top: 20mm !important;
-                        height: 257mm !important;
+                        top: 0 !important;
+                        height: 285mm !important;
+                        padding-top: 24mm !important;
+                    }
+                    .departure-preview.print-mode.no-logo {
+                        padding-top: 24mm !important;
                     }
                     .departure-preview .departure-section { font-size: 14px !important; line-height: 1.6 !important; }
                     .logo-container { clip-path: inset(1px); }

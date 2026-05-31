@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 export const runtime = 'edge';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
@@ -39,7 +39,11 @@ const resolvePedigreeFields = (
 export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const isNew = id === 'new';
+    const isPrintView = searchParams?.get('print') === '1';
+    const isAutoPrintView = searchParams?.get('autoprint') === '1';
+    const printLogoParam = searchParams?.get('logo');
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -50,6 +54,7 @@ export default function ReportEditor() {
     const [draftPromptedKey, setDraftPromptedKey] = useState<string | null>(null);
     const [autosaveStatus, setAutosaveStatus] = useState<string>('');
     const [autosaveStamp, setAutosaveStamp] = useState<number>(0);
+    const [printOverride, setPrintOverride] = useState(false);
 
     // Initial Data for Template
     const [initialData, setInitialData] = useState<Partial<ReportData | DepartureReportData>>({});
@@ -98,6 +103,18 @@ export default function ReportEditor() {
         const horsePart = horseId || 'no-horse';
         return `report-draft:${safeId}:${horsePart}:${reportType}`;
     }, [id, horseId, reportType]);
+
+    const displayData = useMemo(() => {
+        if (!isPrintView && !printOverride) return initialData;
+        const showLogo = printLogoParam === null
+            ? initialData.showLogo
+            : printLogoParam === '1';
+        return {
+            ...initialData,
+            outputMode: 'print',
+            showLogo
+        } as Partial<ReportData | DepartureReportData>;
+    }, [initialData, isPrintView, printOverride, printLogoParam]);
 
     const getDraftHeaders = () => {
         if (!supabaseUrl || !supabaseAnonKey || !session?.access_token) {
@@ -1446,6 +1463,40 @@ export default function ReportEditor() {
         setSaving(false);
     };
 
+    const handlePrint = () => {
+        const currentData = reportDataRef.current;
+        if (currentData) {
+            setInitialData({
+                ...currentData,
+                outputMode: 'print',
+                showLogo: currentData.showLogo
+            });
+        }
+        setPrintOverride(true);
+
+        window.setTimeout(() => {
+            window.print();
+        }, 250);
+    };
+
+    useEffect(() => {
+        const handleAfterPrint = () => {
+            if (!isPrintView) {
+                setPrintOverride(false);
+            }
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+        return () => window.removeEventListener('afterprint', handleAfterPrint);
+    }, [isPrintView]);
+
+    useEffect(() => {
+        if (!isPrintView || !isAutoPrintView || loading) return;
+        const timer = window.setTimeout(() => {
+            window.print();
+        }, 500);
+        return () => window.clearTimeout(timer);
+    }, [isPrintView, isAutoPrintView, loading]);
+
     if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading Report...</div>;
 
     if (showHorseSelector) {
@@ -1558,10 +1609,10 @@ export default function ReportEditor() {
                         {saving ? 'Saving...' : 'Save'}
                     </button>
                     <button
-                        onClick={() => window.print()}
+                        onClick={handlePrint}
                         className="bg-[var(--color-accent)] hover:brightness-110 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[90px]"
                     >
-                        <Printer size={16} /> PDF
+                        <Printer size={16} /> Print / PDF
                     </button>
                 </div>
             </div>
@@ -1573,9 +1624,9 @@ export default function ReportEditor() {
 
             <div className="w-full block md:flex md:flex-1 md:min-h-0 md:justify-center overflow-x-visible overflow-y-visible md:overflow-x-auto md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
                 {reportType === 'departure' ? (
-                    <DepartureReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+                    <DepartureReportTemplate initialData={displayData} onDataChange={handleDataChange} />
                 ) : (
-                    <ReportTemplate initialData={initialData} onDataChange={handleDataChange} />
+                    <ReportTemplate initialData={displayData} onDataChange={handleDataChange} />
                 )}
             </div>
         </div>

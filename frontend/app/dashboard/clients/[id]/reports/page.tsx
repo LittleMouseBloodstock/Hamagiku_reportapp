@@ -477,7 +477,7 @@ export default function ClientBatchReports() {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 0;
+                        margin: 10mm 0 0 0;
                     }
                     .no-print { display: none !important; }
                     html, body, #__next {
@@ -524,14 +524,14 @@ export default function ClientBatchReports() {
                         margin: 0 auto !important;
                         width: 210mm !important;
                         max-width: 210mm !important;
-                        min-height: 297mm !important;
-                        height: 297mm !important;
-                        padding: 20px 30px 10px !important;
+                        min-height: 285mm !important;
+                        height: 285mm !important;
+                        padding: 15mm 30px 8px !important;
                         box-sizing: border-box !important;
                         box-shadow: none !important;
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
-                        overflow: visible !important;
+                        overflow: hidden !important;
                         transform: none !important;
                         transform-origin: top center !important;
                         -webkit-print-color-adjust: exact !important;
@@ -539,8 +539,9 @@ export default function ClientBatchReports() {
                         /* page break handled by wrapper */
                     }
                     .batch-report-page .report-preview.no-logo {
-                        position: relative !important;
-                        top: -18mm !important;
+                        position: static !important;
+                        top: 0 !important;
+                        padding-top: 20mm !important;
                         transform: none !important;
                     }
                     .batch-report-page .horse-name-primary,
@@ -556,21 +557,45 @@ export default function ClientBatchReports() {
                         height: 98mm !important;
                         margin-bottom: 4px !important;
                     }
+                    .batch-report-page .report-preview.print-mode.no-logo .main-photo {
+                        height: 90mm !important;
+                    }
                     .batch-report-page .report-preview.print-mode .data-section {
                         height: 100px !important;
                         margin-bottom: 4px !important;
                     }
+                    .batch-report-page .report-preview.print-mode.no-logo .data-section {
+                        height: 105px !important;
+                        margin-bottom: 6px !important;
+                    }
+                    .batch-report-page .report-preview.print-mode.no-logo .weight-chart {
+                        height: 90px !important;
+                    }
                     .batch-report-page .report-preview.print-mode .comment-box {
                         margin-top: 1px !important;
+                        min-height: 108px !important;
+                        max-height: 108px !important;
+                        padding: 8px 12px 10px !important;
+                        overflow: visible !important;
+                        break-inside: avoid !important;
+                        page-break-inside: avoid !important;
+                    }
+                    .batch-report-page .report-preview.print-mode .comment-label {
+                        display: block !important;
+                        margin-bottom: 3px !important;
+                        line-height: 1.15 !important;
                     }
                     .batch-report-page .report-preview.print-mode .comment-text-ja {
                         font-size: 13.5px !important;
-                        line-height: 1.58 !important;
+                        line-height: 1.48 !important;
+                        max-height: 82px !important;
+                        overflow: hidden !important;
                     }
                     .batch-report-page .report-preview.print-mode .stat-value-print {
                         font-size: 15px !important;
                         line-height: 1.2 !important;
-                        white-space: normal !important;
+                        white-space: nowrap !important;
+                        letter-spacing: -0.02em !important;
                     }
                     .batch-report-page .horse-name-primary {
                         font-size: 34px !important;
@@ -594,6 +619,9 @@ export default function ClientBatchReports() {
                     }
                     .batch-report-page .report-preview.no-logo .comment-box {
                         border-color: #555 !important;
+                    }
+                    .batch-report-page .report-preview.no-logo .footer-text {
+                        display: none !important;
                     }
                 }
             `}</style>

@@ -50,8 +50,8 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode {
-        top: 20mm !important;
-        height: 257mm !important;
+        top: 10mm !important;
+        height: 267mm !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo {
@@ -95,7 +95,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .main-photo {
         width: 127.5mm !important;
-        height: 95.6mm !important;
+        height: 90mm !important;
         max-width: none !important;
       }`}
 
@@ -125,18 +125,22 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         gap: 14px !important;
       }`}
 
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .weight-chart {
+        height: 90px !important;
+      }`}
+
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-box {
         margin-top: 4px !important;
-        min-height: 86px !important;
-        max-height: 86px !important;
-        overflow: hidden !important;
+        min-height: 108px !important;
+        max-height: 108px !important;
+        overflow: visible !important;
         border-color: #555 !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-text {
         font-size: 14px !important;
         line-height: 1.42 !important;
-        max-height: 62px !important;
+        max-height: 82px !important;
         overflow: hidden !important;
       }`}
 
@@ -151,8 +155,7 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .footer-text {
-        padding-top: 0 !important;
-        font-size: 9px !important;
+        display: none !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
@@ -161,10 +164,35 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         gap: 14px !important;
       }`}
 
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .data-section {
+        height: 105px !important;
+        margin-bottom: 6px !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .weight-chart {
+        height: 90px !important;
+      }`}
+
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
         margin-top: 1px !important;
-        min-height: 82px !important;
-        padding: 12px !important;
+        min-height: 108px !important;
+        max-height: 108px !important;
+        padding: 8px 12px 10px 12px !important;
+        overflow: hidden !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-label {
+        display: block !important;
+        margin-bottom: 3px !important;
+        line-height: 1.15 !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .comment-box {
+        min-height: 108px !important;
+        max-height: 108px !important;
+        overflow: visible !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text {
@@ -184,19 +212,26 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-text-ja {
         font-size: 13.5px !important;
-        line-height: 1.58 !important;
+        line-height: 1.48 !important;
+        max-height: 82px !important;
+        overflow: hidden !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .stat-value-print {
         font-size: 15px !important;
         line-height: 1.2 !important;
-        white-space: normal !important;
+        white-space: nowrap !important;
+        letter-spacing: -0.02em !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .footer-text {
         margin-top: auto !important;
         padding-top: 0 !important;
         font-size: 9px !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .footer-text {
+        display: none !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix {
@@ -272,9 +307,9 @@ const formatWeightHistoryLabel = (item: WeightHistoryPoint, lang: 'ja' | 'en') =
     if (item.monthKey && /^\d{4}-\d{2}$/.test(item.monthKey)) {
         const [year, month] = item.monthKey.split('-').map((part) => parseInt(part, 10));
         if (!Number.isNaN(year) && !Number.isNaN(month)) {
-            if (lang === 'ja') return `${year}/${month}`;
+            if (lang === 'ja') return `${String(year).slice(2)}/${month}`;
             const date = new Date(year, month - 1, 1);
-            return date.toLocaleString('en-GB', { month: 'short', year: 'numeric' });
+            return `${date.toLocaleString('en-GB', { month: 'short' })} ${String(year).slice(2)}`;
         }
     }
     return item.label;
@@ -284,6 +319,7 @@ const formatWeightHistoryLabel = (item: WeightHistoryPoint, lang: 'ja' | 'en') =
 const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], color: string, lang: 'ja' | 'en' }) => {
     const width = 200;
     const height = 100;
+    const viewBoxHeight = 116;
     const padding = 20;
 
     if (!data || data.length < 2) return null;
@@ -299,7 +335,7 @@ const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], co
     }).join(' ');
 
     return (
-        <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+        <svg width="100%" height="100%" viewBox={`0 0 ${width} ${viewBoxHeight}`} className="overflow-visible">
             {/* Grid Lines */}
             <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#E5E7EB" strokeWidth="1" />
             <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#E5E7EB" strokeWidth="1" />
@@ -321,7 +357,7 @@ const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], co
                 return (
                     <g key={i}>
                         <circle cx={x} cy={y} r="3" fill="white" stroke={color} strokeWidth="2" />
-                        <text x={x} y={height} dy="12" textAnchor="middle" fontSize="11" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatWeightHistoryLabel(d, lang)}</text>
+                        <text x={x} y={height + 11} textAnchor="middle" fontSize="10" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatWeightHistoryLabel(d, lang)}</text>
                         <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="12" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
                     </g>
                 );
@@ -1675,7 +1711,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             </div>
                         </div>
 
-                        <div className={`owner-line bg-[#f9fbfa] px-3 border border-[#e5e7eb] ${showLogo ? 'py-2 mb-4' : 'py-[6px] mb-[6px] h-[34px] overflow-hidden'} ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] whitespace-nowrap tracking-[-0.01em]'}`}>
+                        <div className={`owner-line bg-[#f9fbfa] px-3 border border-[#e5e7eb] ${showLogo ? 'py-2 mb-4' : 'py-[6px] mb-[6px] min-h-[34px] overflow-visible'} ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] tracking-[-0.01em]'} whitespace-normal break-words [overflow-wrap:anywhere]`}>
                             <span className="font-bold mr-1">{t('owner')}:</span>
                             <span>{formatOwnerName(data.ownerName)}</span>
                             <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
@@ -1704,7 +1740,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                             className="main-photo mx-auto bg-[#eee] mb-5 relative overflow-hidden rounded-[2px] shadow-sm"
                             style={{
                                 width: showLogo ? '132mm' : '127.5mm',
-                                height: showLogo ? '99mm' : '95.6mm',
+                                height: showLogo ? '99mm' : '90mm',
                                 maxWidth: '85%'
                             }}
                         >
@@ -1752,27 +1788,27 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 <span className="text-xs font-bold text-[#1a3c34] block mb-1 border-b border-[#ddd] pb-1 cursor-default">
                                     {t('weightHistory')}
                                 </span>
-                                <div className="h-[90px] w-full">
+                                <div className="weight-chart h-[90px] w-full">
                                     <SimpleLineChart data={data.weightHistory} color="#1a3c34" lang={lang} />
                                 </div>
                             </div>
                         </div>
 
                         {/* Comment Section */}
-                        <div className={`comment-box border-2 border-[#555] relative bg-white flex-shrink overflow-hidden ${showLogo ? 'p-5 min-h-[140px] mt-4' : 'p-3 min-h-[86px] max-h-[86px] mt-1'}`}>
-                            <span className="absolute -top-3 left-5 bg-white px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide">
+                        <fieldset className={`comment-box border-2 border-[#555] relative bg-white flex-shrink ${showLogo ? 'px-5 pb-5 pt-2 min-h-[140px] mt-4 overflow-hidden' : 'px-3 pb-3 pt-1 min-h-[108px] max-h-[108px] mt-1 overflow-visible'}`}>
+                            <legend className="comment-label ml-3 px-2 font-serif-en text-[#1a3c34] font-bold text-sm tracking-wide leading-none">
                                 {t('trainersComment')}
-                            </span>
+                            </legend>
                             {lang === 'ja' ? (
-                                <div className={`comment-text comment-text-ja text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold ${showLogo ? 'text-[15px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
+                                <div className={`comment-text comment-text-ja text-justify whitespace-pre-wrap font-sans text-[#111] font-semibold ${showLogo ? 'text-[15px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[82px] overflow-hidden'}`}>
                                     {data.commentJp}
                                 </div>
                             ) : (
-                                <div className={`comment-text comment-text-en ${getEnglishCommentDensityClass(data.commentEn)} text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words [overflow-wrap:anywhere] hyphens-auto font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[62px] overflow-hidden'}`}>
+                                <div className={`comment-text comment-text-en ${getEnglishCommentDensityClass(data.commentEn)} text-justify font-serif-en text-[#0a0a0a] whitespace-pre-wrap break-words [overflow-wrap:anywhere] hyphens-auto font-semibold ${showLogo ? 'text-[16px] leading-[1.8]' : 'text-[14px] leading-[1.42] max-h-[82px] overflow-hidden'}`}>
                                     {data.commentEn || ''}
                                 </div>
                             )}
-                        </div>
+                        </fieldset>
 
                         {/* Footer */}
                         <div className={`footer-text mt-auto text-center text-[#aaa] font-serif-en tracking-widest ${showLogo ? 'pt-2 text-[10px]' : 'pt-0 text-[9px]'}`}>

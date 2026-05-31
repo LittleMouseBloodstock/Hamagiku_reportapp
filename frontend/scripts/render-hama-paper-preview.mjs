@@ -214,10 +214,10 @@ async function drawOverlay(baseCanvas) {
     ctx.fillRect(overlay.photoX, overlay.photoY, overlay.photoW, overlay.photoH);
   }
 
-  const boxY = mm(266);
+  const boxY = mm(222);
   ctx.strokeStyle = commentBorderColor;
   ctx.lineWidth = 2;
-  ctx.strokeRect(leftPad, boxY, pageWidth - leftPad - mm(8.5), mm(19));
+  ctx.strokeRect(leftPad, boxY, pageWidth - leftPad - mm(8.5), mm(22));
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(leftPad + mm(5), boxY - mm(2.2), mm(24), mm(4));
   fillText(ctx, 'TRAINER’S COMMENT', leftPad + mm(6), boxY - mm(0.3), {
