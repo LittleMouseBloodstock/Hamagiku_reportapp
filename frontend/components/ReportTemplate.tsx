@@ -120,13 +120,13 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .data-section {
-        height: 105px !important;
+        height: 115px !important;
         margin-bottom: 6px !important;
         gap: 14px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .weight-chart {
-        height: 90px !important;
+        height: 100px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .comment-box {
@@ -165,12 +165,12 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .data-section {
-        height: 105px !important;
+        height: 115px !important;
         margin-bottom: 6px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .weight-chart {
-        height: 90px !important;
+        height: 100px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .comment-box {
@@ -317,10 +317,10 @@ const formatWeightHistoryLabel = (item: WeightHistoryPoint, lang: 'ja' | 'en') =
 
 // Simple Line Chart Component
 const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], color: string, lang: 'ja' | 'en' }) => {
-    const width = 200;
-    const height = 100;
-    const viewBoxHeight = 116;
-    const padding = 20;
+    const width = 220;
+    const height = 112;
+    const viewBoxHeight = 132;
+    const padding = 24;
 
     if (!data || data.length < 2) return null;
 
@@ -345,7 +345,7 @@ const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], co
                 points={points}
                 fill="none"
                 stroke={color}
-                strokeWidth="2.5"
+                strokeWidth="2.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
@@ -356,9 +356,9 @@ const SimpleLineChart = ({ data, color, lang }: { data: WeightHistoryPoint[], co
                 const y = height - padding - ((d.value - minVal) / range) * (height - padding * 2);
                 return (
                     <g key={i}>
-                        <circle cx={x} cy={y} r="3" fill="white" stroke={color} strokeWidth="2" />
-                        <text x={x} y={height + 11} textAnchor="middle" fontSize="10" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatWeightHistoryLabel(d, lang)}</text>
-                        <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="12" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
+                        <circle cx={x} cy={y} r="3.3" fill="white" stroke={color} strokeWidth="2.2" />
+                        <text x={x} y={height + 13} textAnchor="middle" fontSize="11.5" fill="#6B7280" className="font-body-en" fontWeight="bold">{formatWeightHistoryLabel(d, lang)}</text>
+                        <text x={x} y={y} dy="-8" textAnchor="middle" fontSize="13" fill={color} fontWeight="bold" className="font-body-en">{d.value}</text>
                     </g>
                 );
             })}
@@ -732,7 +732,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const secondaryHorseName = lang === 'ja' ? (data.horseNameEn || '') : (data.horseNameJp || '');
     const primaryNameLength = primaryHorseName.length;
     const secondaryNameLength = secondaryHorseName.length;
-    const noLogoPrimaryFontSize = primaryNameLength > 14 ? '1.95rem' : primaryNameLength > 11 ? '2.1rem' : '2.3rem';
+    const noLogoPrimaryFontSize = primaryNameLength > 20 ? '1.55rem' : primaryNameLength > 17 ? '1.7rem' : primaryNameLength > 14 ? '1.88rem' : primaryNameLength > 11 ? '2.1rem' : '2.3rem';
     const noLogoSecondaryFontSize = secondaryNameLength > 22 ? '1.08rem' : secondaryNameLength > 16 ? '1.16rem' : '1.24rem';
     const showLogoPrimaryFontSize = lang === 'ja'
         ? (primaryNameLength > 14 ? '1.58rem' : primaryNameLength > 11 ? '1.72rem' : '1.9rem')
@@ -1668,10 +1668,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         {/* Horse Profile */}
                         <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
-                            <div className={`min-w-0 overflow-hidden ${showLogo ? 'basis-[46%] max-w-[46%] flex-none' : 'flex-1'}`}>
+                            <div className={`min-w-0 ${showLogo ? 'basis-[46%] max-w-[46%] flex-none' : 'flex-1'}`}>
                                 <h1 className="leading-tight">
                                     <span
-                                        className={`horse-name-primary block font-bold text-gray-800 whitespace-nowrap overflow-hidden ${lang === 'ja' ? 'font-serif-jp tracking-[-0.03em]' : 'font-serif-en tracking-[-0.03em]'}`}
+                                        className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'font-serif-jp tracking-[-0.04em] whitespace-normal break-keep leading-[1.05] max-h-[2.1em]' : 'font-serif-en tracking-[-0.03em] whitespace-nowrap overflow-hidden'}`}
                                         style={{ fontSize: showLogo ? showLogoPrimaryFontSize : noLogoPrimaryFontSize }}
                                     >
                                         {primaryHorseName}
@@ -1761,7 +1761,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Data Section - Compact Height (Reduced from 220px to 120px) */}
-                        <div className={`data-section flex ${showLogo ? 'gap-6 mb-4 h-[120px]' : 'gap-[14px] mb-[6px] h-[105px]'}`}>
+                        <div className={`data-section flex ${showLogo ? 'gap-6 mb-4 h-[120px]' : 'gap-[14px] mb-[6px] h-[115px]'}`}>
                             {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
                                 <div className="bg-[#f4f7f6] p-3 flex min-h-0 flex-col justify-center border-t-[3px] border-[#ddd]">
@@ -1788,7 +1788,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 <span className="text-xs font-bold text-[#1a3c34] block mb-1 border-b border-[#ddd] pb-1 cursor-default">
                                     {t('weightHistory')}
                                 </span>
-                                <div className="weight-chart h-[90px] w-full">
+                                <div className={`weight-chart w-full ${showLogo ? 'h-[90px]' : 'h-[100px]'}`}>
                                     <SimpleLineChart data={data.weightHistory} color="#1a3c34" lang={lang} />
                                 </div>
                             </div>

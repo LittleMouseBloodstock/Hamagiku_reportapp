@@ -565,11 +565,11 @@ export default function ClientBatchReports() {
                         margin-bottom: 4px !important;
                     }
                     .batch-report-page .report-preview.print-mode.no-logo .data-section {
-                        height: 105px !important;
+                        height: 115px !important;
                         margin-bottom: 6px !important;
                     }
                     .batch-report-page .report-preview.print-mode.no-logo .weight-chart {
-                        height: 90px !important;
+                        height: 100px !important;
                     }
                     .batch-report-page .report-preview.print-mode .comment-box {
                         margin-top: 1px !important;
@@ -598,8 +598,7 @@ export default function ClientBatchReports() {
                         letter-spacing: -0.02em !important;
                     }
                     .batch-report-page .horse-name-primary {
-                        font-size: 34px !important;
-                        line-height: 1.1 !important;
+                        line-height: 1.05 !important;
                     }
                     .batch-report-page .horse-name-secondary {
                         font-size: 18px !important;
