@@ -10,17 +10,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const landingCopy = {
   ja: {
     eyebrow: '競走馬牧場の月次レポート・海外オーナー報告向け',
-    headline: '競走馬の近況報告を、現場メモからそのままレポートに。',
+    headline: '馬主向け報告を、現場メモから読みやすい月次レポートへ。',
     secondary:
-      '写真・体重・コメント・所見をまとめて、馬主や海外オーナーへ送れる月次レポートに。',
+      '写真、体重、コメント、所見をまとめ、送付前に確認できる形へ整えます。',
     body:
-      'Shinba Report は、競走馬牧場向けに設計された報告作成サービスです。日本語・英語・日英併記の報告書を、PDF出力までひとつの流れで整えられます。',
-    kicker: '単なる翻訳ツールではなく、馬主へ送れる報告基盤として設計しています。',
+      'Shinba Report は、競走馬牧場向けに設計された報告作成サービスです。日本語・英語・日英併記の報告書を、入力から確認、PDF出力までひとつの流れで整えます。',
+    kicker: 'まずは1件分の報告サンプルから、現場の運用に合うかを確認できます。',
     heroPrimaryCta: '導入について相談する',
     backToHub: 'Shinba Serviceへ戻る',
     socialProofEyebrow: 'こんな報告業務を想定しています',
     socialProofItems: ['オーナー（海外含む）への月次報告', '英語が必要な近況共有', 'セリ後の買い手向けフォローアップ', '育成状況の定期レポート'],
-    socialProofQuote: '「毎月の英語報告に1〜2時間かかっていたのが、確認するだけになった」— 北海道・育成牧場スタッフ',
+    socialProofQuote: '報告文作成、英語対応、写真・体重・コメント整理を、月次業務として続けやすい形に整えます。',
     positioningEyebrow: 'Shinba Report とは',
     positioningTitle: '競走馬現場の報告業務を、ひとつの流れに。',
     positioningBody:
@@ -161,25 +161,24 @@ const landingCopy = {
     finalEyebrow: '今月のレポートから変える',
     finalTitle: '競走馬の近況報告を、今月から整える。',
     finalBody:
-      '無料トライアルで、現場の記録がどれだけ早く、馬主へ送りやすい月次レポートになるかを体験してください。',
+      '既存のメモ、写真、体重、コメントをもとに、まずは1件分の報告サンプルから確認できます。',
     finalPrimaryCta: '導入について相談する',
     finalSecondaryCta: 'お問い合わせ',
     contactLine: '導入相談や海外オーナー向け報告のご相談は contact@shinba.app までご連絡ください。',
   },
   en: {
     eyebrow: 'For owners with horses in Japan',
-    headline: 'Your horse is in Japan. Get updates in proper English.',
+    headline: 'Turn farm notes into owner-ready monthly reports.',
     secondary:
-      'Receive monthly reports you can actually read, trust, and rely on.',
+      'Photos, weight, comments, and observations are organized into reports owners can read and trust.',
     body:
       'Shinba Report helps Japanese farms deliver clear English reports to owners, buyers, and partners abroad. Instead of awkward translations or fragmented updates, recipients receive structured monthly reports that reflect the horse’s actual care, training, and condition in language that reads naturally.',
-    kicker: 'Built for owners abroad receiving updates from Japan.',
+    kicker: 'Start with one real or anonymized sample report before changing the workflow.',
     heroPrimaryCta: 'Request Consultation',
     backToHub: 'Back to Shinba Service',
     socialProofEyebrow: 'Built for international owner communication',
     socialProofItems: ['Owners in Hong Kong and the UAE', 'International bloodstock partners', 'Post-sale buyer follow-up', 'Monthly reporting for horses in Japan'],
-    socialProofQuote: '"Finally, updates that read like real English rather than rushed translation."',
-    socialProofAttribution: 'HK-based owner, 3 horses in Hokkaido',
+    socialProofQuote: 'Designed for recurring owner reports, English communication, and post-sale follow-up from Japanese farms.',
     positioningEyebrow: 'What it solves',
     positioningTitle: 'Your horse may be in Japan. The communication should still be clear.',
     positioningBody:
@@ -313,7 +312,7 @@ const landingCopy = {
     finalEyebrow: 'Start with the next monthly report',
     finalTitle: 'Receive updates that are clear enough to trust.',
     finalBody:
-      'Start the free trial and see how quickly reporting from Japan can become clearer, more professional, and easier for owners abroad to read.',
+      'Start with one existing note set, photo set, or monthly update and see what the report workflow should look like.',
     finalPrimaryCta: 'Request Consultation',
     finalSecondaryCta: 'Contact Sales',
     contactLine: 'Questions about reporting for owners abroad or communication from Japanese farms? Contact contact@shinba.app.',
@@ -326,15 +325,15 @@ function ProductPreview({
   copy: (typeof landingCopy)['ja'] | (typeof landingCopy)['en'];
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-[760px] gap-4 lg:mx-0 lg:ml-auto xl:pt-1" id="demo">
-      <div className="rounded-lg border border-[#e2d8c7] bg-white p-4 shadow-[0_30px_80px_-44px_rgba(0,0,0,0.28)] sm:p-5 xl:p-6">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-[#c5a059]">{copy.previewEyebrow}</p>
-        <h2 className="mt-3 max-w-[720px] text-balance font-display text-[1.45rem] leading-snug text-[#18392f] sm:text-[1.6rem] lg:text-[1.7rem]">
+    <div className="mx-auto grid w-full max-w-[560px] gap-4 lg:mx-0 lg:ml-auto" id="demo">
+      <div className="rounded-lg border border-[#e2d8c7] bg-white p-4 shadow-[0_30px_80px_-52px_rgba(0,0,0,0.32)] sm:p-5 xl:p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.previewEyebrow}</p>
+        <h2 className="mt-3 max-w-[520px] text-balance font-display text-[1.35rem] leading-snug text-[#18392f] sm:text-[1.55rem]">
           {copy.previewTitle}
         </h2>
         <p className="mt-3 text-sm leading-7 text-stone-600">{copy.previewBody}</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="overflow-hidden rounded-lg border border-[#ebe1cf] xl:self-start">
+          <div className="overflow-hidden rounded-md border border-[#ebe1cf] xl:self-start">
             <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
               {copy.previewDashboardLabel}
             </div>
@@ -348,7 +347,7 @@ function ProductPreview({
             />
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-[#ebe1cf]">
+          <div className="overflow-hidden rounded-md border border-[#ebe1cf]">
             <div className="border-b border-[#ebe1cf] bg-[#fbf7ef] px-4 py-2 text-xs font-semibold text-stone-600">
               {copy.previewReportLabel}
             </div>
@@ -362,9 +361,9 @@ function ProductPreview({
           </div>
 
           <div className="rounded-lg border border-[#ebe1cf] bg-[#183b2d] p-5 text-white md:col-span-2">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-[#e8d49a]">{copy.previewTrustTitle}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#e8d49a]">{copy.previewTrustTitle}</p>
             <p className="mt-3 text-sm leading-7 text-white/78">{copy.previewTrustBody}</p>
-            <div className="mt-4 rounded-lg border border-white/12 bg-white/6 p-4 md:p-5">
+            <div className="mt-4 rounded-md border border-white/12 bg-white/6 p-4 md:p-5">
               <ul className="grid gap-2 text-sm text-white/75 md:grid-cols-2">
                 {copy.previewTrustList.map((item) => (
                   <li key={item}>{item}</li>
@@ -430,16 +429,17 @@ export default function Home() {
   };
 
   return (
-    <main style={landingTheme} className="min-h-screen bg-[#f6f0e7] text-stone-900">
+    <main style={landingTheme} className="min-h-screen overflow-x-hidden bg-[#fffaf1] text-stone-900">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <section className="relative border-b border-[#e7dcc6] bg-[linear-gradient(180deg,#f8f2e8_0%,#f3ecdf_100%)]">
-        <div className="mx-auto flex w-full max-w-[1360px] items-center justify-between gap-4 px-4 py-3 md:px-8">
+      <section className="relative border-b border-[#e7dcc6] bg-[linear-gradient(180deg,#fffaf1_0%,#f6efdf_100%)]">
+        <div className="absolute inset-0 -z-0 opacity-[0.16] [background-image:linear-gradient(rgba(24,60,50,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(24,60,50,0.18)_1px,transparent_1px)] [background-size:56px_56px]" />
+        <div className="relative z-10 mx-auto flex w-full max-w-[1180px] items-center justify-between gap-4 px-5 py-4 md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Image src="/brand-mark.png" alt="Shinba Report" width={42} height={42} className="rounded-xl shadow-sm" />
-            <div className="font-display text-[1.8rem] leading-none text-[var(--brand-primary-dark)]">Shinba Report</div>
+            <div className="font-display text-[1.65rem] leading-none text-[var(--brand-primary-dark)] sm:text-[1.8rem]">Shinba Report</div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Link
@@ -452,16 +452,16 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-[1520px] gap-8 px-5 pb-12 pt-6 sm:px-6 md:px-8 lg:grid-cols-[minmax(560px,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(720px,1.18fr)_minmax(0,0.82fr)] xl:gap-12">
-          <div className="max-w-[860px] lg:pt-4">
-            <div className="mb-4 inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.28em] text-[#c5a059]">
+        <div className="relative z-10 mx-auto grid w-full max-w-[1180px] gap-10 px-5 pb-14 pt-8 sm:px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.78fr)] lg:items-center lg:gap-12 xl:pb-16 xl:pt-10">
+          <div className="max-w-[720px]">
+            <div className="mb-4 inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b6426]">
               <span className="h-px w-10 bg-[#c5a059]" />
               {copy.eyebrow}
             </div>
-            <h1 className="max-w-[860px] text-balance font-display text-[2.35rem] leading-[1.14] text-[#18392f] sm:text-[2.75rem] lg:text-[2.55rem] xl:text-[2.95rem]">
+            <h1 className="max-w-[720px] text-balance font-display text-[2.2rem] leading-[1.16] text-[#18392f] sm:text-[2.6rem] lg:text-[2.75rem] xl:text-[3rem]">
               {copy.headline}
             </h1>
-            <p className="mt-5 max-w-[680px] font-serif text-[1.35rem] leading-snug text-[#2d5a3d] sm:text-[1.65rem] lg:text-[1.75rem]">
+            <p className="mt-5 max-w-[680px] text-[1.1rem] font-semibold leading-8 text-[#2d5a3d] sm:text-[1.28rem]">
               {copy.secondary}
             </p>
             <p className="mt-5 max-w-[690px] text-[15px] leading-8 text-stone-700">{copy.body}</p>
@@ -483,7 +483,7 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#fbf7ef]">
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-8 text-center md:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-8 text-center md:px-8">
           <p className="text-xs tracking-[0.2em] text-[#a08a63]">{copy.socialProofEyebrow}</p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-stone-600">
             {copy.socialProofItems.map((item) => (
@@ -492,23 +492,20 @@ export default function Home() {
           </div>
           <div className="mt-4 space-y-1">
             <p className="text-sm text-stone-500">{copy.socialProofQuote}</p>
-            {'socialProofAttribution' in copy && copy.socialProofAttribution ? (
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-400">{copy.socialProofAttribution}</p>
-            ) : null}
           </div>
         </div>
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#fffaf1]">
-        <div className="mx-auto grid w-full max-w-[1360px] gap-6 px-4 py-10 md:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+        <div className="mx-auto grid w-full max-w-[1180px] gap-8 px-5 py-12 md:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.seoIntentEyebrow}</p>
-            <h2 className="mt-3 font-display text-[2.5rem] leading-none text-[var(--brand-primary)]">{copy.seoIntentTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.seoIntentEyebrow}</p>
+            <h2 className="mt-3 font-display text-[2.15rem] leading-tight text-[var(--brand-primary)] sm:text-[2.5rem]">{copy.seoIntentTitle}</h2>
             <p className="mt-4 text-sm leading-8 text-stone-700">{copy.seoIntentBody}</p>
           </div>
           <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-1">
             {copy.seoIntentItems.map((item) => (
-              <div key={item} className="rounded-2xl border border-[#eadbc1] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_42px_-38px_rgba(0,0,0,0.24)]">
+              <div key={item} className="rounded-lg border border-[#eadbc1] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_42px_-38px_rgba(0,0,0,0.24)]">
                 <div className="mb-2 h-1.5 w-10 rounded-full bg-[var(--brand-accent)]" />
                 {item}
               </div>
@@ -518,16 +515,16 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#f8f3ea]">
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-14 md:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-14 md:px-8">
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.positioningEyebrow}</p>
-              <h2 className="mt-3 font-display text-[3rem] leading-none text-[var(--brand-primary)]">{copy.positioningTitle}</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.positioningEyebrow}</p>
+              <h2 className="mt-3 font-display text-[2.2rem] leading-tight text-[var(--brand-primary)] sm:text-[2.65rem]">{copy.positioningTitle}</h2>
               <p className="mt-4 max-w-[760px] text-sm leading-8 text-stone-700">{copy.positioningBody}</p>
             </div>
             <div className="grid gap-3">
               {copy.positioningPoints.map((point) => (
-                <div key={point} className="rounded-2xl border border-[#e7ddcf] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_40px_-36px_rgba(0,0,0,0.2)]">
+                <div key={point} className="rounded-lg border border-[#e7ddcf] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_40px_-36px_rgba(0,0,0,0.2)]">
                   <div className="mb-2 h-1.5 w-10 rounded-full bg-[var(--brand-accent)]" />
                   {point}
                 </div>
@@ -538,13 +535,13 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#f9f5ec]">
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-14 md:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-14 md:px-8">
           <div className="text-center">
-            <h2 className="font-display text-[2.4rem] text-[var(--brand-primary)] sm:text-[2.8rem]">{copy.processTitle}</h2>
+            <h2 className="font-display text-[2.2rem] leading-tight text-[var(--brand-primary)] sm:text-[2.65rem]">{copy.processTitle}</h2>
           </div>
           <div className="mt-8 grid gap-4 text-center md:grid-cols-3">
             {copy.processSteps.map((step) => (
-              <div key={step.step} className="rounded-xl border border-[#e5d8bf] bg-white p-5">
+              <div key={step.step} className="rounded-lg border border-[#e5d8bf] bg-white p-5">
                 <p className="text-sm text-stone-500">{step.step}</p>
                 <p className="mt-2 font-semibold text-stone-800">{step.title}</p>
               </div>
@@ -552,15 +549,15 @@ export default function Home() {
           </div>
 
           <div className="mt-14 text-center sm:mt-16">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.featureEyebrow}</p>
-            <h2 className="mt-3 font-display text-[3rem] leading-none text-[var(--brand-primary)]">{copy.featureTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.featureEyebrow}</p>
+            <h2 className="mt-3 font-display text-[2.25rem] leading-tight text-[var(--brand-primary)] sm:text-[2.7rem]">{copy.featureTitle}</h2>
             <p className="mx-auto mt-3 max-w-[780px] text-sm leading-7 text-stone-600">{copy.featureSub}</p>
           </div>
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             {copy.cards.map((card) => (
-              <article key={card.number} className="relative overflow-hidden rounded-2xl border border-[#e5d8bf] bg-[#fbf6ec] p-6">
-                <p className="text-[10px] tracking-[0.24em] text-[#c5a059]">{card.number}</p>
-                <h3 className="mt-3 font-display text-[2rem] text-[var(--brand-primary)]">{card.title}</h3>
+              <article key={card.number} className="relative overflow-hidden rounded-lg border border-[#e5d8bf] bg-[#fbf6ec] p-6">
+                <p className="text-[10px] font-bold tracking-[0.24em] text-[#9b6426]">{card.number}</p>
+                <h3 className="mt-3 font-display text-[1.75rem] leading-tight text-[var(--brand-primary)]">{card.title}</h3>
                 <p className="mt-1 text-sm font-semibold text-[#2d5a3d]">{card.sub}</p>
                 <p className="mt-3 text-sm leading-7 text-stone-700">{card.body}</p>
               </article>
@@ -570,17 +567,17 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#f3ece1]">
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-14 md:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-14 md:px-8">
           <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.pricingEyebrow}</p>
-            <h2 className="mt-3 font-display text-[3rem] leading-none text-[var(--brand-primary)]">{copy.pricingTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.pricingEyebrow}</p>
+            <h2 className="mt-3 font-display text-[2.25rem] leading-tight text-[var(--brand-primary)] sm:text-[2.7rem]">{copy.pricingTitle}</h2>
             <p className="mx-auto mt-4 max-w-[880px] text-sm leading-7 text-stone-600">{copy.pricingBody}</p>
           </div>
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             {copy.plans.map((plan, index) => (
               <article
                 key={plan.name}
-                className={`rounded-[24px] border p-6 shadow-[0_18px_44px_-34px_rgba(0,0,0,0.22)] ${
+                className={`rounded-lg border p-6 shadow-[0_18px_44px_-34px_rgba(0,0,0,0.22)] ${
                   index === 1 ? 'border-[#c7a45a] bg-[#fffaf1]' : 'border-[#e5d8bf] bg-[#fbf7ef]'
                 }`}
               >
@@ -603,15 +600,15 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#f8f3ea]">
-        <div className="mx-auto grid w-full max-w-[1360px] gap-8 px-4 py-14 md:px-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
+        <div className="mx-auto grid w-full max-w-[1180px] gap-8 px-5 py-14 md:px-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.privacyEyebrow}</p>
-            <h2 className="mt-3 font-display text-[3rem] leading-none text-[var(--brand-primary)]">{copy.privacyTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.privacyEyebrow}</p>
+            <h2 className="mt-3 font-display text-[2.25rem] leading-tight text-[var(--brand-primary)] sm:text-[2.7rem]">{copy.privacyTitle}</h2>
             <p className="mt-4 max-w-[820px] text-sm leading-8 text-stone-700">{copy.privacyBody}</p>
           </div>
           <div className="grid gap-3">
             {copy.privacyPoints.map((point) => (
-              <div key={point} className="rounded-2xl border border-[#e7ddcf] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_40px_-36px_rgba(0,0,0,0.2)]">
+              <div key={point} className="rounded-lg border border-[#e7ddcf] bg-white px-4 py-4 text-sm leading-7 text-stone-700 shadow-[0_20px_40px_-36px_rgba(0,0,0,0.2)]">
                 <div className="mb-2 h-1.5 w-10 rounded-full bg-[var(--brand-accent)]" />
                 {point}
               </div>
@@ -621,15 +618,15 @@ export default function Home() {
       </section>
 
       <section className="border-t border-[#ece2cf] bg-[#f9f5ec]">
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-14 md:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-14 md:px-8">
           <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.32em] text-[#c5a059]">{copy.faqEyebrow}</p>
-            <h2 className="mt-3 font-display text-[3rem] leading-none text-[var(--brand-primary)]">{copy.faqTitle}</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9b6426]">{copy.faqEyebrow}</p>
+            <h2 className="mt-3 font-display text-[2.25rem] leading-tight text-[var(--brand-primary)] sm:text-[2.7rem]">{copy.faqTitle}</h2>
           </div>
           <div className="mt-10 grid gap-4">
             {copy.faqs.map((faq) => (
-              <article key={faq.q} className="rounded-2xl border border-[#e5d8bf] bg-[#fbf6ec] p-6">
-                <h3 className="font-display text-[1.8rem] text-[var(--brand-primary)]">{faq.q}</h3>
+              <article key={faq.q} className="rounded-lg border border-[#e5d8bf] bg-[#fbf6ec] p-6">
+                <h3 className="font-display text-[1.55rem] leading-tight text-[var(--brand-primary)]">{faq.q}</h3>
                 <p className="mt-3 text-sm leading-7 text-stone-700">{faq.a}</p>
               </article>
             ))}
@@ -639,9 +636,9 @@ export default function Home() {
 
       <section className="relative overflow-hidden bg-[var(--brand-primary)]">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center font-serif text-[20rem] text-white/[0.03]">信</div>
-        <div className="mx-auto w-full max-w-[1360px] px-4 py-16 text-center md:px-8">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#e8d49a]">{copy.finalEyebrow}</p>
-          <h2 className="mt-3 font-display text-[3rem] leading-none text-white sm:text-[3.8rem]">{copy.finalTitle}</h2>
+        <div className="mx-auto w-full max-w-[1180px] px-5 py-16 text-center md:px-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#e8d49a]">{copy.finalEyebrow}</p>
+          <h2 className="mt-3 font-display text-[2.35rem] leading-tight text-white sm:text-[3rem]">{copy.finalTitle}</h2>
           <p className="mx-auto mt-4 max-w-[760px] text-lg leading-8 text-white/72">{copy.finalBody}</p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
