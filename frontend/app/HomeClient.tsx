@@ -51,8 +51,8 @@ export default function Home() {
       : "汎用AIアプリではありません。現場判断を置き換えるのではなく、誤解を減らし、報告と共有を軽くするための仕組みです。",
     servicesTitle: en ? "Services" : "サービス",
     servicesSub: en
-      ? "Start with the visible workflow. Expand only when it genuinely helps the field."
-      : "まずは見えている業務から。現場に役立つ範囲だけ、必要に応じて広げます。",
+      ? "Start with the workflow you can see. Expand only when it helps."
+      : "まずは見えている業務から。必要に応じて広げます。",
     reportTitle: en ? "A practical first step: one owner report." : "最初の一歩は、馬主向け報告1件から。",
     reportBody: en
       ? "Use existing notes, photos, weights, and comments to create a sample owner report in Japanese, English, or bilingual format."
@@ -62,7 +62,7 @@ export default function Home() {
       ? "The first goal is not a subscription. It is confirming fit with real field material."
       : "最初の目的は契約ではなく、実際の素材で合うかを確認することです。",
     faqTitle: en ? "Common questions" : "よくある質問",
-    ctaTitle: en ? "Show one real workflow first." : "まずは、今の業務を1つだけ見せてください。",
+    ctaTitle: en ? "Show one real workflow first." : "まずは、今の業務を1つ見せてください。",
     ctaBody: en
       ? "We can start from one report, one LINE thread, or one handoff routine. If it fits, we move to Shinba Report or a small pilot."
       : "報告書1件、LINE文面、申し送りの流れなど、実際の素材から確認します。合いそうであれば、Shinba Reportや小さなパイロットへ進みます。",
@@ -243,10 +243,10 @@ export default function Home() {
 
       <section id="services" className="bg-[#fffaf1] px-5 py-16 md:px-8" data-analytics-section="services">
         <div className="mx-auto w-full max-w-[1180px]">
-          <div className="grid gap-8 lg:grid-cols-[330px_minmax(0,1fr)] lg:items-end">
+          <div className="grid gap-8 lg:grid-cols-[minmax(420px,0.88fr)_minmax(0,1fr)] lg:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#9b6426]">{copy.servicesTitle}</p>
-              <h2 className="mt-3 font-display text-[2.15rem] leading-tight text-[#17352f] sm:text-[2.65rem] sm:leading-none">{copy.servicesSub}</h2>
+              <h2 className="mt-3 max-w-[620px] font-display text-[2.15rem] leading-tight text-[#17352f] sm:text-[2.65rem] sm:leading-[1.08]">{copy.servicesSub}</h2>
             </div>
             <p className="max-w-[720px] text-sm leading-8 text-stone-700">{copy.reportBody}</p>
           </div>
@@ -352,7 +352,7 @@ export default function Home() {
         <div className="mx-auto grid w-full max-w-[1180px] gap-7 rounded-lg border border-white/14 bg-white/8 p-6 md:p-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#f0c65f]">Next action</p>
-            <h2 className="mt-3 font-display text-[2.45rem] leading-tight sm:text-[3rem]">{copy.ctaTitle}</h2>
+            <h2 className="mt-3 max-w-[980px] font-display text-[2.35rem] leading-tight sm:text-[2.8rem] xl:text-[3rem]">{copy.ctaTitle}</h2>
             <p className="mt-4 max-w-[760px] text-sm leading-8 text-white/75">{copy.ctaBody}</p>
           </div>
           <div className="flex flex-col gap-3">
