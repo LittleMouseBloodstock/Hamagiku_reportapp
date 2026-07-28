@@ -62,7 +62,7 @@ async function rebuildKnowledgeChunks(supabase, args) {
 async function rebuildReportChunks(supabase, args) {
   const { data, error } = await supabase
     .from('reports')
-    .select('id, horse_id, title, body, metrics_json, created_at')
+    .select('id, horse_id, title, body, metrics_json, created_at, horses!inner(owner_id)')
     .not('body', 'is', null)
     .order('created_at', { ascending: false })
     .limit(args.limit);
@@ -71,6 +71,11 @@ async function rebuildReportChunks(supabase, args) {
 
   let processed = 0;
   for (const item of data || []) {
+    const clientId = item.horses?.owner_id || null;
+    if (!item.horse_id || !clientId) {
+      console.warn(`report skipped (missing horse/client scope): ${item.id}`);
+      continue;
+    }
     const baseText = [
       item.title,
       item.body,
@@ -83,14 +88,15 @@ async function rebuildReportChunks(supabase, args) {
     const embeddings = await embedTexts(chunks);
     const rows = chunks.map((chunk, index) => ({
       report_id: item.id,
-      horse_id: item.horse_id || null,
-      client_id: null,
+      horse_id: item.horse_id,
+      client_id: clientId,
       language: 'mixed',
       chunk_text: chunk,
       embedding: vectorToSqlLiteral(embeddings[index] || []),
       metadata: {
         source: 'reports',
         title: item.title,
+        client_id: clientId,
         embedding_model: EMBEDDING_MODEL,
       },
     }));

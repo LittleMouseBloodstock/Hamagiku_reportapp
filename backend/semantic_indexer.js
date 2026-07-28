@@ -21,13 +21,19 @@ async function indexReport(reportId) {
 
   const { data: report, error: reportError } = await supabase
     .from('reports')
-    .select('id, horse_id, title, body, metrics_json, created_at')
+    .select('id, horse_id, title, body, metrics_json, created_at, horses!inner(owner_id)')
     .eq('id', reportId)
     .maybeSingle();
   if (reportError) throw reportError;
   if (!report) {
     const error = new Error('Report not found.');
     error.statusCode = 404;
+    throw error;
+  }
+  const clientId = report.horses?.owner_id || null;
+  if (!report.horse_id || !clientId) {
+    const error = new Error('Report must belong to a horse and client before it can be indexed.');
+    error.statusCode = 422;
     throw error;
   }
 
@@ -41,14 +47,15 @@ async function indexReport(reportId) {
   const embeddings = await embedTexts(chunks);
   const rows = chunks.map((chunk, index) => ({
     report_id: report.id,
-    horse_id: report.horse_id || null,
-    client_id: null,
+    horse_id: report.horse_id,
+    client_id: clientId,
     language: 'mixed',
     chunk_text: chunk,
     embedding: vectorToSqlLiteral(embeddings[index] || []),
     metadata: {
       source: 'reports',
       title: report.title,
+      client_id: clientId,
       embedding_model: EMBEDDING_MODEL,
       indexed_at: new Date().toISOString(),
     },

@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { normalizeCareRecords } from '@/lib/careRecords';
 
 export const runtime = 'edge';
 
@@ -52,6 +53,9 @@ type Report = {
         damJp?: string | null;
         conditionEn?: string | null;
         conditionJp?: string | null;
+        reportType?: string | null;
+        careRecordsSnapshot?: unknown;
+        careRecords?: unknown;
     };
 };
 type ReportRow = Report & { horses?: Horse | null };
@@ -299,9 +303,13 @@ export default function ClientBatchReports() {
                 ) as ReportRow[];
 
                 if (isMounted) {
-                    if (Array.isArray(reportsData) && reportsData.length > 0) {
+                    const monthlyReportsData = (reportsData || []).filter((item) => {
+                        const type = item.metrics_json?.reportType;
+                        return !type || type === 'monthly';
+                    });
+                    if (monthlyReportsData.length > 0) {
                         const idList = Array.from(
-                            new Set(reportsData.map((r) => r.horse_id).filter(Boolean))
+                            new Set(monthlyReportsData.map((r) => r.horse_id).filter(Boolean))
                         ).join(',');
 
                         const horsesById = new Map<string, Horse>();
@@ -313,7 +321,7 @@ export default function ClientBatchReports() {
                             horses.forEach((h) => horsesById.set(h.id, h));
                         }
 
-                        const formattedReports = reportsData.map((r: ReportRow) => {
+                        const formattedReports = monthlyReportsData.map((r: ReportRow) => {
                             const horse = horsesById.get(r.horse_id) || null;
                             if (!horse) return null;
 
@@ -346,6 +354,7 @@ export default function ClientBatchReports() {
                                 trainingStatusEn: metrics.statusEn || r.status_training || '',
                                 targetJp: r.target || '',
                                 targetEn: metrics.targetEn || '',
+                                careRecords: normalizeCareRecords(metrics.careRecordsSnapshot || metrics.careRecords || []),
                                 weightHistory: metrics.weightHistory || [],
                                 mainPhoto: r.main_photo_url || horse.photo_url || '',
                                 showLogo: metrics.showLogo ?? true,
@@ -354,7 +363,7 @@ export default function ClientBatchReports() {
                             return { report: r, horse: horse, data: rData };
                         }).filter((item): item is { report: Report; horse: Horse; data: ReportData } => item !== null);
 
-                        console.log('[batch] reportsData', reportsData.length, 'formatted', formattedReports.length);
+                        console.log('[batch] reportsData', monthlyReportsData.length, 'formatted', formattedReports.length);
 
                         setReports(formattedReports);
                     } else {
@@ -497,8 +506,8 @@ export default function ClientBatchReports() {
                     .page-break-after-always { 
                         page-break-after: always !important;
                         break-after: page !important;
-                        break-inside: avoid-page !important;
-                        page-break-inside: avoid !important;
+                        break-inside: auto !important;
+                        page-break-inside: auto !important;
                         position: static !important;
                         display: block;
                         width: 210mm;
@@ -538,7 +547,40 @@ export default function ClientBatchReports() {
                         print-color-adjust: exact !important;
                         /* page break handled by wrapper */
                     }
-                    .batch-report-page .report-preview.no-logo {
+                    .batch-report-page .report-preview.has-appendix {
+                        height: auto !important;
+                        min-height: 0 !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
+                        page-break-inside: auto !important;
+                        break-inside: auto !important;
+                    }
+                    .batch-report-page .report-preview.has-appendix .report-page {
+                        width: 210mm !important;
+                        height: 285mm !important;
+                        min-height: 285mm !important;
+                        margin: 0 auto !important;
+                        padding: 15mm 30px 8px !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid-page !important;
+                    }
+                    .batch-report-page .report-preview.has-appendix .appendix-page {
+                        height: auto !important;
+                        min-height: 285mm !important;
+                        overflow: visible !important;
+                    }
+                    .batch-report-page .report-preview.has-appendix.no-logo .report-page {
+                        padding-top: 20mm !important;
+                    }
+                    .batch-report-page .report-preview.has-appendix .report-page:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+                    .batch-report-page .report-preview.no-logo:not(.has-appendix) {
                         position: static !important;
                         top: 0 !important;
                         padding-top: 20mm !important;

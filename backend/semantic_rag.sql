@@ -35,21 +35,45 @@ CREATE TABLE IF NOT EXISTS report_chunks (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE domain_knowledge ENABLE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_chunks ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE domain_knowledge, knowledge_chunks, report_chunks FROM anon, authenticated;
+
 CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx
   ON knowledge_chunks
   USING ivfflat (embedding vector_cosine_ops)
   WITH (lists = 100);
+
+CREATE INDEX IF NOT EXISTS knowledge_chunks_knowledge_id_idx
+  ON knowledge_chunks (knowledge_id);
 
 CREATE INDEX IF NOT EXISTS report_chunks_embedding_idx
   ON report_chunks
   USING ivfflat (embedding vector_cosine_ops)
   WITH (lists = 100);
 
+CREATE INDEX IF NOT EXISTS domain_knowledge_workspace_idx
+  ON domain_knowledge (workspace_id);
+
+CREATE INDEX IF NOT EXISTS report_chunks_report_id_idx
+  ON report_chunks (report_id);
+
+CREATE INDEX IF NOT EXISTS report_chunks_client_horse_idx
+  ON report_chunks (client_id, horse_id);
+
+CREATE INDEX IF NOT EXISTS report_chunks_horse_id_idx
+  ON report_chunks (horse_id);
+
+DROP FUNCTION IF EXISTS match_knowledge_chunks(TEXT, INTEGER, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION match_knowledge_chunks(
   query_embedding_text TEXT,
   match_count INTEGER,
   filter_language TEXT,
-  filter_category TEXT DEFAULT NULL
+  filter_category TEXT DEFAULT NULL,
+  filter_workspace_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
   knowledge_id UUID,
@@ -62,6 +86,7 @@ RETURNS TABLE (
   similarity DOUBLE PRECISION
 )
 LANGUAGE SQL
+SET search_path = public, extensions
 AS $$
   SELECT
     dk.id AS knowledge_id,
@@ -77,6 +102,10 @@ AS $$
   WHERE dk.is_active = true
     AND dk.language = filter_language
     AND (filter_category IS NULL OR dk.category = filter_category)
+    AND (
+      (filter_workspace_id IS NULL AND dk.workspace_id IS NULL)
+      OR dk.workspace_id = filter_workspace_id
+    )
     AND kc.embedding IS NOT NULL
   ORDER BY kc.embedding <=> query_embedding_text::vector
   LIMIT match_count;
@@ -98,6 +127,7 @@ RETURNS TABLE (
   similarity DOUBLE PRECISION
 )
 LANGUAGE SQL
+SET search_path = public, extensions
 AS $$
   SELECT
     r.id AS report_id,
@@ -109,9 +139,17 @@ AS $$
     1 - (rc.embedding <=> query_embedding_text::vector) AS similarity
   FROM report_chunks rc
   JOIN reports r ON r.id = rc.report_id
-  WHERE (filter_horse_id IS NULL OR r.horse_id = filter_horse_id OR (1 - (rc.embedding <=> query_embedding_text::vector)) > 0.82)
-    AND (filter_client_id IS NULL OR rc.client_id = filter_client_id OR (1 - (rc.embedding <=> query_embedding_text::vector)) > 0.8)
+  WHERE filter_horse_id IS NOT NULL
+    AND filter_client_id IS NOT NULL
+    AND rc.client_id = filter_client_id
+    AND rc.horse_id = filter_horse_id
     AND rc.embedding IS NOT NULL
   ORDER BY rc.embedding <=> query_embedding_text::vector
   LIMIT match_count;
 $$;
+
+REVOKE EXECUTE ON FUNCTION match_knowledge_chunks(TEXT, INTEGER, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION match_knowledge_chunks(TEXT, INTEGER, TEXT, TEXT, UUID) TO service_role;
+
+REVOKE EXECUTE ON FUNCTION match_report_chunks(TEXT, INTEGER, UUID, UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION match_report_chunks(TEXT, INTEGER, UUID, UUID) TO service_role;

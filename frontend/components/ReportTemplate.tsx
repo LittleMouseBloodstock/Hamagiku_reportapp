@@ -5,7 +5,8 @@ import { FileText, Image as ImageIcon, Activity, Globe, Crop, X, Check, ArrowUp,
 import Cropper from 'react-easy-crop';
 import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
-import { translateText } from '@/lib/api';
+import { getApiAuthHeaders, translateText } from '@/lib/api';
+import { getCareRecordNote, paginateCareRecords, type CareRecord } from '@/lib/careRecords';
 
 // Google Fonts Component
 const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean }) => (
@@ -263,6 +264,12 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
         page-break-after: always !important;
         box-shadow: none !important;
         transform: none !important;
+      }`}
+
+      ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix .appendix-page {
+        height: auto !important;
+        min-height: 285mm !important;
+        overflow: visible !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.has-appendix .report-page:last-child {
@@ -582,13 +589,7 @@ export type ReportData = {
     targetJp: string;
     commentEn: string;
     commentJp: string;
-    careRecords?: Array<{
-        id: string;
-        date: string;
-        note: string;
-        reportMode: 'none' | 'body' | 'appendix';
-        imageUrls?: string[];
-    }>;
+    careRecords?: CareRecord[];
     weightHistory: WeightHistoryPoint[];
     logo: string | null;
     originalPhoto?: string | null; // Keep original for re-cropping
@@ -723,9 +724,10 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print';
     const appendixRecords = (data.careRecords || []).filter((item) => (
-        item.reportMode === 'appendix' && (item.note.trim() || (item.imageUrls || []).length)
+        item.reportMode === 'appendix' && (getCareRecordNote(item, lang).trim() || (item.imageUrls || []).length)
     ));
     const hasAppendix = appendixRecords.length > 0;
+    const appendixPages = paginateCareRecords(appendixRecords, lang);
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
     const [renderPhotoSrc, setRenderPhotoSrc] = useState('');
     const primaryHorseName = lang === 'ja' ? (data.horseNameJp || '（馬名を入力）') : (data.horseNameEn || '(Horse Name)');
@@ -826,15 +828,15 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         if (!aiPrompt) return;
         setIsGenerating(true);
         const carePrompt = (data.careRecords || [])
-            .filter((item) => item.reportMode === 'body' && item.note.trim())
-            .map((item) => `- ${item.date || 'undated'}: ${item.note.trim()}`)
+            .filter((item) => item.reportMode === 'body' && getCareRecordNote(item, 'en').trim())
+            .map((item) => `- ${item.date || 'undated'}: ${getCareRecordNote(item, 'en').trim()}`)
             .join('\n');
         const fullPrompt = [aiPrompt, carePrompt ? `Care notes to reflect if relevant:\n${carePrompt}` : ''].filter(Boolean).join('\n\n');
         try {
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
             const res = await fetch(`${baseUrl}/generate`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders(),
                 body: JSON.stringify({ prompt: fullPrompt })
             });
 
@@ -1497,7 +1499,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                                         {record.date || (language === 'ja' ? '日付なし' : 'Undated')}
                                                     </div>
                                                     <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs leading-relaxed text-stone-600">
-                                                        {record.note || (language === 'ja' ? 'メモ未入力' : 'No note')}
+                                                        {getCareRecordNote(record, language) || (language === 'ja' ? 'メモ未入力' : 'No note')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1817,12 +1819,13 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                     </div>
                     </div>
-                    {hasAppendix && (
+                    {hasAppendix && appendixPages.map((pageRecords, pageIndex) => (
                         <div
+                            key={`appendix-page-${pageIndex + 1}`}
                             className="report-page appendix-page bg-white relative flex flex-col"
                             style={{
                                 width: '210mm',
-                                height: '297mm',
+                                height: 'auto',
                                 minHeight: '297mm',
                                 padding: showLogo ? '15mm 30px 10px 30px' : '20mm 30px 10px 30px',
                                 boxSizing: 'border-box'
@@ -1839,27 +1842,34 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                             {lang === 'ja' ? 'レポートに添付する補足記録' : 'Supporting care notes attached to this report'}
                                         </p>
                                     </div>
-                                    <div className="text-right text-sm text-[#555]">
-                                        <div className="font-bold">{primaryHorseName}</div>
-                                        <div>{lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}</div>
-                                    </div>
+                                            <div className="text-right text-sm text-[#555]">
+                                                <div className="font-bold">{primaryHorseName}</div>
+                                                <div>{lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}</div>
+                                                <div className="mt-1 text-xs text-[#888]">{pageIndex + 1} / {appendixPages.length}</div>
+                                            </div>
                                 </div>
                             </header>
-                            <div className="flex-1 space-y-4 overflow-hidden">
-                                {appendixRecords.slice(0, 5).map((record, index) => {
+                            <div className="flex-1 space-y-4 overflow-visible">
+                                {pageRecords.map((record, index) => {
                                     const imageUrls = (record.imageUrls || []).filter(Boolean).slice(0, 6);
                                     const imageHeightClass = imageUrls.length <= 1 ? 'h-[300px]' : imageUrls.length === 2 ? 'h-[230px]' : 'h-[155px]';
+                                    const recordNumber = record.appendixRecordNumber || index + 1;
+                                    const continuationLabel = (record.continuationCount || 1) > 1
+                                        ? (lang === 'ja'
+                                            ? `（続き ${record.continuationIndex}/${record.continuationCount}）`
+                                            : ` (part ${record.continuationIndex}/${record.continuationCount})`)
+                                        : '';
                                     return (
                                         <section key={record.id || `${record.date}-${index}`} className="rounded-xl border border-[#d8c8af] bg-white p-5">
                                             <div className="flex items-center justify-between gap-4 border-b border-[#eee4d8] pb-3">
-                                                <h3 className="font-serif-en text-[#1a3c34] font-bold tracking-[0.18em] text-sm uppercase">
-                                                    {lang === 'ja' ? `記録 #${index + 1}` : `Record #${index + 1}`}
-                                                </h3>
+                                                 <h3 className="font-serif-en text-[#1a3c34] font-bold tracking-[0.18em] text-sm uppercase">
+                                                     {lang === 'ja' ? `記録 #${recordNumber}${continuationLabel}` : `Record #${recordNumber}${continuationLabel}`}
+                                                 </h3>
                                                 <span className="text-sm text-[#666]">{record.date || '-'}</span>
                                             </div>
-                                            {record.note ? (
+                                            {getCareRecordNote(record, lang) ? (
                                                 <p className={`mt-4 whitespace-pre-wrap text-[#222] ${lang === 'ja' ? 'font-serif-jp text-[14px] leading-[1.8]' : 'font-serif-en text-[16px] leading-[1.65]'}`}>
-                                                    {record.note}
+                                                    {getCareRecordNote(record, lang)}
                                                 </p>
                                             ) : null}
                                             {imageUrls.length ? (
@@ -1881,19 +1891,12 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         </section>
                                     );
                                 })}
-                                {appendixRecords.length > 5 && (
-                                    <p className="text-xs text-[#777]">
-                                        {lang === 'ja'
-                                            ? `ほか ${appendixRecords.length - 5} 件の記録は省略されています。`
-                                            : `${appendixRecords.length - 5} additional records are omitted from this one-page appendix.`}
-                                    </p>
-                                )}
                             </div>
                             <div className="footer-text mt-auto text-center text-[#aaa] font-serif-en tracking-widest text-[10px]">
-                                HAMAGIKU FARM - CARE APPENDIX | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
+                                HAMAGIKU FARM - CARE APPENDIX | {lang === 'ja' ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)} | {pageIndex + 1}/{appendixPages.length}
                             </div>
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
         </div >

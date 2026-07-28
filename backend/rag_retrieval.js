@@ -76,14 +76,19 @@ function dedupeTranslationRules(items = []) {
 
 function matchesCategoryFilters(item, params = {}) {
   const category = item?.category || null;
+  const workspaceId = item?.workspace_id || null;
   const include = Array.isArray(params.categories) ? params.categories.filter(Boolean) : [];
   const exclude = Array.isArray(params.excludeCategories) ? params.excludeCategories.filter(Boolean) : [];
+  if (params.workspaceId ? workspaceId !== params.workspaceId : workspaceId !== null) return false;
   if (include.length && !include.includes(category)) return false;
   if (exclude.length && exclude.includes(category)) return false;
   return true;
 }
 
 function matchesSimilarReportFilters(item, params = {}) {
+  if (!params.horseId || !params.clientId) return false;
+  if (item?.horse_id !== params.horseId) return false;
+  if (item?.client_id !== params.clientId) return false;
   if (params.excludeReportId && item?.report_id === params.excludeReportId) return false;
   return true;
 }
@@ -136,7 +141,7 @@ async function searchKnowledgeLexical(supabase, params, queryText) {
   const rows = await safeSelect(
     supabase
       .from('domain_knowledge')
-      .select('id, category, title, content, language, metadata, updated_at')
+      .select('id, workspace_id, category, title, content, language, metadata, updated_at')
       .eq('is_active', true)
       .limit(30)
   );
@@ -164,7 +169,9 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
   const rows = await safeSelect(
     supabase
       .from('reports')
-      .select('id, horse_id, body, metrics_json, created_at')
+      .select('id, horse_id, body, metrics_json, created_at, horses!inner(owner_id)')
+      .eq('horse_id', params.horseId)
+      .eq('horses.owner_id', params.clientId)
       .not('body', 'is', null)
       .order('created_at', { ascending: false })
       .limit(20)
@@ -174,7 +181,7 @@ async function searchSimilarReportsLexical(supabase, params, queryText) {
     .map((item) => ({
       report_id: item.id,
       horse_id: item.horse_id,
-      client_id: null,
+      client_id: item.horses?.owner_id || null,
       body: item.body,
       metrics_json: item.metrics_json,
       created_at: item.created_at,
@@ -211,6 +218,7 @@ async function searchKnowledge(params = {}) {
       match_count: params.limit || 5,
       filter_language: params.language || 'ja',
       filter_category: params.category || null,
+      filter_workspace_id: params.workspaceId || null,
     })).filter((item) => matchesCategoryFilters(item, params));
 
     if (semanticRows.length) {
@@ -237,6 +245,7 @@ async function loadTranslationRules() {
     supabase
       .from('translation_rules')
       .select('id, source_phrase, target_phrase, priority, rule_type, metadata')
+      .eq('is_active', true)
       .order('priority', { ascending: true })
       .limit(30)
   );
@@ -248,6 +257,14 @@ async function loadTranslationRules() {
 }
 
 async function searchSimilarReports(params = {}) {
+  if (!params.horseId || !params.clientId) {
+    return attachRagMeta([], {
+      source: 'disabled',
+      count: 0,
+      reason: 'horse_and_client_scope_required',
+    });
+  }
+
   const supabase = createAdminClient();
   if (!supabase) {
     return attachRagMeta([], {

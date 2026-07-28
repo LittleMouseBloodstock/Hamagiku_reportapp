@@ -5,6 +5,8 @@ import type { InputHTMLAttributes } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
+import { translateText } from '@/lib/api';
+import { getCareRecordNote, normalizeCareRecords, type CareRecord } from '@/lib/careRecords';
 
 type HorseOption = {
     id: string;
@@ -17,18 +19,12 @@ type HorseOption = {
     last_worming_note?: string | null;
 };
 
-type CareRecord = {
-    id: string;
-    date: string;
-    note: string;
-    reportMode: 'none' | 'body' | 'appendix';
-    imageUrls?: string[];
-};
-
 const emptyRecord = (): CareRecord => ({
     id: `care-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     date: '',
     note: '',
+    noteJp: '',
+    noteEn: '',
     reportMode: 'none'
 });
 
@@ -39,6 +35,7 @@ export default function CareRecordsPage() {
     const [selectedHorseId, setSelectedHorseId] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [translating, setTranslating] = useState(false);
     const [uploadingRecordId, setUploadingRecordId] = useState('');
     const loadedHorseIdRef = useRef('');
     const hasUnsavedCareChangesRef = useRef(false);
@@ -50,6 +47,11 @@ export default function CareRecordsPage() {
         last_worming_note: ''
     });
     const [records, setRecords] = useState<CareRecord[]>([]);
+    const recordsRef = useRef<CareRecord[]>([]);
+
+    useEffect(() => {
+        recordsRef.current = records;
+    }, [records]);
 
     const selectedHorse = useMemo(
         () => horses.find((horse) => horse.id === selectedHorseId) || null,
@@ -75,7 +77,7 @@ export default function CareRecordsPage() {
     const loadCareDraft = async (horseId: string) => {
         const rows = await restGet(`report_drafts?draft_key=eq.${encodeURIComponent(draftKeyForHorse(horseId))}&select=data`, getHeaders());
         const nextRecords = rows?.[0]?.data?.records;
-        return Array.isArray(nextRecords) ? nextRecords as CareRecord[] : [];
+        return normalizeCareRecords(nextRecords);
     };
 
     const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
@@ -180,6 +182,51 @@ export default function CareRecordsPage() {
         setRecords((prev) => prev.map((record) => record.id === recordId ? { ...record, [key]: value } : record));
     };
 
+    const handleRecordNoteChange = (recordId: string, value: string) => {
+        markCareDirty();
+        setRecords((prev) => prev.map((record) => record.id === recordId
+            ? {
+                ...record,
+                note: value,
+                ...(language === 'ja'
+                    ? { noteJp: value, noteEn: '' }
+                    : { noteEn: value, noteJp: '' })
+            }
+            : record));
+    };
+
+    const translateMissingCareNotes = async (nextRecords: CareRecord[]) => {
+        const translated = await Promise.all(nextRecords.map(async (record) => {
+            const noteJp = (record.noteJp || '').trim();
+            const noteEn = (record.noteEn || '').trim();
+            if (language === 'ja' && noteJp && !noteEn) {
+                const result = await translateText(noteJp, 'en', 'care');
+                return { ...record, note: noteJp, noteJp, noteEn: result?.translatedText?.trim() || noteEn };
+            }
+            if (language === 'en' && noteEn && !noteJp) {
+                const result = await translateText(noteEn, 'ja', 'care');
+                return { ...record, note: noteEn, noteJp: result?.translatedText?.trim() || noteJp, noteEn };
+            }
+            return { ...record, note: record.note.trim(), noteJp: noteJp || undefined, noteEn: noteEn || undefined };
+        }));
+        return translated;
+    };
+
+    const completeCareTranslations = async () => {
+        if (translating || !records.some((record) => getCareRecordNote(record, language).trim())) return;
+        setTranslating(true);
+        try {
+            const nextRecords = await translateMissingCareNotes(records);
+            setRecords(nextRecords);
+            markCareDirty();
+        } catch (error) {
+            console.error('Failed to translate care records:', error);
+            alert(language === 'ja' ? 'ケア記録の翻訳に失敗しました。' : 'Care record translation failed.');
+        } finally {
+            setTranslating(false);
+        }
+    };
+
     const addRecord = () => {
         markCareDirty();
         setRecords((prev) => [...prev, emptyRecord()]);
@@ -196,8 +243,13 @@ export default function CareRecordsPage() {
     const saveCareDraftRecords = async (nextRecords: CareRecord[]) => {
         if (!selectedHorseId) return;
         const cleanedRecords = nextRecords
-            .map((record) => ({ ...record, note: record.note.trim() }))
-            .filter((record) => record.date || record.note || (record.imageUrls || []).length);
+            .map((record) => ({
+                ...record,
+                note: record.note.trim(),
+                noteJp: record.noteJp?.trim() || undefined,
+                noteEn: record.noteEn?.trim() || undefined
+            }))
+            .filter((record) => record.date || record.note || record.noteJp || record.noteEn || (record.imageUrls || []).length);
 
         await restPost('report_drafts?on_conflict=draft_key', {
             draft_key: draftKeyForHorse(selectedHorseId),
@@ -222,16 +274,13 @@ export default function CareRecordsPage() {
                 .map((result) => result.value);
             const failedCount = results.length - urls.length;
             if (urls.length) {
-                let nextRecordsToSave: CareRecord[] = [];
-                setRecords((prev) => {
-                    const next = prev.map((record) => (
-                        record.id === recordId
-                            ? { ...record, imageUrls: [...(record.imageUrls || []), ...urls] }
-                            : record
-                    ));
-                    nextRecordsToSave = next;
-                    return next;
-                });
+                const nextRecordsToSave = recordsRef.current.map((record) => (
+                    record.id === recordId
+                        ? { ...record, imageUrls: [...(record.imageUrls || []), ...urls] }
+                        : record
+                ));
+                recordsRef.current = nextRecordsToSave;
+                setRecords(nextRecordsToSave);
                 await saveCareDraftRecords(nextRecordsToSave);
                 hasUnsavedCareChangesRef.current = false;
             }
@@ -274,7 +323,10 @@ export default function CareRecordsPage() {
                 updated_at: new Date().toISOString()
             }, getHeaders());
 
-            await saveCareDraftRecords(records);
+            setTranslating(true);
+            const translatedRecords = await translateMissingCareNotes(records);
+            setRecords(translatedRecords);
+            await saveCareDraftRecords(translatedRecords);
 
             setHorses((prev) => prev.map((horse) => horse.id === selectedHorseId ? {
                 ...horse,
@@ -289,6 +341,7 @@ export default function CareRecordsPage() {
             console.error('Failed to save care records:', error);
             alert(language === 'ja' ? 'ケア記録の保存に失敗しました。' : 'Failed to save care records.');
         } finally {
+            setTranslating(false);
             setSaving(false);
         }
     };
@@ -320,6 +373,15 @@ export default function CareRecordsPage() {
                             </option>
                         ))}
                     </select>
+                    <button
+                        onClick={() => void completeCareTranslations()}
+                        disabled={translating || saving || !selectedHorseId}
+                        className="px-4 py-2 text-sm rounded-lg border border-[#1a3c34] text-[#1a3c34] hover:bg-[#1a3c34]/5 disabled:opacity-50"
+                    >
+                        {translating
+                            ? (language === 'ja' ? '英日訳中...' : 'Translating...')
+                            : (language === 'ja' ? '英日訳を補完' : 'Complete JP/EN')}
+                    </button>
                     <button
                         onClick={handleSave}
                         disabled={saving || !!uploadingRecordId || !selectedHorseId}
@@ -396,7 +458,7 @@ export default function CareRecordsPage() {
                                             : 'Keep farm-side notes from vet explanations and follow-up updates.'}
                                     </div>
                                 </div>
-                                <button onClick={addRecord} className="px-4 py-2 text-sm rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200">
+                        <button onClick={addRecord} className="px-4 py-2 text-sm rounded-lg bg-stone-100 text-stone-700 hover:bg-stone-200">
                                     {language === 'ja' ? '記録追加' : 'Add Note'}
                                 </button>
                             </div>
@@ -418,7 +480,12 @@ export default function CareRecordsPage() {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? '共有メモ' : 'Shared Note'}</label>
-                                            <textarea className="w-full min-h-[120px] rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.note} onChange={(e) => handleRecordChange(record.id, 'note', e.target.value)} />
+                                            <textarea className="w-full min-h-[120px] rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={language === 'ja' ? (record.noteJp || record.note) : (record.noteEn || record.note)} onChange={(e) => handleRecordNoteChange(record.id, e.target.value)} />
+                                            <div className="mt-1 text-[11px] text-stone-400">
+                                                {language === 'ja'
+                                                    ? (record.noteEn ? 'English translation is ready.' : '保存時に英訳を自動補完します。')
+                                                    : (record.noteJp ? '日本語訳を保持しています。' : 'Japanese translation is completed on save.')}
+                                            </div>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? 'レポート出力' : 'Report Output'}</label>

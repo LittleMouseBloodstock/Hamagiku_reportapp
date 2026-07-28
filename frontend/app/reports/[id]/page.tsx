@@ -4,13 +4,17 @@ export const runtime = 'edge';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
+import StatusReportTemplate, { StatusReportData } from '@/components/StatusReportTemplate';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
-const stripDraftImagePayload = <T extends ReportData | DepartureReportData>(data: T): T => {
+type ReportKind = 'monthly' | 'departure' | 'status';
+type EditorData = ReportData | DepartureReportData | StatusReportData;
+
+const stripDraftImagePayload = <T extends EditorData>(data: T): T => {
     if (!data || typeof data !== 'object') return data;
     const next = { ...data } as T & { mainPhoto?: string; originalPhoto?: string | null };
     if ('mainPhoto' in next && typeof next.mainPhoto === 'string' && next.mainPhoto.startsWith('data:')) {
@@ -50,14 +54,14 @@ export default function ReportEditor() {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [reviewStatus, setReviewStatus] = useState<string>('draft');
     const [isDirty, setIsDirty] = useState(false);
-    const [reportType, setReportType] = useState<'monthly' | 'departure'>('monthly');
+    const [reportType, setReportType] = useState<ReportKind>('monthly');
     const [draftPromptedKey, setDraftPromptedKey] = useState<string | null>(null);
     const [autosaveStatus, setAutosaveStatus] = useState<string>('');
     const [autosaveStamp, setAutosaveStamp] = useState<number>(0);
     const [printOverride, setPrintOverride] = useState(false);
 
     // Initial Data for Template
-    const [initialData, setInitialData] = useState<Partial<ReportData | DepartureReportData>>({});
+    const [initialData, setInitialData] = useState<Partial<EditorData>>({});
     const [horseId, setHorseId] = useState<string | null>(null);
 
     // Horse Selection (for New Reports)
@@ -65,7 +69,7 @@ export default function ReportEditor() {
     const [horses, setHorses] = useState<{ id: string, name: string, name_en: string, horse_status?: string | null }[]>([]);
 
     // Current Data (Synced from Child)
-    const reportDataRef = useRef<ReportData | DepartureReportData | null>(null);
+    const reportDataRef = useRef<EditorData | null>(null);
     const autosaveTimerRef = useRef<number | null>(null);
     const remoteAutosaveTimerRef = useRef<number | null>(null);
     const lastRemoteSaveRef = useRef<number>(0);
@@ -113,7 +117,7 @@ export default function ReportEditor() {
             ...initialData,
             outputMode: 'print',
             showLogo
-        } as Partial<ReportData | DepartureReportData>;
+        } as Partial<EditorData>;
     }, [initialData, isPrintView, printOverride, printLogoParam]);
 
     const getDraftHeaders = () => {
@@ -281,7 +285,7 @@ export default function ReportEditor() {
         try {
             const data = await restGet(`reports?horse_id=eq.${horseId}&select=weight,metrics_json,created_at,title&order=created_at.desc&limit=5`);
             const monthly = (data || []).find((r: { metrics_json?: { reportType?: string } }) => {
-                return r?.metrics_json?.reportType !== 'departure';
+                return r?.metrics_json?.reportType !== 'departure' && r?.metrics_json?.reportType !== 'status';
             });
             return monthly ?? null;
         } catch {
@@ -299,6 +303,8 @@ export default function ReportEditor() {
         id: string;
         date: string;
         note: string;
+        noteJp?: string;
+        noteEn?: string;
         reportMode: 'none' | 'body' | 'appendix';
         imageUrls?: string[];
     };
@@ -313,6 +319,8 @@ export default function ReportEditor() {
                 ...record,
                 date: latest.date || record.date,
                 note: latest.note || record.note,
+                noteJp: latest.noteJp || record.noteJp,
+                noteEn: latest.noteEn || record.noteEn,
                 reportMode: latest.reportMode !== 'none' ? latest.reportMode : record.reportMode,
                 imageUrls: latest.imageUrls?.length ? latest.imageUrls : record.imageUrls
             };
@@ -321,12 +329,12 @@ export default function ReportEditor() {
     };
 
     const mergeDraftCareRecords = (
-        draftData: ReportData | DepartureReportData | null | undefined,
+        draftData: EditorData | null | undefined,
         latestRecords: CareRecord[],
-        draftType?: 'monthly' | 'departure' | null
+        draftType?: ReportKind | null
     ) => {
         if (!draftData) return draftData;
-        if (draftType === 'departure') return draftData;
+        if (draftType !== 'monthly') return draftData;
 
         const monthlyDraft = draftData as ReportData;
         const snapshotRecords = Array.isArray(monthlyDraft.careRecords) ? monthlyDraft.careRecords : [];
@@ -339,15 +347,15 @@ export default function ReportEditor() {
     };
 
     const mergeLatestHorsePedigree = useCallback(async (
-        draftData: ReportData | DepartureReportData | null | undefined,
-        draftType?: 'monthly' | 'departure' | null
+        draftData: EditorData | null | undefined,
+        draftType?: ReportKind | null
     ) => {
         if (!draftData || !horseId) return draftData;
         try {
             const horseArr = await restGet(`horses?id=eq.${horseId}&select=sire,sire_en,dam,dam_en`);
             const horse = horseArr?.[0];
             const pedigree = resolvePedigreeFields(horse, draftData);
-            if (draftType === 'departure') {
+            if (draftType === 'departure' || draftType === 'status') {
                 const depDraft = draftData as DepartureReportData;
                 return {
                     ...depDraft,
@@ -498,7 +506,11 @@ export default function ReportEditor() {
                     const params = new URLSearchParams(window.location.search);
                     const paramHorseId = params.get('horseId');
                     const reportTypeParam = params.get('reportType');
-                    const nextReportType = reportTypeParam === 'departure' ? 'departure' : 'monthly';
+                    const nextReportType: ReportKind = reportTypeParam === 'departure'
+                        ? 'departure'
+                        : reportTypeParam === 'status'
+                            ? 'status'
+                            : 'monthly';
                     if (isMounted) setReportType(nextReportType);
                     const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.'); // yyyy.MM
                     const sixMonthsAgo = new Date();
@@ -531,7 +543,31 @@ export default function ReportEditor() {
                             latestWeightValue
                         );
 
-                        if (nextReportType === 'departure') {
+                        if (nextReportType === 'status') {
+                            const pedigree = resolvePedigreeFields(horse);
+                            const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                            setInitialData({
+                                reportDate: new Date().toISOString().slice(0, 10),
+                                horseNameJp: horse?.name || '',
+                                horseNameEn: horse?.name_en || '',
+                                sireJp: pedigree.sireJp,
+                                sireEn: pedigree.sireEn,
+                                damJp: pedigree.damJp,
+                                damEn: pedigree.damEn,
+                                ownerName: horse?.clients?.name || '',
+                                trainerNameJp: horse?.trainers?.trainer_name || '',
+                                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
+                                weightDate: latestWeightDate || '',
+                                assessmentJp: '', assessmentEn: '',
+                                managementJp: [horse?.last_farrier_note, horse?.last_worming_note].filter(Boolean).join(' / '),
+                                managementEn: '',
+                                nextStepsJp: '', nextStepsEn: '',
+                                commentJp: '', commentEn: '',
+                                outputMode: defaultOutputMode,
+                                showLogo: defaultOutputMode !== 'print'
+                            } as Partial<StatusReportData>);
+                        } else if (nextReportType === 'departure') {
                             const pedigree = resolvePedigreeFields(horse);
                             const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                             setInitialData({
@@ -629,11 +665,40 @@ export default function ReportEditor() {
 
                     // Parse metrics_json for extra fields
                     const metrics = report.metrics_json || {};
-                    const reportTypeFromMetrics = metrics.reportType === 'departure' ? 'departure' : 'monthly';
+                    const reportTypeFromMetrics: ReportKind = metrics.reportType === 'departure'
+                        ? 'departure'
+                        : metrics.reportType === 'status'
+                            ? 'status'
+                            : 'monthly';
                     setReportType(reportTypeFromMetrics);
 
                     // Map DB to ReportData
-                    if (reportTypeFromMetrics === 'departure') {
+                    if (reportTypeFromMetrics === 'status') {
+                        const pedigree = resolvePedigreeFields(horse, metrics);
+                        const resolvedMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
+                            ? metrics.outputMode
+                            : resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                        setInitialData({
+                            reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
+                            horseNameJp: metrics.horseNameJp || horse?.name || '',
+                            horseNameEn: metrics.horseNameEn || horse?.name_en || '',
+                            ownerName: metrics.ownerName || horse?.clients?.name || '',
+                            trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
+                            trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
+                            sireJp: pedigree.sireJp,
+                            sireEn: pedigree.sireEn,
+                            damJp: pedigree.damJp,
+                            damEn: pedigree.damEn,
+                            weight: report.weight ? `${report.weight}kg` : '',
+                            weightDate: metrics.weightDate || '',
+                            assessmentJp: metrics.assessmentJp || '', assessmentEn: metrics.assessmentEn || '',
+                            managementJp: metrics.managementJp || '', managementEn: metrics.managementEn || '',
+                            nextStepsJp: metrics.nextStepsJp || '', nextStepsEn: metrics.nextStepsEn || '',
+                            commentJp: report.body || metrics.commentJp || '', commentEn: metrics.commentEn || '',
+                            outputMode: resolvedMode,
+                            showLogo: typeof metrics.showLogo === 'boolean' ? metrics.showLogo : resolvedMode !== 'print'
+                        } as Partial<StatusReportData>);
+                    } else if (reportTypeFromMetrics === 'departure') {
                         const pedigree = resolvePedigreeFields(horse, metrics);
                         const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                         const metricsOutputMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
@@ -788,7 +853,7 @@ export default function ReportEditor() {
 
                                     const latestReportData = latestReportRes.ok ? await latestReportRes.json() : [];
                                     const latestMonthlyReport = (latestReportData || []).find((r: { metrics_json?: { reportType?: string } }) => {
-                                        return r?.metrics_json?.reportType !== 'departure';
+                                        return r?.metrics_json?.reportType !== 'departure' && r?.metrics_json?.reportType !== 'status';
                                     });
                                     const latestHistory = latestMonthlyReport?.metrics_json?.weightHistory;
                                     const weightHistoryFromWeights = buildWeightHistoryFromWeights(rData || []);
@@ -872,7 +937,29 @@ export default function ReportEditor() {
                                     report.title || report.created_at,
                                     report.weight ?? null
                                 );
-                                setInitialData({
+                                if (metrics.reportType === 'status') {
+                                    setReportType('status');
+                                    setInitialData({
+                                        reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
+                                        horseNameJp: metrics.horseNameJp || horse?.name || '',
+                                        horseNameEn: metrics.horseNameEn || horse?.name_en || '',
+                                        ownerName: metrics.ownerName || horse?.clients?.name || '',
+                                        trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
+                                        trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
+                                        sireJp: pedigree.sireJp,
+                                        sireEn: pedigree.sireEn,
+                                        damJp: pedigree.damJp,
+                                        damEn: pedigree.damEn,
+                                        weight: report.weight ? `${report.weight}kg` : '',
+                                        weightDate: metrics.weightDate || '',
+                                        assessmentJp: metrics.assessmentJp || '', assessmentEn: metrics.assessmentEn || '',
+                                        managementJp: metrics.managementJp || '', managementEn: metrics.managementEn || '',
+                                        nextStepsJp: metrics.nextStepsJp || '', nextStepsEn: metrics.nextStepsEn || '',
+                                        commentJp: report.body || metrics.commentJp || '', commentEn: metrics.commentEn || '',
+                                        outputMode: metrics.outputMode === 'print' ? 'print' : 'pdf',
+                                        showLogo
+                                    } as Partial<StatusReportData>);
+                                } else setInitialData({
                                     reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                                     horseNameJp: metrics.horseNameJp || horse?.name || '',
                                     horseNameEn: metrics.horseNameEn || horse?.name_en || '',
@@ -931,7 +1018,7 @@ export default function ReportEditor() {
         if (typeof window === 'undefined') return;
 
         const localRaw = window.localStorage.getItem(draftKey);
-        let localDraft: { updatedAt?: string; reportType?: 'monthly' | 'departure'; data?: ReportData | DepartureReportData } | null = null;
+        let localDraft: { updatedAt?: string; reportType?: ReportKind; data?: EditorData } | null = null;
         if (localRaw) {
             try {
                 localDraft = JSON.parse(localRaw);
@@ -958,19 +1045,19 @@ export default function ReportEditor() {
 
             const label = chosenUpdated ? new Date(chosenUpdated).toLocaleString() : 'recent';
             if (window.confirm(`Unsaved draft found (${label}). Restore?`)) {
-                const latestCareRecords = horseId && chosenType !== 'departure'
+                const latestCareRecords = horseId && chosenType === 'monthly'
                     ? await fetchCareRecords(horseId)
                     : [];
                 const mergedDraftData = mergeDraftCareRecords(
-                    chosenData as ReportData | DepartureReportData | null | undefined,
+                    chosenData as EditorData | null | undefined,
                     latestCareRecords,
-                    chosenType === 'departure' || chosenType === 'monthly' ? chosenType : null
+                    chosenType === 'departure' || chosenType === 'monthly' || chosenType === 'status' ? chosenType : null
                 );
                 const mergedDraftWithPedigree = await mergeLatestHorsePedigree(
-                    mergedDraftData as ReportData | DepartureReportData | null | undefined,
-                    chosenType === 'departure' || chosenType === 'monthly' ? chosenType : null
+                    mergedDraftData as EditorData | null | undefined,
+                    chosenType === 'departure' || chosenType === 'monthly' || chosenType === 'status' ? chosenType : null
                 );
-                if (chosenType === 'departure' || chosenType === 'monthly') {
+                if (chosenType === 'departure' || chosenType === 'monthly' || chosenType === 'status') {
                     setReportType(chosenType);
                 }
                 setInitialData(mergedDraftWithPedigree || {});
@@ -1016,7 +1103,25 @@ export default function ReportEditor() {
             latestWeightValue
         );
 
-        if (reportType === 'departure') {
+        if (reportType === 'status') {
+            const pedigree = resolvePedigreeFields(horse);
+            setInitialData({
+                reportDate: new Date().toISOString().slice(0, 10),
+                horseNameJp: horse?.name || '',
+                horseNameEn: horse?.name_en || '',
+                sireJp: pedigree.sireJp,
+                sireEn: pedigree.sireEn,
+                damJp: pedigree.damJp,
+                damEn: pedigree.damEn,
+                ownerName: horse?.clients?.name || '',
+                trainerNameJp: horse?.trainers?.trainer_name || '',
+                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
+                weightDate: latestWeightDate || '',
+                assessmentJp: '', assessmentEn: '', managementJp: '', managementEn: '',
+                nextStepsJp: '', nextStepsEn: '', commentJp: '', commentEn: ''
+            } as Partial<StatusReportData>);
+        } else if (reportType === 'departure') {
             const pedigree = resolvePedigreeFields(horse);
             setInitialData({
                 reportDate: new Date().toISOString().slice(0, 10),
@@ -1080,7 +1185,7 @@ export default function ReportEditor() {
         setLoading(false);
     };
 
-    const handleDataChange = useCallback((data: ReportData | DepartureReportData) => {
+    const handleDataChange = useCallback((data: EditorData) => {
         reportDataRef.current = data;
         setIsDirty(true);
         setAutosaveStatus('Saving draft...');
@@ -1097,7 +1202,7 @@ export default function ReportEditor() {
 
         autosaveTimerRef.current = window.setTimeout(() => {
             try {
-                const draftData = stripDraftImagePayload(reportDataRef.current as ReportData | DepartureReportData);
+                const draftData = stripDraftImagePayload(reportDataRef.current as EditorData);
                 const payload = {
                     updatedAt: new Date().toISOString(),
                     reportType,
@@ -1110,7 +1215,7 @@ export default function ReportEditor() {
                 console.warn('Failed to store draft', err);
             }
             const now = Date.now();
-            const currentData = reportDataRef.current as ReportData | DepartureReportData | null;
+            const currentData = reportDataRef.current as EditorData | null;
             const hasInlinePhoto = !!(currentData && 'mainPhoto' in currentData && typeof currentData.mainPhoto === 'string' && currentData.mainPhoto.startsWith('data:'));
             const remoteInterval = hasInlinePhoto ? 120_000 : 30_000;
             if (now - lastRemoteSaveRef.current >= remoteInterval) {
@@ -1134,7 +1239,7 @@ export default function ReportEditor() {
             if (!reportDataRef.current) return;
             if (!isDirty) return;
             if (saving) return;
-            const currentData = reportDataRef.current as ReportData | DepartureReportData;
+            const currentData = reportDataRef.current as EditorData;
             const hasInlinePhoto = 'mainPhoto' in currentData && typeof currentData.mainPhoto === 'string' && currentData.mainPhoto.startsWith('data:');
             if (hasInlinePhoto && Date.now() - lastRemoteSaveRef.current < 120_000) return;
             void saveRemoteDraft();
@@ -1196,13 +1301,19 @@ export default function ReportEditor() {
     async function requestReportIndex(reportId: string | null) {
         if (!reportId) return;
         const apiBase = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
-        if (!apiBase) return;
+        if (!apiBase || !session?.access_token) return;
         try {
-            await fetch(`${apiBase}/index-report`, {
+            const response = await fetch(`${apiBase}/index-report`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({ reportId })
             });
+            if (!response.ok) {
+                console.warn('Report semantic index request failed:', response.status, await response.text());
+            }
         } catch (error) {
             console.warn('Report semantic index request failed:', error);
         }
@@ -1224,6 +1335,64 @@ export default function ReportEditor() {
         }, 90000);
 
         try {
+            if (reportType === 'status') {
+                const status = d as StatusReportData;
+                const metricsJson = {
+                    reportType: 'status',
+                    horseNameJp: status.horseNameJp,
+                    horseNameEn: status.horseNameEn,
+                    ownerName: status.ownerName,
+                    trainerNameJp: status.trainerNameJp,
+                    trainerNameEn: status.trainerNameEn,
+                    sireJp: status.sireJp,
+                    sireEn: status.sireEn,
+                    damJp: status.damJp,
+                    damEn: status.damEn,
+                    weightDate: status.weightDate,
+                    assessmentJp: status.assessmentJp,
+                    assessmentEn: status.assessmentEn,
+                    managementJp: status.managementJp,
+                    managementEn: status.managementEn,
+                    nextStepsJp: status.nextStepsJp,
+                    nextStepsEn: status.nextStepsEn,
+                    commentJp: status.commentJp,
+                    commentEn: status.commentEn,
+                    outputMode: status.outputMode || 'pdf',
+                    showLogo: status.showLogo ?? true
+                };
+                const payload = {
+                    horse_id: horseId,
+                    title: status.reportDate,
+                    body: status.commentJp || null,
+                    weight: parseFloat((status.weight || '').replace(/[^0-9.]/g, '') || '0'),
+                    status_training: 'Current status',
+                    condition: status.assessmentJp || null,
+                    target: status.nextStepsJp || null,
+                    metrics_json: metricsJson,
+                    updated_at: new Date().toISOString()
+                };
+                let newReportId: string | null = null;
+                if (isNew) {
+                    const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports`, { method: 'POST', body: JSON.stringify(payload) });
+                    if (!res.ok) throw new Error(`REST insert failed: ${res.status} ${await res.text()}`);
+                    const saved = await res.json();
+                    newReportId = saved?.[0]?.id ?? null;
+                } else {
+                    const res = await fetchRestWithRetry(`${supabaseUrl}/rest/v1/reports?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+                    if (!res.ok) throw new Error(`REST update failed: ${res.status} ${await res.text()}`);
+                }
+                setLastSaved(new Date());
+                setIsDirty(false);
+                setSaving(false);
+                window.localStorage.removeItem(draftKey);
+                void deleteRemoteDraft();
+                setAutosaveStatus('Saved');
+                setAutosaveStamp(Date.now());
+                void requestReportIndex(newReportId || (typeof id === 'string' ? id : null));
+                if (isNew && newReportId) router.replace(`/reports/${newReportId}`);
+                return;
+            }
+
             if (reportType === 'departure') {
                 const dep = d as DepartureReportData;
                 const metricsJson = {
@@ -1623,7 +1792,9 @@ export default function ReportEditor() {
                So we should just let it be full width. */}
 
             <div className="w-full block md:flex md:flex-1 md:min-h-0 md:justify-center overflow-x-visible overflow-y-visible md:overflow-x-auto md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
-                {reportType === 'departure' ? (
+                {reportType === 'status' ? (
+                    <StatusReportTemplate initialData={displayData as Partial<StatusReportData>} onDataChange={handleDataChange} />
+                ) : reportType === 'departure' ? (
                     <DepartureReportTemplate initialData={displayData} onDataChange={handleDataChange} />
                 ) : (
                     <ReportTemplate initialData={displayData} onDataChange={handleDataChange} />

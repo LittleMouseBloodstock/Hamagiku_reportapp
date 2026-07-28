@@ -624,6 +624,10 @@ export default function HorseDetail() {
         router.push(`/reports/new?horseId=${id}&reportType=departure`);
     };
 
+    const createStatusReport = () => {
+        router.push(`/reports/new?horseId=${id}&reportType=status`);
+    };
+
     const handleDeleteReport = async (reportId: string) => {
         if (!window.confirm(t('confirmDeleteReport'))) return;
 
@@ -996,6 +1000,12 @@ export default function HorseDetail() {
                             className="bg-white border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white px-5 py-2.5 rounded-full font-bold shadow-sm flex items-center gap-2 transition-all whitespace-nowrap"
                         >
                             <FileText size={18} /> {t('createDepartureReport')}
+                        </button>
+                        <button
+                            onClick={createStatusReport}
+                            className="bg-emerald-50 border border-emerald-700 text-emerald-800 hover:bg-emerald-700 hover:text-white px-5 py-2.5 rounded-full font-bold shadow-sm flex items-center gap-2 transition-all whitespace-nowrap"
+                        >
+                            <FileText size={18} /> {language === 'ja' ? '現状報告を作成' : 'Create Status Report'}
                         </button>
                         <Link
                             href={`/dashboard/care-records?horseId=${id}`}

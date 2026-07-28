@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getApiAuthHeaders } from '@/lib/api';
 
 export type DepartureReportData = {
     reportDate: string;
@@ -124,7 +125,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
             const res = await fetch(`${baseUrl}/generate-departure`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getApiAuthHeaders(),
                 body: JSON.stringify({ notes: aiNotes })
             });
             if (!res.ok) {

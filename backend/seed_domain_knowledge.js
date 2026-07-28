@@ -27,6 +27,26 @@ const seeds = [
     ].join('\n'),
   },
   {
+    category: 'status_report',
+    language: 'ja',
+    title: '現状報告: 構成と事実ベースの表現',
+    content: [
+      '現状報告は、assessment（現状評価）、management（現在の管理・処置）、nextSteps（今後の予定）、comment（総括）に分けて簡潔にまとめる。',
+      '各項目は入力された観察、実施内容、予定だけを使い、未記載の診断名・投薬・投薬量は補わない。',
+      '経過観察や予定は完了した事実に変えず、安心材料があっても「完全に治癒した」などの強い断定を避ける。',
+    ].join('\n'),
+  },
+  {
+    category: 'status_report',
+    language: 'en',
+    title: 'Current-status report: structure and factual wording',
+    content: [
+      'A current-status report can be organized into assessment, management, nextSteps, and comment.',
+      'Use only observations, care or treatment, exercise or feeding, and plans stated in the source; do not fill in an unstated diagnosis, medication, or dosage.',
+      'Keep follow-up and planned actions as follow-up and plans. Avoid strong conclusions such as completely healed unless the source explicitly says so.',
+    ].join('\n'),
+  },
+  {
     category: 'terminology',
     language: 'ja',
     title: '脚元・治療メモの扱い',

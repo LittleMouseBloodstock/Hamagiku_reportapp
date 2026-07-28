@@ -25,7 +25,7 @@ export default function Dashboard() {
         languages: string[];
         horses?: { name: string; name_en: string; };
         horse_id?: string;
-        reportType?: 'monthly' | 'departure';
+        reportType?: 'monthly' | 'departure' | 'status';
     }
 
     type ReportRow = {
@@ -148,9 +148,11 @@ export default function Dashboard() {
                         if (langs.length === 0) langs.push('JP');
                         const statusRaw = r.review_status || r.status_training || 'draft';
                         const reportType: DashboardReport['reportType'] =
-                            r.metrics_json?.reportType === 'departure' || r.status_training === 'Departed'
-                                ? 'departure'
-                                : 'monthly';
+                            r.metrics_json?.reportType === 'status'
+                                ? 'status'
+                                : r.metrics_json?.reportType === 'departure' || r.status_training === 'Departed'
+                                    ? 'departure'
+                                    : 'monthly';
 
                         return {
                             id: r.id,
@@ -677,8 +679,8 @@ export default function Dashboard() {
                                             {report.title}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.reportType === 'departure' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                {report.reportType === 'departure' ? 'Departure' : 'Monthly'}
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.reportType === 'departure' ? 'bg-amber-100 text-amber-800' : report.reportType === 'status' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                {report.reportType === 'departure' ? 'Departure' : report.reportType === 'status' ? 'Current Status' : 'Monthly'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
