@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { FileText, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getApiAuthHeaders, translateText } from '@/lib/api';
+import { generateStatusReport, translateText } from '@/lib/api';
 
 export type StatusReportData = {
     reportDate: string;
@@ -84,6 +84,7 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
     const [aiNotes, setAiNotes] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
+    const [generationError, setGenerationError] = useState('');
     const isPrintMode = data.outputMode === 'print';
     const showLogo = data.showLogo ?? !isPrintMode;
 
@@ -102,15 +103,12 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
     const generateStatus = async () => {
         if (!aiNotes.trim()) return;
         setIsGenerating(true);
+        setGenerationError('');
         try {
-            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
-            const response = await fetch(`${baseUrl}/generate-departure`, {
-                method: 'POST',
-                headers: await getApiAuthHeaders(),
-                body: JSON.stringify({ notes: aiNotes, reportType: 'status' })
-            });
-            if (!response.ok) throw new Error(await response.text());
-            const json = await response.json();
+            const json = await generateStatusReport(aiNotes.trim());
+            if (!json?.ja || !json?.en) {
+                throw new Error('The generated report was incomplete. Please try again.');
+            }
             setData((prev) => ({
                 ...prev,
                 assessmentJp: json?.ja?.assessment || json?.ja?.comment || prev.assessmentJp,
@@ -124,7 +122,12 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
             }));
         } catch (error) {
             console.error('Status report generation failed:', error);
-            alert(`AI generation failed: ${error instanceof Error ? error.message : String(error)}`);
+            const detail = error instanceof Error ? error.message : String(error);
+            setGenerationError(
+                language === 'ja'
+                    ? `文章を生成できませんでした。${detail}`
+                    : `The report could not be generated. ${detail}`
+            );
         } finally {
             setIsGenerating(false);
         }
@@ -167,11 +170,12 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <p className="mt-1 text-xs text-stone-400">{language === 'ja' ? '来場時にすぐ渡せる、写真なしの近況報告です。' : 'A photo-free update for an immediate owner or trainer handover.'}</p>
                 </div>
                 <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
-                    <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-800"><FileText size={14} /> RAG AI Writer</div>
+                    <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-800"><FileText size={14} /> {language === 'ja' ? '文章作成' : 'Report Draft'}</div>
                     <textarea value={aiNotes} onChange={(event) => setAiNotes(event.target.value)} rows={7} placeholder={language === 'ja' ? '例：跛行の経過、検査結果、現在の管理、次の方針を入力' : 'e.g. lameness history, examination findings, current management and next steps'} className="w-full rounded-lg border-0 bg-white/80 px-3 py-3 text-sm text-stone-900 shadow-sm ring-1 ring-indigo-200" />
                     <button type="button" onClick={() => void generateStatus()} disabled={isGenerating || !aiNotes.trim()} className="mt-2 w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50">
-                        {isGenerating ? 'Generating...' : (language === 'ja' ? '英日・日英の両方を生成' : 'Generate JP & EN')}
+                        {isGenerating ? (language === 'ja' ? '生成中...' : 'Generating...') : (language === 'ja' ? '日本語・英語の文章を生成' : 'Generate Japanese & English')}
                     </button>
+                    {generationError && <p role="alert" className="mt-2 text-xs font-medium text-red-700">{generationError}</p>}
                 </div>
                 <label className="block text-xs font-semibold text-stone-600">{t('reportDate') || 'Report date'}
                     <input type="date" value={data.reportDate} onChange={(event) => update('reportDate', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900" />

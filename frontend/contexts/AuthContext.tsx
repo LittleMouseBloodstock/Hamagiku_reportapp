@@ -30,6 +30,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         let mounted = true;
+        let activeAuthEmail: string | null = null;
+        let whitelistCheckTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
         // 1. Setup failsafe timeout (in case auth event never fires due to locks/errors)
         const timeoutId = setTimeout(() => {
@@ -52,15 +54,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         })();
 
+        const verifyAllowedUser = async (email: string) => {
+            try {
+                const { count, error } = await supabase
+                    .from('allowed_users')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('email', email);
+
+                if (!mounted || activeAuthEmail !== email) return;
+                if (error) {
+                    console.error('Whitelist check failed:', error);
+                    return;
+                }
+                if (count === 0) {
+                    console.warn('Access denied for:', email);
+                    await supabase.auth.signOut();
+                    alert('Access Denied: Your email is not permitted to access this application.');
+                    router.replace('/login');
+                }
+            } catch (err) {
+                console.error('Whitelist check exception:', err);
+            }
+        };
+
+        const scheduleWhitelistCheck = (email: string) => {
+            if (whitelistCheckTimeoutId) clearTimeout(whitelistCheckTimeoutId);
+            whitelistCheckTimeoutId = setTimeout(() => {
+                whitelistCheckTimeoutId = null;
+                void verifyAllowedUser(email);
+            }, 0);
+        };
+
         // 2. Listen for auth changes
         // This usually fires immediately with 'INITIAL_SESSION'
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        // Keep this callback synchronous. Awaiting another Supabase call here can
+        // lock the auth client and prevent later getSession() calls from returning.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!mounted) return;
 
             // Clear timeout since we got a response
             clearTimeout(timeoutId);
 
             const currentUser = session?.user;
+            activeAuthEmail = currentUser?.email ?? null;
 
             // Update state
             setSession(session);
@@ -71,28 +107,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 router.replace('/login');
                 return;
             }
-            // 3. Background Whitelist Check (Only on meaningful changes)
-            if (currentUser?.email) {
-                try {
-                    const { count, error } = await supabase
-                        .from('allowed_users')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('email', currentUser.email);
 
-                    if (!error && count === 0) {
-                        console.warn('Access denied for:', currentUser.email);
-                        await supabase.auth.signOut();
-                        alert('Access Denied: Your email is not permitted to access this application.');
-                        router.replace('/login');
-                    }
-                } catch (err) {
-                    console.error('Whitelist check exception:', err);
-                }
+            // Run the whitelist query only after the auth callback has returned.
+            if (currentUser?.email) {
+                scheduleWhitelistCheck(currentUser.email);
             }
         });
 
         return () => {
             mounted = false;
+            clearTimeout(timeoutId);
+            if (whitelistCheckTimeoutId) clearTimeout(whitelistCheckTimeoutId);
             subscription.unsubscribe();
         };
     }, [router]);
