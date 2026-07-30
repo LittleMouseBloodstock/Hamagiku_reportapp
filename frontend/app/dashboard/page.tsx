@@ -680,7 +680,11 @@ export default function Dashboard() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.reportType === 'departure' ? 'bg-amber-100 text-amber-800' : report.reportType === 'status' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                {report.reportType === 'departure' ? 'Departure' : report.reportType === 'status' ? 'Current Status' : 'Monthly'}
+                                                {report.reportType === 'departure'
+                                                    ? 'Departure'
+                                                    : report.reportType === 'status'
+                                                        ? (language === 'ja' ? '治療経過報告' : 'Treatment Update')
+                                                        : 'Monthly'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
@@ -701,6 +705,12 @@ export default function Dashboard() {
                                                     if (s === 'Training') return t('status_Training');
                                                     if (s === 'Resting') return t('status_Resting');
                                                     if (s === 'Spelling') return t('status_Spelling');
+                                                    if (
+                                                        report.reportType === 'status'
+                                                        && ['current status', 'treatment update'].includes(s.toLowerCase())
+                                                    ) {
+                                                        return language === 'ja' ? '治療経過報告' : 'Treatment Update';
+                                                    }
 
                                                     // Handle "調整中" or other variations if needed
                                                     if (s === '調整中') return language === 'en' ? 'Training' : s; // Or map to 'Training' translation if desired

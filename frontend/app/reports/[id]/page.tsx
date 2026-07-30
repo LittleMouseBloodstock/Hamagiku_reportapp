@@ -1365,7 +1365,7 @@ export default function ReportEditor() {
                     title: status.reportDate,
                     body: status.commentJp || null,
                     weight: parseFloat((status.weight || '').replace(/[^0-9.]/g, '') || '0'),
-                    status_training: 'Current status',
+                    status_training: 'Treatment Update',
                     condition: status.assessmentJp || null,
                     target: status.nextStepsJp || null,
                     metrics_json: metricsJson,

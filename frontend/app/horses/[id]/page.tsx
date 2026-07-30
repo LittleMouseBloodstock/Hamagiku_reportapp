@@ -31,6 +31,13 @@ type Report = {
     horse_id: string;
 };
 
+const getReportActivityLabel = (value: string | null) => {
+    if (!value) return '';
+    return ['current status', 'treatment update'].includes(value.trim().toLowerCase())
+        ? 'Treatment Update'
+        : value;
+};
+
 export default function HorseDetail() {
     const { id } = useParams();
     const router = useRouter();
@@ -180,7 +187,7 @@ export default function HorseDetail() {
                                             <div className="font-bold text-gray-700">{report.title || 'Untitled Report'}</div>
                                             <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
                                                 <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
-                                                {report.status_training && <span className="flex items-center gap-1"><Activity size={10} /> {report.status_training}</span>}
+                                                {getReportActivityLabel(report.status_training) && <span className="flex items-center gap-1"><Activity size={10} /> {getReportActivityLabel(report.status_training)}</span>}
                                             </div>
                                         </div>
                                     </div>

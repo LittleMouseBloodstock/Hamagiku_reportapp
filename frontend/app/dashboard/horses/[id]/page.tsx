@@ -46,6 +46,21 @@ type Report = {
     metrics_json?: any;
 };
 
+const getReportActivityLabel = (report: Report, language: 'ja' | 'en') => {
+    const isTreatmentUpdate =
+        report.metrics_json?.reportType === 'status'
+        || report.status_training?.trim().toLowerCase() === 'current status'
+        || report.status_training?.trim().toLowerCase() === 'treatment update';
+
+    if (isTreatmentUpdate) {
+        return language === 'ja' ? '治療経過報告' : 'Treatment Update';
+    }
+
+    return language === 'ja'
+        ? (report.status_training || report.metrics_json?.statusJp || '')
+        : (report.metrics_json?.statusEn || report.status_training || '');
+};
+
 type WeightEntry = {
     id: string;
     measured_at: string;
@@ -1005,7 +1020,7 @@ export default function HorseDetail() {
                             onClick={createStatusReport}
                             className="bg-emerald-50 border border-emerald-700 text-emerald-800 hover:bg-emerald-700 hover:text-white px-5 py-2.5 rounded-full font-bold shadow-sm flex items-center gap-2 transition-all whitespace-nowrap"
                         >
-                            <FileText size={18} /> {language === 'ja' ? '現状報告を作成' : 'Create Status Report'}
+                            <FileText size={18} /> {language === 'ja' ? '治療経過報告を作成' : 'Create Treatment Update'}
                         </button>
                         <Link
                             href={`/dashboard/care-records?horseId=${id}`}
@@ -1362,10 +1377,10 @@ export default function HorseDetail() {
                                         <div className="font-bold text-gray-700">{report.title || (language === 'ja' ? '無題のレポート' : 'Untitled Report')}</div>
                                         <div className="text-xs text-gray-400 flex items-center gap-3 mt-1">
                                             <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(report.created_at).toLocaleDateString()}</span>
-                                            {(report.status_training || report.metrics_json?.statusEn) && (
+                                            {getReportActivityLabel(report, language) && (
                                                 <span className="flex items-center gap-1">
                                                     <Activity size={10} />
-                                                    {language === 'ja' ? (report.status_training || report.metrics_json?.statusJp) : (report.metrics_json?.statusEn || report.status_training)}
+                                                    {getReportActivityLabel(report, language)}
                                                 </span>
                                             )}
                                         </div>

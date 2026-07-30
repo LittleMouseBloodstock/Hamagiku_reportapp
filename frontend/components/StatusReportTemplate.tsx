@@ -166,8 +166,8 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
         <div className="status-report-root flex min-h-screen w-full flex-col bg-gray-100 font-sans md:flex-row md:overflow-hidden">
             <div className="status-report-form no-print w-full space-y-5 overflow-y-auto border-r border-stone-200 bg-white p-6 pb-40 md:w-[420px]">
                 <div>
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-stone-500">{language === 'ja' ? '現状報告レポート' : 'Current Status Report'}</h2>
-                    <p className="mt-1 text-xs text-stone-400">{language === 'ja' ? '来場時にすぐ渡せる、写真なしの近況報告です。' : 'A photo-free update for an immediate owner or trainer handover.'}</p>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-stone-500">{language === 'ja' ? '治療経過報告' : 'Treatment Update'}</h2>
+                    <p className="mt-1 text-xs text-stone-400">{language === 'ja' ? '来場時にすぐ渡せる、写真なしの治療・管理経過報告です。' : 'A photo-free treatment and management update for an immediate owner or trainer handover.'}</p>
                 </div>
                 <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
                     <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-800"><FileText size={14} /> {language === 'ja' ? '文章作成' : 'Report Draft'}</div>
@@ -207,7 +207,7 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <header className="relative flex h-[130px] items-center justify-between border-b-2 border-[#c5a059] px-8 pt-4">
                         <div className="z-10 font-serif text-2xl font-bold leading-tight tracking-widest text-[#1a3c34]">HAMAGIKU<br />FARM</div>
                         {showLogo && <img src="/hamagiku-logo.png" alt="Logo" className="logo-container absolute left-1/2 top-1/2 h-[120px] w-[120px] -translate-x-1/2 -translate-y-1/2 object-contain opacity-70" />}
-                        <div className="z-10 text-right"><div className="font-serif text-xl font-bold tracking-widest text-[#1a3c34]">{language === 'ja' ? '現状報告' : 'CURRENT STATUS'}</div><div className="mt-1 text-xs text-stone-500">{reportDateLabel(data.reportDate, language)}</div></div>
+                        <div className="z-10 text-right"><div className="font-serif text-xl font-bold tracking-widest text-[#1a3c34]">{language === 'ja' ? '治療経過報告' : 'TREATMENT UPDATE'}</div><div className="mt-1 text-xs text-stone-500">{reportDateLabel(data.reportDate, language)}</div></div>
                     </header>
                     <main className="px-8 py-6">
                         <div className="mb-5 flex items-end justify-between gap-6">
