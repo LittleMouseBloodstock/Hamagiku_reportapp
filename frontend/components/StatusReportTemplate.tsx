@@ -247,7 +247,20 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <main className="px-8 py-6">
                         <div className="status-report-identity mb-5 flex items-end justify-between gap-6">
                             <div className="status-report-horse min-w-0"><div className="font-serif text-3xl font-bold text-stone-800">{language === 'ja' ? data.horseNameJp || '（馬名未入力）' : data.horseNameEn || '(Horse name)'}</div><div className="mt-1 text-lg text-[#c5a059]">{language === 'ja' ? data.horseNameEn : data.horseNameJp}</div></div>
-                            <div className="status-report-owner min-w-0 border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-right text-sm text-stone-600">{language === 'ja' ? `馬主：${data.ownerName || '-'} / 調教師：${data.trainerNameJp || '-'}` : `Owner: ${data.ownerName || '-'} / Trainer: ${data.trainerNameEn || '-'}`}<br />{language === 'ja' ? `馬体重：${data.weight || '-'}${data.weightDate ? `（${formatDate(data.weightDate, language)}）` : ''}` : `Weight: ${data.weight || '-'}${data.weightDate ? ` (${formatDate(data.weightDate, language)})` : ''}`}</div>
+                            <div className="status-report-owner min-w-0 border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-sm text-stone-600">
+                                <div className="status-report-owner-row">
+                                    <span className="status-report-owner-label">{language === 'ja' ? '馬主：' : 'Owner:'}</span>
+                                    <span className="status-report-owner-value">{data.ownerName || '-'}</span>
+                                </div>
+                                <div className="status-report-owner-row">
+                                    <span className="status-report-owner-label">{language === 'ja' ? '調教師：' : 'Trainer:'}</span>
+                                    <span className="status-report-owner-value">{language === 'ja' ? (data.trainerNameJp || '-') : (data.trainerNameEn || '-')}</span>
+                                </div>
+                                <div className="status-report-owner-row">
+                                    <span className="status-report-owner-label">{language === 'ja' ? '馬体重：' : 'Weight:'}</span>
+                                    <span className="status-report-owner-value">{data.weight || '-'}{data.weightDate ? ` ${language === 'ja' ? `（${formatDate(data.weightDate, language)}）` : `(${formatDate(data.weightDate, language)})`}` : ''}</span>
+                                </div>
+                            </div>
                         </div>
                         <article className="status-report-article border-t-2 border-[#315f91] pt-5">
                             {previewSections.length ? previewSections.map((section, index) => (
@@ -269,7 +282,12 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <footer className="absolute bottom-4 left-0 w-full text-center text-[10px] tracking-widest text-[#aaa]">HAMAGIKU FARM - HOKKAIDO, JAPAN | {language === 'ja' ? data.reportDate.replace(/-/g, '/') : reportDateLabel(data.reportDate, 'en')}</footer>
                 </div>
             </div>
-            <style jsx global>{`@media print {
+            <style jsx global>{`
+                .status-report-owner { line-height: 1.45; }
+                .status-report-owner-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); column-gap: 0.5rem; align-items: baseline; text-align: right; }
+                .status-report-owner-label { white-space: nowrap; }
+                .status-report-owner-value { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+                @media print {
                 @page { size: A4 portrait; margin: 0 !important; }
                 html, body, #__next { width: 210mm !important; min-width: 210mm !important; height: auto !important; overflow: visible !important; background: #fff !important; margin: 0 !important; padding: 0 !important; }
                 .no-print { display: none !important; }
@@ -296,8 +314,7 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                 .status-report-preview main { box-sizing: border-box !important; width: 100% !important; padding: 9mm 8mm 10mm !important; }
                 .status-report-preview.print-mode main { padding-top: 11mm !important; }
                 .status-report-identity { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) !important; align-items: end !important; gap: 6mm !important; }
-                .status-report-horse, .status-report-owner { min-width: 0 !important; max-width: 100% !important; }
-                .status-report-owner { overflow-wrap: anywhere !important; word-break: break-word !important; white-space: normal !important; line-height: 1.45 !important; }
+                 .status-report-horse, .status-report-owner { min-width: 0 !important; max-width: 100% !important; }
                 .status-report-article, .status-report-section, .status-report-section p { max-width: 100% !important; overflow-wrap: anywhere !important; word-break: break-word !important; }
                 .status-report-section { break-inside: avoid-page !important; page-break-inside: avoid !important; }
                 .status-report-section-heading { break-after: avoid-page !important; page-break-after: avoid !important; }
