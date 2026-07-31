@@ -7,6 +7,7 @@ import { Point, Area } from 'react-easy-crop';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getApiAuthHeaders, translateText } from '@/lib/api';
 import { getCareRecordNote, paginateCareRecords, type CareRecord } from '@/lib/careRecords';
+import { CARE_RECORD_REPORT_LINKING_ENABLED } from '@/lib/care-record-features';
 
 // Google Fonts Component
 const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean }) => (
@@ -723,9 +724,9 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const [data, setData] = useState<ReportData>({ ...defaultData, ...initialData });
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print';
-    const appendixRecords = (data.careRecords || []).filter((item) => (
+    const appendixRecords = CARE_RECORD_REPORT_LINKING_ENABLED ? (data.careRecords || []).filter((item) => (
         item.reportMode === 'appendix' && (getCareRecordNote(item, lang).trim() || (item.imageUrls || []).length)
-    ));
+    )) : [];
     const hasAppendix = appendixRecords.length > 0;
     const appendixPages = paginateCareRecords(appendixRecords, lang);
     const mainPhotoSrc = data.mainPhoto || data.originalPhoto || '';
@@ -827,10 +828,12 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
     const handleGenerateComment = async () => {
         if (!aiPrompt) return;
         setIsGenerating(true);
-        const carePrompt = (data.careRecords || [])
-            .filter((item) => item.reportMode === 'body' && getCareRecordNote(item, 'en').trim())
-            .map((item) => `- ${item.date || 'undated'}: ${getCareRecordNote(item, 'en').trim()}`)
-            .join('\n');
+        const carePrompt = CARE_RECORD_REPORT_LINKING_ENABLED
+            ? (data.careRecords || [])
+                .filter((item) => item.reportMode === 'body' && getCareRecordNote(item, 'en').trim())
+                .map((item) => `- ${item.date || 'undated'}: ${getCareRecordNote(item, 'en').trim()}`)
+                .join('\n')
+            : '';
         const fullPrompt = [aiPrompt, carePrompt ? `Care notes to reflect if relevant:\n${carePrompt}` : ''].filter(Boolean).join('\n\n');
         try {
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
@@ -1485,7 +1488,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </section>
 
                         {/* Care Records */}
-                        <section>
+                        {CARE_RECORD_REPORT_LINKING_ENABLED && <section>
                             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
                                 <FileText size={16} /> {language === 'ja' ? 'このレポートのケア記録' : 'Care Records for This Report'}
                             </h2>
@@ -1530,7 +1533,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                         : 'No care records are loaded for this horse yet. Save records from the Care Records screen first, then reopen this report.'}
                                 </div>
                             )}
-                        </section>
+                        </section>}
 
                         {/* Comments & AI Tools */}
                         <section>

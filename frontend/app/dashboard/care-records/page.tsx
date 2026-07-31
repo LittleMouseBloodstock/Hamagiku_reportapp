@@ -7,6 +7,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { buildRestHeaders, restGet, restPatch, restPost } from '@/lib/restClient';
 import { translateText } from '@/lib/api';
 import { getCareRecordNote, normalizeCareRecords, type CareRecord } from '@/lib/careRecords';
+import {
+    CARE_RECORD_REPORT_LINKING_ENABLED,
+    CARE_RECORD_TRANSLATION_ENABLED,
+} from '@/lib/care-record-features';
 
 type HorseOption = {
     id: string;
@@ -196,6 +200,7 @@ export default function CareRecordsPage() {
     };
 
     const translateMissingCareNotes = async (nextRecords: CareRecord[]) => {
+        if (!CARE_RECORD_TRANSLATION_ENABLED) return nextRecords;
         const translated = await Promise.all(nextRecords.map(async (record) => {
             const noteJp = (record.noteJp || '').trim();
             const noteEn = (record.noteEn || '').trim();
@@ -213,6 +218,7 @@ export default function CareRecordsPage() {
     };
 
     const completeCareTranslations = async () => {
+        if (!CARE_RECORD_TRANSLATION_ENABLED) return;
         if (translating || !records.some((record) => getCareRecordNote(record, language).trim())) return;
         setTranslating(true);
         try {
@@ -323,10 +329,11 @@ export default function CareRecordsPage() {
                 updated_at: new Date().toISOString()
             }, getHeaders());
 
-            setTranslating(true);
-            const translatedRecords = await translateMissingCareNotes(records);
-            setRecords(translatedRecords);
-            await saveCareDraftRecords(translatedRecords);
+            const recordsToSave = CARE_RECORD_TRANSLATION_ENABLED
+                ? await translateMissingCareNotes(records)
+                : records;
+            if (CARE_RECORD_TRANSLATION_ENABLED) setRecords(recordsToSave);
+            await saveCareDraftRecords(recordsToSave);
 
             setHorses((prev) => prev.map((horse) => horse.id === selectedHorseId ? {
                 ...horse,
@@ -373,15 +380,17 @@ export default function CareRecordsPage() {
                             </option>
                         ))}
                     </select>
-                    <button
-                        onClick={() => void completeCareTranslations()}
-                        disabled={translating || saving || !selectedHorseId}
-                        className="px-4 py-2 text-sm rounded-lg border border-[#1a3c34] text-[#1a3c34] hover:bg-[#1a3c34]/5 disabled:opacity-50"
-                    >
-                        {translating
-                            ? (language === 'ja' ? '英日訳中...' : 'Translating...')
-                            : (language === 'ja' ? '英日訳を補完' : 'Complete JP/EN')}
-                    </button>
+                    {CARE_RECORD_TRANSLATION_ENABLED && (
+                        <button
+                            onClick={() => void completeCareTranslations()}
+                            disabled={translating || saving || !selectedHorseId}
+                            className="px-4 py-2 text-sm rounded-lg border border-[#1a3c34] text-[#1a3c34] hover:bg-[#1a3c34]/5 disabled:opacity-50"
+                        >
+                            {translating
+                                ? (language === 'ja' ? '英日訳中...' : 'Translating...')
+                                : (language === 'ja' ? '英日訳を補完' : 'Complete JP/EN')}
+                        </button>
+                    )}
                     <button
                         onClick={handleSave}
                         disabled={saving || !!uploadingRecordId || !selectedHorseId}
@@ -473,7 +482,7 @@ export default function CareRecordsPage() {
                                             {language === 'ja' ? '削除' : 'Delete'}
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)_220px] gap-3">
+                                    <div className={`grid grid-cols-1 gap-3 ${CARE_RECORD_REPORT_LINKING_ENABLED ? 'md:grid-cols-[180px_minmax(0,1fr)_220px]' : 'md:grid-cols-[180px_minmax(0,1fr)]'}`}>
                                         <div>
                                             <label className="block text-xs font-medium text-stone-600 mb-1">{t('date')}</label>
                                             <input {...localizedDateInputProps} className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.date} onChange={(e) => handleRecordChange(record.id, 'date', e.target.value)} />
@@ -483,18 +492,24 @@ export default function CareRecordsPage() {
                                             <textarea className="w-full min-h-[120px] rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={language === 'ja' ? (record.noteJp || record.note) : (record.noteEn || record.note)} onChange={(e) => handleRecordNoteChange(record.id, e.target.value)} />
                                             <div className="mt-1 text-[11px] text-stone-400">
                                                 {language === 'ja'
-                                                    ? (record.noteEn ? 'English translation is ready.' : '保存時に英訳を自動補完します。')
-                                                    : (record.noteJp ? '日本語訳を保持しています。' : 'Japanese translation is completed on save.')}
+                                                    ? (record.noteEn
+                                                        ? 'English translation is ready.'
+                                                        : (CARE_RECORD_TRANSLATION_ENABLED ? '保存時に英訳を自動補完します。' : '入力した言語の記録として保存します。'))
+                                                    : (record.noteJp
+                                                        ? '日本語訳を保持しています。'
+                                                        : (CARE_RECORD_TRANSLATION_ENABLED ? 'Japanese translation is completed on save.' : 'The note is saved in the entered language.'))}
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? 'レポート出力' : 'Report Output'}</label>
-                                            <select className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.reportMode} onChange={(e) => handleRecordChange(record.id, 'reportMode', e.target.value)}>
-                                                <option value="none">{t('reportOutputNone') || 'Do not include'}</option>
-                                                <option value="body">{t('reportOutputBody') || 'Use in body'}</option>
-                                                <option value="appendix">{t('reportOutputAppendix') || 'Keep for appendix'}</option>
-                                            </select>
-                                        </div>
+                                        {CARE_RECORD_REPORT_LINKING_ENABLED && (
+                                            <div>
+                                                <label className="block text-xs font-medium text-stone-600 mb-1">{language === 'ja' ? 'レポート出力' : 'Report Output'}</label>
+                                                <select className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20" value={record.reportMode} onChange={(e) => handleRecordChange(record.id, 'reportMode', e.target.value)}>
+                                                    <option value="none">{t('reportOutputNone') || 'Do not include'}</option>
+                                                    <option value="body">{t('reportOutputBody') || 'Use in body'}</option>
+                                                    <option value="appendix">{t('reportOutputAppendix') || 'Keep for appendix'}</option>
+                                                </select>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-3">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -504,8 +519,12 @@ export default function CareRecordsPage() {
                                                 </div>
                                                 <div className="mt-1 text-xs text-stone-500">
                                                     {language === 'ja'
-                                                        ? '傷、レントゲン、エコー、経過写真など。appendix 出力時に2ページ目へ表示します。'
-                                                        : 'Wound photos, X-rays, ultrasound images, or progress photos. These appear on the appendix page.'}
+                                                        ? (CARE_RECORD_REPORT_LINKING_ENABLED
+                                                            ? '傷、レントゲン、エコー、経過写真など。appendix 出力時に2ページ目へ表示します。'
+                                                            : '傷、レントゲン、エコー、経過写真などの記録画像を保存します。')
+                                                        : (CARE_RECORD_REPORT_LINKING_ENABLED
+                                                            ? 'Wound photos, X-rays, ultrasound images, or progress photos. These appear on the appendix page.'
+                                                            : 'Save wound photos, X-rays, ultrasound images, or progress photos with the care record.')}
                                                 </div>
                                             </div>
                                             <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-stone-700 shadow-sm ring-1 ring-stone-200 hover:bg-stone-100">
