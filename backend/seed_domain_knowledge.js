@@ -31,9 +31,11 @@ const seeds = [
     language: 'ja',
     title: '現状報告: 構成と事実ベースの表現',
     content: [
-      '現状報告は、assessment（現状評価）、management（現在の管理・処置）、nextSteps（今後の予定）、comment（総括）に分けて簡潔にまとめる。',
-      '各項目は入力された観察、実施内容、予定だけを使い、未記載の診断名・投薬・投薬量は補わない。',
-      '経過観察や予定は完了した事実に変えず、安心材料があっても「完全に治癒した」などの強い断定を避ける。',
+      '治療経過報告は、治療・管理、検査、診断麻酔、画像所見、現在の状況と今後の方針を、入力に沿って時系列の一体型本文にまとめる。',
+      '別々に実施した処置や検査は、手技名、解剖学的位置、左右、実施順序、個別の結果を保ち、広い表現へ統合しない。',
+      'Low palmar nerve block、High palmar nerve block、sub-carpal nerve blockは別の手技として扱い、相互に置き換えない。',
+      '後から明示された訂正や補足は、それ以前の矛盾する記述より優先し、訂正前の内容を事実として残さない。',
+      '入力された事実、不確実性、待機中の予定だけを使い、未記載の人名・施設名・診断・投薬・投薬量・因果関係は補わない。',
     ].join('\n'),
   },
   {
@@ -41,9 +43,11 @@ const seeds = [
     language: 'en',
     title: 'Current-status report: structure and factual wording',
     content: [
-      'A current-status report can be organized into assessment, management, nextSteps, and comment.',
-      'Use only observations, care or treatment, exercise or feeding, and plans stated in the source; do not fill in an unstated diagnosis, medication, or dosage.',
-      'Keep follow-up and planned actions as follow-up and plans. Avoid strong conclusions such as completely healed unless the source explicitly says so.',
+      'A treatment update should be one chronological narrative covering treatment and management, examinations, diagnostic anaesthesia, imaging findings, and the current status and next plan.',
+      'Keep separately performed procedures and examinations distinct, preserving the exact name, anatomical level, laterality, order, and individual result of each event.',
+      'Low palmar nerve block, High palmar nerve block, and sub-carpal nerve block are distinct procedures and must never be substituted for one another.',
+      'A later explicit correction or clarification overrides an earlier conflicting statement; do not retain the superseded statement as fact.',
+      'Use only facts, uncertainty, and pending plans stated in the source. Do not invent a person, facility, diagnosis, medication, dosage, causal conclusion, contact route, or sign-off.',
     ].join('\n'),
   },
   {

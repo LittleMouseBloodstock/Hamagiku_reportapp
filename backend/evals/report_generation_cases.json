@@ -85,5 +85,56 @@
       "enMustInclude": ["cooling", "shockwave", "movement"],
       "enMustAvoid": ["severe", "acute fracture"]
     }
+  },
+  {
+    "id": "status-palmar-block-correction-01",
+    "type": "status",
+    "notes": "The treatment and management instructions provided by Godolphin Castle Park consisted of one month of complete box rest, followed by one month of restricted paddock exercise. These recommendations were followed; however, the resulting improvement in her lameness was minimal.\nFurther ultrasound and radiographic examinations of the distal forelimbs were performed by Watanabe Sensei of Monbetsu Veterinary Clinic, which revealed no significant abnormalities.\nSub-carpal nerve blocks were subsequently performed; however, bilateral forelimb lameness persisted.\nExploratory radiographs of the proximal forelimbs were then taken, identifying a suspected proximomedial radial subchondral bone cyst in the left elbow. Radiographs of the right forelimb revealed no abnormalities.\nThe images have been referred to Shadai Clinic for a second opinion, and we are currently awaiting their diagnosis and recommendations regarding possible surgical intervention or further treatment options.\n訂正：サブカーパル神経ブロックではなく、最初にLow palmar nerve block（遠位部での掌側神経ブロック、球節以下）を行い改善せず、続いてHigh palmar nerve block（近位部での掌側神経ブロック、管以下）を行い改善しなかった、というのが正確です。",
+    "expectations": {
+      "jaMustInclude": [
+        "Low palmar nerve block",
+        "High palmar nerve block",
+        "球節以下",
+        "管以下",
+        "両前肢",
+        "門別家畜診療所",
+        "左肘",
+        "橈骨",
+        "骨嚢胞",
+        "右前肢",
+        "社台"
+      ],
+      "enMustInclude": [
+        "Low palmar nerve block",
+        "High palmar nerve block",
+        "below fetlock",
+        "proximal palmar level",
+        "bilateral forelimb",
+        "left elbow",
+        "radial subchondral bone cyst",
+        "right forelimb",
+        "Shadai"
+      ],
+      "jaMustAvoid": ["サブカーパル神経ブロック", "訂正"],
+      "enMustAvoid": ["sub-carpal nerve block", "corrected", "previous report"],
+      "jaMustAppearInOrder": [
+        "Low palmar nerve block",
+        "改善なし",
+        "High palmar nerve block",
+        "改善なし",
+        "左肘",
+        "社台"
+      ],
+      "enMustAppearInOrder": [
+        "Low palmar nerve block",
+        "below fetlock",
+        "no improvement",
+        "High palmar nerve block",
+        "proximal palmar level",
+        "no improvement",
+        "left elbow",
+        "Shadai"
+      ]
+    }
   }
 ]

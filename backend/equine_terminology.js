@@ -26,6 +26,20 @@ const TERMINOLOGY_RULES = [
     match: /(骨に問題がない|no fracture|no particular issues with the bone)/i,
     line: '- Preserve the reassuring wording around bone findings. Do not contradict it.',
   },
+  {
+    match: /(low palmar|high palmar|sub-?carpal|掌側神経ブロック|神経ブロック)/i,
+    line: [
+      '- Preserve every named diagnostic nerve block exactly as written, including anatomical level, order, limb scope, and the result of each block.',
+      '- Low palmar nerve block, High palmar nerve block, and sub-carpal nerve block are distinct procedures; never substitute or collapse them.',
+      '- If a later source note corrects an earlier block description, use the correction and omit the superseded wording.',
+      '- When the source describes Low palmar nerve block as 遠位部 / 球節以下, the English report must explicitly retain "distal palmar level (below the fetlock)".',
+      '- When the source describes High palmar nerve block as 近位部 / 管以下, the English report must explicitly retain "proximal palmar level" and state that it covers the region described as 管以下 in the source.',
+    ].join(' '),
+  },
+  {
+    match: /(Monbetsu Veterinary Clinic|門別家畜診療所)/i,
+    line: '- Translate "Monbetsu Veterinary Clinic" as "門別家畜診療所" and preserve "門別家畜診療所" exactly. Do not rename it as a veterinary clinic, horse clinic, hospital, or another facility.',
+  },
 ];
 
 function buildBaseTerminologyGuard() {

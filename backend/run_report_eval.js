@@ -50,6 +50,10 @@ const TERM_ALIASES = {
   '気分の波': ['気分の波', '気分の浮き沈み', '気分に多少の波', '気分の変動', '気性の波', '気分の変動が見られる', '日によっては気分の変動', '日によっては気分の変動が見られる'],
   印象: ['印象', '面は見受けられません', '扱いにくい面', '気になることはございません', '感じることはありません', '感じる場面はございません', '感じることもなく', '感じることもありません', '感じられません', '目立つようなことはありません', '扱いにくい面はございません', '扱いにくい面はありません', '扱いにくさが強い印象はありません', '特に扱いにくい面はございません'],
   冷却: ['冷却', 'アイシング'],
+  改善なし: ['改善なし', '改善は認められません', '改善しませんでした', '改善が見られませんでした', '改善は見られず', '改善はありませんでした', '跛行は持続しました', '跛行が持続しました'],
+  'no improvement': ['no improvement', 'did not improve', 'failed to improve', 'without improvement', 'no clear improvement', 'lameness persisted'],
+  'below fetlock': ['below the fetlock', 'distal to the fetlock', 'distal palmar level', 'distal palmar region'],
+  'proximal palmar level': ['proximal palmar level', 'proximal palmar region', 'high palmar level', 'below the carpus', 'distal to the carpus', 'cannon region'],
 };
 
 function includesAll(text, tokens = []) {
@@ -85,14 +89,47 @@ function evaluateDeparture(result, expectations = {}) {
   return { missing };
 }
 
+function evaluateStatus(result, expectations = {}) {
+  const jaReport = result?.ja?.report || '';
+  const enReport = result?.en?.report || '';
+  const checkOrder = (text, tokens = []) => {
+    const normalizedText = normalize(text);
+    let cursor = -1;
+    for (const token of tokens) {
+      const aliases = TERM_ALIASES[token] || [token];
+      const indexes = aliases
+        .map((alias) => normalizedText.indexOf(normalize(alias), cursor + 1))
+        .filter((index) => index >= 0);
+      if (!indexes.length) return tokens;
+      cursor = Math.min(...indexes);
+    }
+    return [];
+  };
+
+  return {
+    jaMissing: includesAll(jaReport, expectations.jaMustInclude || []),
+    enMissing: includesAll(enReport, expectations.enMustInclude || []),
+    jaForbidden: (expectations.jaMustAvoid || []).filter((token) => normalize(jaReport).includes(normalize(token))),
+    enForbidden: (expectations.enMustAvoid || []).filter((token) => normalize(enReport).includes(normalize(token))),
+    jaOrderFailure: checkOrder(jaReport, expectations.jaMustAppearInOrder || []),
+    enOrderFailure: checkOrder(enReport, expectations.enMustAppearInOrder || []),
+  };
+}
+
 async function runCase(testCase, apiKey) {
-  if (testCase.type === 'departure') {
-    const output = await generateDepartureReport({ notes: testCase.notes, apiKey });
+  if (testCase.type === 'departure' || testCase.type === 'status') {
+    const output = await generateDepartureReport({
+      notes: testCase.notes,
+      reportType: testCase.type === 'status' ? 'status' : 'departure',
+      apiKey,
+    });
     return {
       id: testCase.id,
       type: testCase.type,
       output,
-      evaluation: evaluateDeparture(output, testCase.expectations || {}),
+      evaluation: testCase.type === 'status'
+        ? evaluateStatus(output, testCase.expectations || {})
+        : evaluateDeparture(output, testCase.expectations || {}),
     };
   }
 
@@ -153,6 +190,26 @@ async function main() {
   console.log(`Saved results to ${outputPath}`);
 
   for (const result of results) {
+    if (result.type === 'status') {
+      const checks = result.evaluation;
+      const status = checks.jaMissing.length === 0
+        && checks.enMissing.length === 0
+        && checks.jaForbidden.length === 0
+        && checks.enForbidden.length === 0
+        && checks.jaOrderFailure.length === 0
+        && checks.enOrderFailure.length === 0
+        ? 'PASS'
+        : 'CHECK';
+      console.log(`[${status}] ${result.id}`);
+      if (checks.jaMissing.length) console.log(`  ja missing: ${checks.jaMissing.join(', ')}`);
+      if (checks.enMissing.length) console.log(`  en missing: ${checks.enMissing.join(', ')}`);
+      if (checks.jaForbidden.length) console.log(`  ja forbidden: ${checks.jaForbidden.join(', ')}`);
+      if (checks.enForbidden.length) console.log(`  en forbidden: ${checks.enForbidden.join(', ')}`);
+      if (checks.jaOrderFailure.length) console.log(`  ja order: ${checks.jaOrderFailure.join(' -> ')}`);
+      if (checks.enOrderFailure.length) console.log(`  en order: ${checks.enOrderFailure.join(' -> ')}`);
+      continue;
+    }
+
     if (result.type === 'departure') {
       const status = result.evaluation.missing.length === 0 ? 'PASS' : 'CHECK';
       console.log(`[${status}] ${result.id}`);

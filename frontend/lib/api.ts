@@ -75,6 +75,6 @@ export async function generateStatusReport(notes: string) {
         method: 'POST',
         headers: await getApiAuthHeaders(),
         body: JSON.stringify({ notes, reportType: 'status' }),
-    });
+    }, 150000);
     return readApiResponse(res);
 }

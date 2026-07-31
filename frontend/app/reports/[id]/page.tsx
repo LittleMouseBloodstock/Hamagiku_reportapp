@@ -559,6 +559,9 @@ export default function ReportEditor() {
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                                 weightDate: latestWeightDate || '',
+                                sourceNotes: '',
+                                reportJp: '',
+                                reportEn: '',
                                 assessmentJp: '', assessmentEn: '',
                                 managementJp: [horse?.last_farrier_note, horse?.last_worming_note].filter(Boolean).join(' / '),
                                 managementEn: '',
@@ -691,10 +694,14 @@ export default function ReportEditor() {
                             damEn: pedigree.damEn,
                             weight: report.weight ? `${report.weight}kg` : '',
                             weightDate: metrics.weightDate || '',
+                            sourceNotes: metrics.sourceNotes || '',
+                            reportJp: metrics.reportJp || '',
+                            reportEn: metrics.reportEn || '',
                             assessmentJp: metrics.assessmentJp || '', assessmentEn: metrics.assessmentEn || '',
                             managementJp: metrics.managementJp || '', managementEn: metrics.managementEn || '',
                             nextStepsJp: metrics.nextStepsJp || '', nextStepsEn: metrics.nextStepsEn || '',
-                            commentJp: report.body || metrics.commentJp || '', commentEn: metrics.commentEn || '',
+                            commentJp: metrics.commentJp || (!metrics.reportJp ? report.body : '') || '',
+                            commentEn: metrics.commentEn || '',
                             outputMode: resolvedMode,
                             showLogo: typeof metrics.showLogo === 'boolean' ? metrics.showLogo : resolvedMode !== 'print'
                         } as Partial<StatusReportData>);
@@ -828,6 +835,12 @@ export default function ReportEditor() {
                             // New Report Fallback
                             const params = new URLSearchParams(window.location.search);
                             const paramHorseId = params.get('horseId');
+                            const fallbackReportType: ReportKind = params.get('reportType') === 'status'
+                                ? 'status'
+                                : params.get('reportType') === 'departure'
+                                    ? 'departure'
+                                    : 'monthly';
+                            setReportType(fallbackReportType);
                             const defaultDate = new Date().toISOString().slice(0, 7).replace('-', '.');
                             const sixMonthsAgo = new Date();
                             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -866,7 +879,37 @@ export default function ReportEditor() {
 
                                     if (isMounted) {
                                         const pedigree = resolvePedigreeFields(horse);
-                                        setInitialData({
+                                        if (fallbackReportType === 'status') {
+                                            const fallbackOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                                            setInitialData({
+                                                reportDate: new Date().toISOString().slice(0, 10),
+                                                horseNameJp: horse?.name || '',
+                                                horseNameEn: horse?.name_en || '',
+                                                sireJp: pedigree.sireJp,
+                                                sireEn: pedigree.sireEn,
+                                                damJp: pedigree.damJp,
+                                                damEn: pedigree.damEn,
+                                                ownerName: horse?.clients?.name || '',
+                                                trainerNameJp: horse?.trainers?.trainer_name || '',
+                                                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                                weight: latestWeight !== null ? `${latestWeight}kg` : '',
+                                                weightDate: weightData?.[0]?.measured_at || '',
+                                                sourceNotes: '',
+                                                reportJp: '',
+                                                reportEn: '',
+                                                assessmentJp: '',
+                                                assessmentEn: '',
+                                                managementJp: [horse?.last_farrier_note, horse?.last_worming_note].filter(Boolean).join(' / '),
+                                                managementEn: '',
+                                                nextStepsJp: '',
+                                                nextStepsEn: '',
+                                                commentJp: '',
+                                                commentEn: '',
+                                                outputMode: fallbackOutputMode,
+                                                showLogo: fallbackOutputMode !== 'print',
+                                            } as Partial<StatusReportData>);
+                                        } else {
+                                            setInitialData({
                                             reportDate: defaultDate,
                                             horseNameJp: horse?.name || '',
                                             horseNameEn: horse?.name_en || '',
@@ -894,6 +937,7 @@ export default function ReportEditor() {
                                             commentEn: '', commentJp: '',
                                             weightHistory: weightHistory
                                         });
+                                        }
                                         setLoading(false);
                                     }
                                 }
@@ -952,10 +996,14 @@ export default function ReportEditor() {
                                         damEn: pedigree.damEn,
                                         weight: report.weight ? `${report.weight}kg` : '',
                                         weightDate: metrics.weightDate || '',
+                                        sourceNotes: metrics.sourceNotes || '',
+                                        reportJp: metrics.reportJp || '',
+                                        reportEn: metrics.reportEn || '',
                                         assessmentJp: metrics.assessmentJp || '', assessmentEn: metrics.assessmentEn || '',
                                         managementJp: metrics.managementJp || '', managementEn: metrics.managementEn || '',
                                         nextStepsJp: metrics.nextStepsJp || '', nextStepsEn: metrics.nextStepsEn || '',
-                                        commentJp: report.body || metrics.commentJp || '', commentEn: metrics.commentEn || '',
+                                        commentJp: metrics.commentJp || (!metrics.reportJp ? report.body : '') || '',
+                                        commentEn: metrics.commentEn || '',
                                         outputMode: metrics.outputMode === 'print' ? 'print' : 'pdf',
                                         showLogo
                                     } as Partial<StatusReportData>);
@@ -1118,6 +1166,9 @@ export default function ReportEditor() {
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                 weightDate: latestWeightDate || '',
+                sourceNotes: '',
+                reportJp: '',
+                reportEn: '',
                 assessmentJp: '', assessmentEn: '', managementJp: '', managementEn: '',
                 nextStepsJp: '', nextStepsEn: '', commentJp: '', commentEn: ''
             } as Partial<StatusReportData>);
@@ -1349,6 +1400,9 @@ export default function ReportEditor() {
                     damJp: status.damJp,
                     damEn: status.damEn,
                     weightDate: status.weightDate,
+                    sourceNotes: status.sourceNotes,
+                    reportJp: status.reportJp,
+                    reportEn: status.reportEn,
                     assessmentJp: status.assessmentJp,
                     assessmentEn: status.assessmentEn,
                     managementJp: status.managementJp,
@@ -1363,10 +1417,10 @@ export default function ReportEditor() {
                 const payload = {
                     horse_id: horseId,
                     title: status.reportDate,
-                    body: status.commentJp || null,
+                    body: status.reportJp || status.commentJp || null,
                     weight: parseFloat((status.weight || '').replace(/[^0-9.]/g, '') || '0'),
                     status_training: 'Treatment Update',
-                    condition: status.assessmentJp || null,
+                    condition: status.assessmentJp || status.reportJp?.slice(0, 1000) || null,
                     target: status.nextStepsJp || null,
                     metrics_json: metricsJson,
                     updated_at: new Date().toISOString()

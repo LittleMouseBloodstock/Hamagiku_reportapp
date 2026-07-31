@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { FileText, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateStatusReport, translateText } from '@/lib/api';
+import {
+    buildLegacyStatusNarrative,
+    parseStatusNarrative,
+} from '@/lib/status-report-format';
 
 export type StatusReportData = {
     reportDate: string;
@@ -20,6 +24,9 @@ export type StatusReportData = {
     damEn?: string;
     weight?: string;
     weightDate?: string;
+    sourceNotes: string;
+    reportJp: string;
+    reportEn: string;
     assessmentJp: string;
     assessmentEn: string;
     managementJp: string;
@@ -52,6 +59,9 @@ const defaultData: StatusReportData = {
     damEn: '',
     weight: '',
     weightDate: '',
+    sourceNotes: '',
+    reportJp: '',
+    reportEn: '',
     assessmentJp: '',
     assessmentEn: '',
     managementJp: '',
@@ -63,6 +73,25 @@ const defaultData: StatusReportData = {
     outputMode: 'pdf',
     showLogo: true
 };
+
+function hydrateStatusData(value?: Partial<StatusReportData>): StatusReportData {
+    const merged = { ...defaultData, ...value };
+    return {
+        ...merged,
+        reportJp: merged.reportJp.trim() || buildLegacyStatusNarrative('ja', {
+            assessment: merged.assessmentJp,
+            management: merged.managementJp,
+            nextSteps: merged.nextStepsJp,
+            comment: merged.commentJp,
+        }),
+        reportEn: merged.reportEn.trim() || buildLegacyStatusNarrative('en', {
+            assessment: merged.assessmentEn,
+            management: merged.managementEn,
+            nextSteps: merged.nextStepsEn,
+            comment: merged.commentEn,
+        }),
+    };
+}
 
 function formatDate(value: string, language: 'ja' | 'en') {
     if (!value) return '-';
@@ -80,8 +109,7 @@ function reportDateLabel(value: string, language: 'ja' | 'en') {
 
 export default function StatusReportTemplate({ initialData, onDataChange }: Props) {
     const { language, t } = useLanguage();
-    const [data, setData] = useState<StatusReportData>({ ...defaultData, ...initialData });
-    const [aiNotes, setAiNotes] = useState('');
+    const [data, setData] = useState<StatusReportData>(() => hydrateStatusData(initialData));
     const [isGenerating, setIsGenerating] = useState(false);
     const [isTranslating, setIsTranslating] = useState(false);
     const [generationError, setGenerationError] = useState('');
@@ -89,7 +117,7 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
     const showLogo = data.showLogo ?? !isPrintMode;
 
     useEffect(() => {
-        setData((prev) => ({ ...prev, ...initialData }));
+        setData((prev) => hydrateStatusData({ ...prev, ...initialData }));
     }, [initialData]);
 
     useEffect(() => {
@@ -101,24 +129,38 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
     };
 
     const generateStatus = async () => {
-        if (!aiNotes.trim()) return;
+        if (!data.sourceNotes.trim()) return;
         setIsGenerating(true);
         setGenerationError('');
         try {
-            const json = await generateStatusReport(aiNotes.trim());
-            if (!json?.ja || !json?.en) {
+            const json = await generateStatusReport(data.sourceNotes.trim());
+            const reportJp = String(
+                json?.ja?.report
+                || json?.ja?.narrative
+                || buildLegacyStatusNarrative('ja', {
+                    assessment: json?.ja?.assessment,
+                    management: json?.ja?.management,
+                    nextSteps: json?.ja?.nextSteps,
+                    comment: json?.ja?.comment,
+                })
+            ).trim();
+            const reportEn = String(
+                json?.en?.report
+                || json?.en?.narrative
+                || buildLegacyStatusNarrative('en', {
+                    assessment: json?.en?.assessment,
+                    management: json?.en?.management,
+                    nextSteps: json?.en?.nextSteps,
+                    comment: json?.en?.comment,
+                })
+            ).trim();
+            if (!reportJp || !reportEn) {
                 throw new Error('The generated report was incomplete. Please try again.');
             }
             setData((prev) => ({
                 ...prev,
-                assessmentJp: json?.ja?.assessment || json?.ja?.comment || prev.assessmentJp,
-                assessmentEn: json?.en?.assessment || json?.en?.comment || prev.assessmentEn,
-                managementJp: json?.ja?.management || json?.ja?.exercise || prev.managementJp,
-                managementEn: json?.en?.management || json?.en?.exercise || prev.managementEn,
-                nextStepsJp: json?.ja?.nextSteps || json?.ja?.feeding || prev.nextStepsJp,
-                nextStepsEn: json?.en?.nextSteps || json?.en?.feeding || prev.nextStepsEn,
-                commentJp: json?.ja?.comment || prev.commentJp,
-                commentEn: json?.en?.comment || prev.commentEn
+                reportJp,
+                reportEn,
             }));
         } catch (error) {
             console.error('Status report generation failed:', error);
@@ -133,14 +175,14 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
         }
     };
 
-    const translateComment = async () => {
-        if (!data.commentEn.trim()) return;
+    const translateReport = async () => {
+        if (!data.reportEn.trim()) return;
         setIsTranslating(true);
         try {
-            const result = await translateText(data.commentEn, 'ja', 'status');
+            const result = await translateText(data.reportEn, 'ja', 'status');
             const translatedText = result?.translatedText?.trim();
             if (!translatedText) throw new Error('Translation returned no text');
-            update('commentJp', translatedText);
+            update('reportJp', translatedText);
         } catch (error) {
             console.error('Status report translation failed:', error);
             alert('Translation failed.');
@@ -149,18 +191,8 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
         }
     };
 
-    const pairField = (label: string, jpKey: keyof StatusReportData, enKey: keyof StatusReportData) => (
-        <div className="grid gap-3 md:grid-cols-2">
-            <div>
-                <label className="mb-1 block text-xs font-semibold text-stone-600">{label} (JP)</label>
-                <textarea value={String(data[jpKey] || '')} onChange={(event) => update(jpKey, event.target.value)} rows={3} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900 shadow-sm" />
-            </div>
-            <div>
-                <label className="mb-1 block text-xs font-semibold text-stone-600">{label} (EN)</label>
-                <textarea value={String(data[enKey] || '')} onChange={(event) => update(enKey, event.target.value)} rows={3} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900 shadow-sm" />
-            </div>
-        </div>
-    );
+    const previewText = language === 'ja' ? data.reportJp : data.reportEn;
+    const previewSections = parseStatusNarrative(previewText);
 
     return (
         <div className="status-report-root flex min-h-screen w-full flex-col bg-gray-100 font-sans md:flex-row md:overflow-hidden">
@@ -171,8 +203,9 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                 </div>
                 <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
                     <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-800"><FileText size={14} /> {language === 'ja' ? '文章作成' : 'Report Draft'}</div>
-                    <textarea value={aiNotes} onChange={(event) => setAiNotes(event.target.value)} rows={7} placeholder={language === 'ja' ? '例：跛行の経過、検査結果、現在の管理、次の方針を入力' : 'e.g. lameness history, examination findings, current management and next steps'} className="w-full rounded-lg border-0 bg-white/80 px-3 py-3 text-sm text-stone-900 shadow-sm ring-1 ring-indigo-200" />
-                    <button type="button" onClick={() => void generateStatus()} disabled={isGenerating || !aiNotes.trim()} className="mt-2 w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50">
+                    <textarea value={data.sourceNotes} onChange={(event) => update('sourceNotes', event.target.value)} rows={10} placeholder={language === 'ja' ? '治療・管理経過、検査、診断麻酔、画像所見、現在の状況、今後の方針を入力してください。後から訂正を追記した場合は、訂正内容を優先して反映します。' : 'Enter the complete treatment history, examinations, diagnostic blocks, imaging findings, current status, and next steps. A later explicit correction will override an earlier conflicting statement.'} className="w-full rounded-lg border-0 bg-white/80 px-3 py-3 text-sm text-stone-900 shadow-sm ring-1 ring-indigo-200" />
+                    <p className="mt-2 text-[11px] leading-5 text-indigo-700">{language === 'ja' ? '入力原文は生成後も保存され、内容確認に利用できます。' : 'The original source notes are retained after generation for factual review.'}</p>
+                    <button type="button" onClick={() => void generateStatus()} disabled={isGenerating || !data.sourceNotes.trim()} className="mt-2 w-full rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50">
                         {isGenerating ? (language === 'ja' ? '生成中...' : 'Generating...') : (language === 'ja' ? '日本語・英語の文章を生成' : 'Generate Japanese & English')}
                     </button>
                     {generationError && <p role="alert" className="mt-2 text-xs font-medium text-red-700">{generationError}</p>}
@@ -193,12 +226,14 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <label className="text-xs font-semibold text-stone-600">{language === 'ja' ? '馬体重' : 'Weight'}<input value={data.weight || ''} onChange={(event) => update('weight', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
                     <label className="text-xs font-semibold text-stone-600">{language === 'ja' ? '計測日' : 'Weight date'}<input type="date" value={data.weightDate || ''} onChange={(event) => update('weightDate', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
                 </div>
-                {pairField(language === 'ja' ? '現在の状態' : 'Current assessment', 'assessmentJp', 'assessmentEn')}
-                {pairField(language === 'ja' ? '治療・管理' : 'Treatment & management', 'managementJp', 'managementEn')}
-                {pairField(language === 'ja' ? '今後の方針' : 'Next steps', 'nextStepsJp', 'nextStepsEn')}
-                <div className="grid gap-3 md:grid-cols-2">
-                    <div><label className="mb-1 block text-xs font-semibold text-stone-600">Comment (JP)</label><textarea value={data.commentJp} onChange={(event) => update('commentJp', event.target.value)} rows={4} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900" /></div>
-                    <div><label className="mb-1 block text-xs font-semibold text-stone-600">Comment (EN)</label><textarea value={data.commentEn} onChange={(event) => update('commentEn', event.target.value)} rows={4} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900" /><button type="button" onClick={() => void translateComment()} disabled={isTranslating || !data.commentEn.trim()} className="mt-2 inline-flex items-center gap-1 rounded-md border border-stone-200 px-3 py-2 text-xs text-[#1a3c34] disabled:opacity-50"><Globe size={13} />{isTranslating ? 'Translating...' : 'Translate to Japanese'}</button></div>
+                <div>
+                    <label className="mb-1 block text-xs font-semibold text-stone-600">{language === 'ja' ? '治療・診断経過（日本語）' : 'Treatment and diagnostic history (Japanese)'}</label>
+                    <textarea value={data.reportJp} onChange={(event) => update('reportJp', event.target.value)} rows={14} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm leading-6 text-stone-900" />
+                </div>
+                <div>
+                    <label className="mb-1 block text-xs font-semibold text-stone-600">{language === 'ja' ? '治療・診断経過（英語）' : 'Treatment and diagnostic history (English)'}</label>
+                    <textarea value={data.reportEn} onChange={(event) => update('reportEn', event.target.value)} rows={14} className="w-full rounded-lg border-stone-300 bg-stone-50 px-3 py-2 text-sm leading-6 text-stone-900" />
+                    <button type="button" onClick={() => void translateReport()} disabled={isTranslating || !data.reportEn.trim()} className="mt-2 inline-flex items-center gap-1 rounded-md border border-stone-200 px-3 py-2 text-xs text-[#1a3c34] disabled:opacity-50"><Globe size={13} />{isTranslating ? 'Translating...' : 'Translate full report to Japanese'}</button>
                 </div>
             </div>
 
@@ -214,19 +249,27 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                             <div><div className="font-serif text-3xl font-bold text-stone-800">{language === 'ja' ? data.horseNameJp || '（馬名未入力）' : data.horseNameEn || '(Horse name)'}</div><div className="mt-1 text-lg text-[#c5a059]">{language === 'ja' ? data.horseNameEn : data.horseNameJp}</div></div>
                             <div className="border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-right text-sm text-stone-600">{language === 'ja' ? `馬主：${data.ownerName || '-'} / 調教師：${data.trainerNameJp || '-'}` : `Owner: ${data.ownerName || '-'} / Trainer: ${data.trainerNameEn || '-'}`}<br />{language === 'ja' ? `馬体重：${data.weight || '-'}${data.weightDate ? `（${formatDate(data.weightDate, language)}）` : ''}` : `Weight: ${data.weight || '-'}${data.weightDate ? ` (${formatDate(data.weightDate, language)})` : ''}`}</div>
                         </div>
-                        <div className="grid gap-4">
-                            {[
-                                [language === 'ja' ? '現在の状態' : 'CURRENT ASSESSMENT', data.assessmentJp, data.assessmentEn],
-                                [language === 'ja' ? '治療・管理' : 'TREATMENT & MANAGEMENT', data.managementJp, data.managementEn],
-                                [language === 'ja' ? '今後の方針' : 'NEXT STEPS', data.nextStepsJp, data.nextStepsEn],
-                                [language === 'ja' ? 'コメント' : 'COMMENT', data.commentJp, data.commentEn]
-                            ].map(([label, jp, en]) => <section key={String(label)} className="rounded-lg border border-[#d8c8af] bg-white p-4"><h2 className="mb-2 border-b border-[#eee4d8] pb-2 font-serif text-sm font-bold tracking-[0.16em] text-[#1a3c34]">{label}</h2><p className="whitespace-pre-wrap text-[15px] leading-7">{language === 'ja' ? (jp || '-') : (en || '-')}</p></section>)}
-                        </div>
+                        <article className="status-report-article border-t-2 border-[#315f91] pt-5">
+                            {previewSections.length ? previewSections.map((section, index) => (
+                                <section key={`${section.number ?? index}-${section.heading}`} className="status-report-section mb-5">
+                                    {section.heading && (
+                                        <h2 className="status-report-section-heading mb-2 font-serif text-[16px] font-bold leading-6 text-[#315f91]">
+                                            {section.number ?? index + 1}{language === 'ja' ? '．' : '. '}{section.heading}
+                                        </h2>
+                                    )}
+                                    <div className="space-y-2">
+                                        {section.paragraphs.map((paragraph, paragraphIndex) => (
+                                            <p key={paragraphIndex} className="whitespace-pre-wrap text-[14px] leading-7 text-stone-800">{paragraph}</p>
+                                        ))}
+                                    </div>
+                                </section>
+                            )) : <p className="py-10 text-center text-sm text-stone-400">-</p>}
+                        </article>
                     </main>
                     <footer className="absolute bottom-4 left-0 w-full text-center text-[10px] tracking-widest text-[#aaa]">HAMAGIKU FARM - HOKKAIDO, JAPAN | {language === 'ja' ? data.reportDate.replace(/-/g, '/') : reportDateLabel(data.reportDate, 'en')}</footer>
                 </div>
             </div>
-            <style jsx global>{`@media print { @page { size: A4 portrait; margin: 10mm 0 0 0; } html, body, #__next { height:auto !important; overflow:visible !important; background:#fff !important; margin:0 !important; padding:0 !important; } .no-print { display:none !important; } .status-report-root { display:block !important; min-height:0 !important; background:#fff !important; } .status-report-preview-wrap { display:block !important; padding:0 !important; overflow:visible !important; background:#fff !important; } .status-report-preview { position:static !important; width:210mm !important; height:auto !important; min-height:285mm !important; margin:0 !important; padding:0 0 12mm !important; overflow:visible !important; box-shadow:none !important; } .status-report-preview.no-logo .logo-container { display:none !important; } .status-report-preview main { padding:18mm 30px 10px !important; } .status-report-preview.print-mode main { padding-top:22mm !important; } .status-report-preview section { break-inside:avoid-page !important; page-break-inside:avoid !important; } .status-report-preview footer { position:static !important; margin-top:8mm !important; } }`}</style>
+            <style jsx global>{`@media print { @page { size: A4 portrait; margin: 10mm 0 0 0; } html, body, #__next { height:auto !important; overflow:visible !important; background:#fff !important; margin:0 !important; padding:0 !important; } .no-print { display:none !important; } .status-report-root { display:block !important; min-height:0 !important; background:#fff !important; } .status-report-preview-wrap { display:block !important; padding:0 !important; overflow:visible !important; background:#fff !important; } .status-report-preview { position:static !important; width:210mm !important; height:auto !important; min-height:285mm !important; margin:0 !important; padding:0 0 12mm !important; overflow:visible !important; box-shadow:none !important; } .status-report-preview.no-logo .logo-container { display:none !important; } .status-report-preview main { padding:18mm 30px 10px !important; } .status-report-preview.print-mode main { padding-top:22mm !important; } .status-report-section-heading { break-after:avoid-page !important; page-break-after:avoid !important; } .status-report-preview footer { position:static !important; margin-top:8mm !important; } }`}</style>
         </div>
     );
 }
