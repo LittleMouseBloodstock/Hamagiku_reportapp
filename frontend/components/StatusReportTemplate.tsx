@@ -245,9 +245,9 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                         <div className="z-10 text-right"><div className="font-serif text-xl font-bold tracking-widest text-[#1a3c34]">{language === 'ja' ? '治療経過報告' : 'TREATMENT UPDATE'}</div><div className="mt-1 text-xs text-stone-500">{reportDateLabel(data.reportDate, language)}</div></div>
                     </header>
                     <main className="px-8 py-6">
-                        <div className="mb-5 flex items-end justify-between gap-6">
-                            <div><div className="font-serif text-3xl font-bold text-stone-800">{language === 'ja' ? data.horseNameJp || '（馬名未入力）' : data.horseNameEn || '(Horse name)'}</div><div className="mt-1 text-lg text-[#c5a059]">{language === 'ja' ? data.horseNameEn : data.horseNameJp}</div></div>
-                            <div className="border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-right text-sm text-stone-600">{language === 'ja' ? `馬主：${data.ownerName || '-'} / 調教師：${data.trainerNameJp || '-'}` : `Owner: ${data.ownerName || '-'} / Trainer: ${data.trainerNameEn || '-'}`}<br />{language === 'ja' ? `馬体重：${data.weight || '-'}${data.weightDate ? `（${formatDate(data.weightDate, language)}）` : ''}` : `Weight: ${data.weight || '-'}${data.weightDate ? ` (${formatDate(data.weightDate, language)})` : ''}`}</div>
+                        <div className="status-report-identity mb-5 flex items-end justify-between gap-6">
+                            <div className="status-report-horse min-w-0"><div className="font-serif text-3xl font-bold text-stone-800">{language === 'ja' ? data.horseNameJp || '（馬名未入力）' : data.horseNameEn || '(Horse name)'}</div><div className="mt-1 text-lg text-[#c5a059]">{language === 'ja' ? data.horseNameEn : data.horseNameJp}</div></div>
+                            <div className="status-report-owner min-w-0 border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-right text-sm text-stone-600">{language === 'ja' ? `馬主：${data.ownerName || '-'} / 調教師：${data.trainerNameJp || '-'}` : `Owner: ${data.ownerName || '-'} / Trainer: ${data.trainerNameEn || '-'}`}<br />{language === 'ja' ? `馬体重：${data.weight || '-'}${data.weightDate ? `（${formatDate(data.weightDate, language)}）` : ''}` : `Weight: ${data.weight || '-'}${data.weightDate ? ` (${formatDate(data.weightDate, language)})` : ''}`}</div>
                         </div>
                         <article className="status-report-article border-t-2 border-[#315f91] pt-5">
                             {previewSections.length ? previewSections.map((section, index) => (
@@ -269,7 +269,40 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <footer className="absolute bottom-4 left-0 w-full text-center text-[10px] tracking-widest text-[#aaa]">HAMAGIKU FARM - HOKKAIDO, JAPAN | {language === 'ja' ? data.reportDate.replace(/-/g, '/') : reportDateLabel(data.reportDate, 'en')}</footer>
                 </div>
             </div>
-            <style jsx global>{`@media print { @page { size: A4 portrait; margin: 10mm 0 0 0; } html, body, #__next { height:auto !important; overflow:visible !important; background:#fff !important; margin:0 !important; padding:0 !important; } .no-print { display:none !important; } .status-report-root { display:block !important; min-height:0 !important; background:#fff !important; } .status-report-preview-wrap { display:block !important; padding:0 !important; overflow:visible !important; background:#fff !important; } .status-report-preview { position:static !important; width:210mm !important; height:auto !important; min-height:285mm !important; margin:0 !important; padding:0 0 12mm !important; overflow:visible !important; box-shadow:none !important; } .status-report-preview.no-logo .logo-container { display:none !important; } .status-report-preview main { padding:18mm 30px 10px !important; } .status-report-preview.print-mode main { padding-top:22mm !important; } .status-report-section-heading { break-after:avoid-page !important; page-break-after:avoid !important; } .status-report-preview footer { position:static !important; margin-top:8mm !important; } }`}</style>
+            <style jsx global>{`@media print {
+                @page { size: A4 portrait; margin: 0 !important; }
+                html, body, #__next { width: 210mm !important; min-width: 210mm !important; height: auto !important; overflow: visible !important; background: #fff !important; margin: 0 !important; padding: 0 !important; }
+                .no-print { display: none !important; }
+                .status-report-root { display: block !important; width: 210mm !important; min-height: 0 !important; background: #fff !important; }
+                .status-report-preview-wrap { display: block !important; width: 210mm !important; padding: 0 !important; overflow: visible !important; background: #fff !important; }
+                .status-report-preview {
+                    box-sizing: border-box !important;
+                    position: static !important;
+                    width: 190mm !important;
+                    min-height: 297mm !important;
+                    margin: 0 auto !important;
+                    padding: 8mm 0 10mm !important;
+                    overflow: visible !important;
+                    box-shadow: none !important;
+                }
+                .status-report-preview header {
+                    box-sizing: border-box !important;
+                    width: 100% !important;
+                    height: 40mm !important;
+                    min-height: 40mm !important;
+                    padding: 6mm 8mm 4mm !important;
+                }
+                .status-report-preview.no-logo .logo-container { display: none !important; }
+                .status-report-preview main { box-sizing: border-box !important; width: 100% !important; padding: 9mm 8mm 10mm !important; }
+                .status-report-preview.print-mode main { padding-top: 11mm !important; }
+                .status-report-identity { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) !important; align-items: end !important; gap: 6mm !important; }
+                .status-report-horse, .status-report-owner { min-width: 0 !important; max-width: 100% !important; }
+                .status-report-owner { overflow-wrap: anywhere !important; word-break: break-word !important; white-space: normal !important; line-height: 1.45 !important; }
+                .status-report-article, .status-report-section, .status-report-section p { max-width: 100% !important; overflow-wrap: anywhere !important; word-break: break-word !important; }
+                .status-report-section { break-inside: avoid-page !important; page-break-inside: avoid !important; }
+                .status-report-section-heading { break-after: avoid-page !important; page-break-after: avoid !important; }
+                .status-report-preview footer { position: static !important; margin-top: 8mm !important; padding: 0 8mm !important; }
+            }`}</style>
         </div>
     );
 }
