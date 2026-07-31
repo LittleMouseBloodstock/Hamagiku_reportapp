@@ -284,9 +284,9 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
             </div>
             <style jsx global>{`
                 .status-report-owner { line-height: 1.45; }
-                .status-report-owner-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr); column-gap: 0.5rem; align-items: baseline; text-align: right; }
+                .status-report-owner-row { display: flex; justify-content: flex-end; align-items: baseline; column-gap: 0.35rem; text-align: right; }
                 .status-report-owner-label { white-space: nowrap; }
-                .status-report-owner-value { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+                .status-report-owner-value { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
                 @media print {
                 @page { size: A4 portrait; margin: 0 !important; }
                 html, body, #__next { width: 210mm !important; min-width: 210mm !important; height: auto !important; overflow: visible !important; background: #fff !important; margin: 0 !important; padding: 0 !important; }
