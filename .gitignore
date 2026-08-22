@@ -6,9 +6,11 @@ out
 .DS_Store
 *.log
 .vscode
+supabase/.temp/
 
 # Local Operational Scripts
 backend/fix_storage_policies.sql
+internal_memory_secret.txt
 
 # Eval artifacts
 backend/evals/results/*.json

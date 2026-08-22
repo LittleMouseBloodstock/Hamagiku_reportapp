@@ -165,8 +165,9 @@ export default function ReproTimelinePage() {
             alert(t('vetCheck'));
             return;
         }
+        if (!session?.access_token) return;
         try {
-            const headers = buildRestHeaders({ bearerToken: session?.access_token });
+            const headers = buildRestHeaders({ bearerToken: session.access_token });
             await restPost('repro_vet_checks', {
                 horse_id: id,
                 check_date: vetCheck.check_date,
@@ -185,8 +186,9 @@ export default function ReproTimelinePage() {
             alert('Cover date is required');
             return;
         }
+        if (!session?.access_token) return;
         try {
-            const headers = buildRestHeaders({ bearerToken: session?.access_token });
+            const headers = buildRestHeaders({ bearerToken: session.access_token });
             await restPost('rpc/repro_create_cover', {
                 horse_id: id,
                 cover_date: newCover.cover_date,

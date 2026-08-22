@@ -1,0 +1,49 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # GitHub schedules may be delayed. Use a non-zero minute and run twice daily.
+    - cron: "17 9,21 * * *"
+      timezone: "Asia/Tokyo"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Keep ${{ matrix.project }} active
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: hamagiku
+            project_ref: srhthxknehzofuzjjrhh
+            url: https://srhthxknehzofuzjjrhh.supabase.co
+            key_secret: SUPABASE_HAMAGIKU_PUBLISHABLE_KEY
+          - project: shinba
+            project_ref: qlebmpirqfkhierfjqxv
+            url: https://qlebmpirqfkhierfjqxv.supabase.co
+            key_secret: SUPABASE_SHINBA_PUBLISHABLE_KEY
+
+    steps:
+      - name: Check out keepalive script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/supabase-keepalive.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Call dedicated keepalive RPC
+        env:
+          SUPABASE_PROJECT: ${{ matrix.project }}
+          SUPABASE_PROJECT_REF: ${{ matrix.project_ref }}
+          SUPABASE_URL: ${{ matrix.url }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets[matrix.key_secret] }}
+        run: node scripts/supabase-keepalive.mjs

@@ -1,5 +1,7 @@
 'use client';
 
+import { supabase } from '@/lib/supabase';
+
 export type RestHeaders = {
     apikey: string;
     Authorization: string;
@@ -16,20 +18,40 @@ export const getSupabaseRestEnv = () => {
     return { supabaseUrl, supabaseAnonKey };
 };
 
-export const buildRestHeaders = (options?: { prefer?: string; bearerToken?: string }): RestHeaders => {
+export const buildRestHeaders = (options: { prefer?: string; bearerToken: string }): RestHeaders => {
     const { supabaseAnonKey } = getSupabaseRestEnv();
-    const token = options?.bearerToken || supabaseAnonKey;
+    if (!options.bearerToken) {
+        throw new Error('An authenticated Supabase session is required for REST');
+    }
     return {
         apikey: supabaseAnonKey,
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${options.bearerToken}`,
         'Content-Type': 'application/json',
-        ...(options?.prefer ? { Prefer: options.prefer } : {})
+        ...(options.prefer ? { Prefer: options.prefer } : {})
     };
+};
+
+const resolveRestHeaders = async (headers?: RestHeaders, prefer?: string): Promise<RestHeaders> => {
+    if (headers) {
+        return prefer && !headers.Prefer ? { ...headers, Prefer: prefer } : headers;
+    }
+
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+        throw new Error('Unable to resolve the authenticated Supabase session');
+    }
+    const bearerToken = data.session?.access_token;
+    if (!bearerToken) {
+        throw new Error('An authenticated Supabase session is required for REST');
+    }
+    return buildRestHeaders({ bearerToken, prefer });
 };
 
 export const restGet = async (path: string, headers?: RestHeaders) => {
     const { supabaseUrl } = getSupabaseRestEnv();
-    const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: headers || buildRestHeaders() });
+    const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+        headers: await resolveRestHeaders(headers)
+    });
     if (!res.ok) {
         const text = await res.text();
         throw new Error(`REST GET failed: ${res.status} ${text}`);
@@ -39,12 +61,9 @@ export const restGet = async (path: string, headers?: RestHeaders) => {
 
 export const restPost = async (path: string, body: unknown, headers?: RestHeaders) => {
     const { supabaseUrl } = getSupabaseRestEnv();
-    const finalHeaders = headers
-        ? { ...headers, Prefer: headers.Prefer || 'return=representation' }
-        : buildRestHeaders({ prefer: 'return=representation' });
     const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
         method: 'POST',
-        headers: finalHeaders,
+        headers: await resolveRestHeaders(headers, 'return=representation'),
         body: JSON.stringify(body)
     });
     if (!res.ok) {
@@ -60,7 +79,7 @@ export const restPatch = async (path: string, body: unknown, headers?: RestHeade
     const { supabaseUrl } = getSupabaseRestEnv();
     const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
         method: 'PATCH',
-        headers: headers || buildRestHeaders({ prefer: 'return=representation' }),
+        headers: await resolveRestHeaders(headers, 'return=representation'),
         body: JSON.stringify(body)
     });
     if (!res.ok) {
@@ -76,7 +95,7 @@ export const restDelete = async (path: string, headers?: RestHeaders) => {
     const { supabaseUrl } = getSupabaseRestEnv();
     const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
         method: 'DELETE',
-        headers: headers || buildRestHeaders()
+        headers: await resolveRestHeaders(headers)
     });
     if (!res.ok) {
         const text = await res.text();
@@ -87,10 +106,11 @@ export const restDelete = async (path: string, headers?: RestHeaders) => {
 
 export const restCount = async (path: string, headers?: RestHeaders) => {
     const { supabaseUrl } = getSupabaseRestEnv();
+    const resolvedHeaders = await resolveRestHeaders(headers);
     const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
         method: 'HEAD',
         headers: {
-            ...(headers || buildRestHeaders()),
+            ...resolvedHeaders,
             Prefer: 'count=exact'
         }
     });
