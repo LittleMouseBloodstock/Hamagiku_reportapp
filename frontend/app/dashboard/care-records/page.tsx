@@ -247,7 +247,7 @@ export default function CareRecordsPage() {
     };
 
     const saveCareDraftRecords = async (nextRecords: CareRecord[]) => {
-        if (!selectedHorseId) return;
+        if (!selectedHorseId || !session?.access_token) return;
         const cleanedRecords = nextRecords
             .map((record) => ({
                 ...record,
@@ -264,7 +264,7 @@ export default function CareRecordsPage() {
             updated_at: new Date().toISOString(),
             data: { records: cleanedRecords }
         }, buildRestHeaders({
-            bearerToken: session?.access_token,
+            bearerToken: session.access_token,
             prefer: 'resolution=merge-duplicates,return=representation'
         }));
     };
