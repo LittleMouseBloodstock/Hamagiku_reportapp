@@ -1,7 +1,9 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { AlertCircle, CheckCircle2, Languages, Loader2, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiAuthHeaders } from '@/lib/api';
+import { fillMissingDepartureTranslations, getDepartureTranslationStatus } from '@/lib/departure-report';
 
 export type DepartureReportData = {
     reportDate: string;
@@ -87,6 +89,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
     const [data, setData] = useState<DepartureReportData>({ ...defaultData, ...initialData });
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translationMessage, setTranslationMessage] = useState('');
     const [aiNotes, setAiNotes] = useState('');
     const showLogo = data.showLogo ?? (data.outputMode !== 'print');
     const isPrintMode = data.outputMode === 'print';
@@ -121,6 +125,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     const handleGenerateFields = async () => {
         if (!aiNotes) return;
         setIsGenerating(true);
+        setTranslationMessage('');
         try {
             const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
             const res = await fetch(`${baseUrl}/generate-departure`, {
@@ -133,19 +138,21 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 throw new Error(`Server Error (${res.status}): ${errorText}`);
             }
             const json = await res.json();
-            if (!json?.ja) return;
+            if (!json?.ja || !json?.en) {
+                throw new Error('The generated report did not include both Japanese and English fields.');
+            }
             setData(prev => ({
                 ...prev,
                 farrierJp: prev.farrierJp || json.ja.farrier || '',
-                farrierEn: isJa ? prev.farrierEn : prev.farrierEn || json.en?.farrier || '',
+                farrierEn: prev.farrierEn || json.en.farrier || '',
                 wormingJp: prev.wormingJp || json.ja.worming || '',
-                wormingEn: isJa ? prev.wormingEn : prev.wormingEn || json.en?.worming || '',
+                wormingEn: prev.wormingEn || json.en.worming || '',
                 feedingJp: prev.feedingJp || json.ja.feeding || '',
-                feedingEn: isJa ? prev.feedingEn : prev.feedingEn || json.en?.feeding || '',
+                feedingEn: prev.feedingEn || json.en.feeding || '',
                 exerciseJp: prev.exerciseJp || json.ja.exercise || '',
-                exerciseEn: isJa ? prev.exerciseEn : prev.exerciseEn || json.en?.exercise || '',
+                exerciseEn: prev.exerciseEn || json.en.exercise || '',
                 commentJp: prev.commentJp || json.ja.comment || '',
-                commentEn: isJa ? prev.commentEn : prev.commentEn || json.en?.comment || ''
+                commentEn: prev.commentEn || json.en.comment || ''
             }));
         } catch (e) {
             console.error(e);
@@ -154,6 +161,28 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
             setIsGenerating(false);
         }
     };
+
+    const handleTranslateMissing = async () => {
+        if (readOnly || getDepartureTranslationStatus(data).pending === 0) return;
+        setIsTranslating(true);
+        setTranslationMessage('');
+        try {
+            const result = await fillMissingDepartureTranslations(data);
+            setData(result.data);
+            setTranslationMessage(
+                isJa
+                    ? `${result.translatedKeys.length}項目の不足言語を補完しました。`
+                    : `${result.translatedKeys.length} missing language fields were completed.`
+            );
+        } catch (e) {
+            const detail = e instanceof Error ? e.message : String(e);
+            setTranslationMessage(isJa ? `翻訳に失敗しました。${detail}` : `Translation failed. ${detail}`);
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
+    const translationStatus = getDepartureTranslationStatus(data);
 
     return (
         <div className="departure-root flex w-full flex-col md:flex-row min-h-screen md:h-screen bg-gray-100 overflow-visible md:overflow-hidden font-sans">
@@ -181,9 +210,47 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             disabled={isGenerating}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
                         >
-                            <span>{isGenerating ? 'Generating...' : (isJa ? 'Generate Japanese' : 'Generate En & Jp')}</span>
+                            <span>{isGenerating ? 'Generating...' : (isJa ? '日本語・英語を生成' : 'Generate Japanese & English')}</span>
                         </button>
                     </div>
+                </div>
+
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-900">
+                            <Languages size={15} />
+                            <span>{isJa ? '言語の整合性' : 'Language consistency'}</span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-emerald-700">
+                            {translationStatus.complete}/{translationStatus.total}
+                        </span>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-5 text-emerald-800">
+                        {translationStatus.pending > 0
+                            ? (isJa
+                                ? `${translationStatus.pending}項目は片側のみです。保存時に不足分を自動翻訳します。`
+                                : `${translationStatus.pending} field${translationStatus.pending === 1 ? '' : 's'} have one language missing. Save will complete them automatically.`)
+                            : (isJa
+                                ? '入力済みの項目は日本語・英語が揃っています。'
+                                : 'All entered fields have both Japanese and English values.')}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => void handleTranslateMissing()}
+                        disabled={readOnly || isTranslating || translationStatus.pending === 0}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {isTranslating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                        {isTranslating
+                            ? (isJa ? '翻訳中...' : 'Translating...')
+                            : (isJa ? '不足分を翻訳' : 'Translate missing fields')}
+                    </button>
+                    {translationMessage && (
+                        <p className={`mt-2 flex items-start gap-1 text-[11px] leading-5 ${translationMessage.includes(isJa ? '失敗' : 'failed') ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {translationMessage.includes(isJa ? '失敗' : 'failed') ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
+                            <span>{translationMessage}</span>
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-3">
@@ -363,17 +430,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (EN)</label>
-                            <input
-                                type="text"
-                                value={data.farrierEn}
-                                onChange={e => handleChange('farrierEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (EN)</label>
+                        <input
+                            type="text"
+                            value={data.farrierEn}
+                            onChange={e => handleChange('farrierEn', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
                     <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} {t('date')}</label>
                         <input
@@ -395,17 +460,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (EN)</label>
-                            <input
-                                type="text"
-                                value={data.wormingEn}
-                                onChange={e => handleChange('wormingEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (EN)</label>
+                        <input
+                            type="text"
+                            value={data.wormingEn}
+                            onChange={e => handleChange('wormingEn', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
                     <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} {t('date')}</label>
                         <input
@@ -426,17 +489,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                {!isJa && (
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('feeding')} (EN)</label>
-                        <textarea
-                            rows={3}
-                            value={data.feedingEn}
-                            onChange={e => handleChange('feedingEn', e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                        />
-                    </div>
-                )}
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('feeding')} (EN)</label>
+                    <textarea
+                        rows={3}
+                        value={data.feedingEn}
+                        onChange={e => handleChange('feedingEn', e.target.value)}
+                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                    />
+                </div>
 
                 <div>
                     <label className="block text-xs font-medium text-gray-700">{t('exercise')} (JP)</label>
@@ -447,17 +508,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                {!isJa && (
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('exercise')} (EN)</label>
-                        <textarea
-                            rows={4}
-                            value={data.exerciseEn}
-                            onChange={e => handleChange('exerciseEn', e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                        />
-                    </div>
-                )}
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('exercise')} (EN)</label>
+                    <textarea
+                        rows={4}
+                        value={data.exerciseEn}
+                        onChange={e => handleChange('exerciseEn', e.target.value)}
+                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                    />
+                </div>
 
                 <div>
                     <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
@@ -468,17 +527,15 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
                     />
                 </div>
-                {!isJa && (
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
-                        <textarea
-                            rows={3}
-                            value={data.commentEn}
-                            onChange={e => handleChange('commentEn', e.target.value)}
-                            className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                        />
-                    </div>
-                )}
+                <div>
+                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
+                    <textarea
+                        rows={3}
+                        value={data.commentEn}
+                        onChange={e => handleChange('commentEn', e.target.value)}
+                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
+                    />
+                </div>
             </div>
 
             <div className="departure-preview-wrap hidden md:flex print:flex flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto justify-center items-start h-auto md:h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">

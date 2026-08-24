@@ -171,6 +171,124 @@ function normalizeDepartureResponse(jsonResponse) {
   };
 }
 
+const DEPARTURE_TRANSLATION_KEYS = new Set(['farrier', 'worming', 'feeding', 'exercise', 'comment']);
+
+function normalizeDepartureTranslationText(text) {
+  return String(text || '')
+    .replace(/```(?:text|markdown)?\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .replace(/^\s*"(?:translation|translated_text|text)"\s*:\s*/i, '')
+    .replace(/^\s*(?:translation|translated_text|text)\s*:\s*/i, '')
+    .replace(/^\s*[>*`]+|[>*`]+\s*$/g, '')
+    .trim();
+}
+
+function normalizeDepartureTranslationFields(fields) {
+  if (!Array.isArray(fields) || fields.length === 0) {
+    throw new Error('At least one departure field is required for translation.');
+  }
+  if (fields.length > DEPARTURE_TRANSLATION_KEYS.size) {
+    throw new Error('Too many departure fields were submitted for translation.');
+  }
+
+  const seen = new Set();
+  return fields.map((field) => {
+    const key = String(field?.key || '').trim();
+    const text = String(field?.text || '').trim();
+    const sourceLang = field?.sourceLang === 'ja' ? 'ja' : field?.sourceLang === 'en' ? 'en' : '';
+    const targetLang = field?.targetLang === 'ja' ? 'ja' : field?.targetLang === 'en' ? 'en' : '';
+    if (!DEPARTURE_TRANSLATION_KEYS.has(key)) {
+      throw new Error(`Unsupported departure translation field: ${key || 'unknown'}`);
+    }
+    if (seen.has(key)) {
+      throw new Error(`Duplicate departure translation field: ${key}`);
+    }
+    if (!text) {
+      throw new Error(`Departure translation field is empty: ${key}`);
+    }
+    if (text.length > 12000) {
+      throw new Error(`Departure translation field is too long: ${key}`);
+    }
+    if (!sourceLang || !targetLang || sourceLang === targetLang) {
+      throw new Error(`Invalid departure translation languages: ${key}`);
+    }
+    seen.add(key);
+    return { key, text, sourceLang, targetLang };
+  });
+}
+
+function buildDepartureTranslationPrompt(fields, context = {}) {
+  const requestedKeys = fields.map((field) => field.key);
+  const fieldText = fields.map((field) => [
+    `Field key: ${field.key}`,
+    `Source language: ${field.sourceLang === 'ja' ? 'Japanese' : 'English'}`,
+    `Target language: ${field.targetLang === 'ja' ? 'Japanese' : 'English'}`,
+    '<source>',
+    field.text,
+    '</source>',
+  ].join('\n')).join('\n\n');
+
+  return [
+    'Role: You are a professional racehorse farm report translator.',
+    'Goal: Translate the supplied departure-report fields so that the Japanese and English versions are aligned and ready for owner-facing handover.',
+    `Output valid JSON with exactly this shape and exactly these keys: {"translations": {${requestedKeys.map((key) => `"${key}": "translated text"`).join(', ')}}}`,
+    'Rules:',
+    '- Translate each field independently into its requested target language.',
+    '- Preserve every fact, number, date, product name, horse name, treatment, exercise description, uncertainty, and planned action.',
+    '- Use natural Japanese or English for a professional racehorse departure report; do not translate mechanically when a standard equine expression is clearer.',
+    '- Keep feed, supplement, medication, facility, and named-product terms faithful to the source. Do not invent dosage, ingredients, or a medical conclusion.',
+    '- Do not add headings, labels, explanations, notes, Markdown, or quotation marks inside field values.',
+    '- Return a non-empty value for every requested key. If the source is a short proper name or product name, preserve it rather than dropping it.',
+    context.terminologyGuard ? `Terminology guard:\n${context.terminologyGuard}` : '',
+    context.translationRuleContext ? `Translation rules:\n${context.translationRuleContext}` : '',
+    context.knowledgeContext ? `Departure-report context:\n${context.knowledgeContext}` : '',
+    `Fields to translate:\n${fieldText}`,
+  ].filter(Boolean).join('\n\n');
+}
+
+function normalizeDepartureTranslationResponse(jsonResponse, fields) {
+  const translations = {};
+  for (const field of fields) {
+    const translated = normalizeDepartureTranslationText(jsonResponse?.translations?.[field.key]);
+    if (!translated) {
+      throw new Error(`Model returned an empty departure translation for ${field.key}.`);
+    }
+    if (field.targetLang === 'ja' && !/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/u.test(translated)) {
+      throw new Error(`Model did not return Japanese for ${field.key}.`);
+    }
+    const preservedShortTerm = translated === field.text
+      && translated.length <= 60
+      && !/[。、！？.!?]/u.test(translated);
+    if (field.targetLang === 'en' && !/[A-Za-z]/.test(translated) && !preservedShortTerm) {
+      throw new Error(`Model did not return English for ${field.key}.`);
+    }
+    translations[field.key] = translated;
+  }
+  return { translations };
+}
+
+async function translateDepartureFields({ fields, apiKey }) {
+  if (!apiKey) throw new Error('API Key not configured in Environment Variables');
+
+  const normalizedFields = normalizeDepartureTranslationFields(fields);
+  const sourceText = normalizedFields.map((field) => `${field.key}: ${field.text}`).join('\n');
+  const context = await buildStructuredReportPromptContext(sourceText, 'departure');
+  const dynamicGenAI = new GoogleGenerativeAI(apiKey);
+  const model = dynamicGenAI.getGenerativeModel({
+    model: GENERATION_MODEL,
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+  const text = await generateGeminiTextWithRetry(
+    model,
+    buildDepartureTranslationPrompt(normalizedFields, context),
+  );
+  const jsonResponse = parseModelJsonResponse(text);
+  if (!jsonResponse?.translations || typeof jsonResponse.translations !== 'object' || Array.isArray(jsonResponse.translations)) {
+    throw new Error('Model returned invalid departure translation JSON.');
+  }
+  return normalizeDepartureTranslationResponse(jsonResponse, normalizedFields);
+}
+
 function normalizeStatusNarrative(text) {
   return String(text || '')
     .replace(/```(?:json|markdown)?\s*/gi, '')
@@ -445,8 +563,10 @@ async function generateDepartureReport({ notes, reportType, apiKey }) {
   Rules:
   - Use Japanese for "ja" and English for "en".
   - If notes do NOT mention a field, return an empty string for that field.
+  - If notes mention a field in either language, represent that field's meaning in both "ja" and "en"; never leave only one language populated.
   - Keep each field concise (1-2 sentences maximum).
   - English must match the meaning of Japanese.
+  - For feeding, preserve feed, hay, supplement, and product names while adding a natural Japanese description in "ja" and a natural English description in "en".
   - Do not add diagnosis details or medication details that the source does not explicitly contain.
   - Return only the JSON object.
   `;
@@ -546,10 +666,14 @@ async function translateReportText({ text, targetLang, reportType, apiKey }) {
 module.exports = {
   generateMonthlyReport,
   generateDepartureReport,
+  translateDepartureFields,
   translateReportText,
   buildStatusSystemInstruction,
   buildStatusFidelityRepairPrompt,
   normalizeStatusNarrative,
   normalizeStatusResponse,
   hasValidStatusDraft,
+  normalizeDepartureTranslationFields,
+  buildDepartureTranslationPrompt,
+  normalizeDepartureTranslationResponse,
 };

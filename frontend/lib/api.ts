@@ -61,6 +61,28 @@ export async function translateText(text: string, targetLang: 'ja' | 'en', repor
     return readApiResponse(res);
 }
 
+export type DepartureTranslationFieldKey = 'farrier' | 'worming' | 'feeding' | 'exercise' | 'comment';
+
+export type DepartureTranslationRequest = {
+    key: DepartureTranslationFieldKey;
+    text: string;
+    sourceLang: 'ja' | 'en';
+    targetLang: 'ja' | 'en';
+};
+
+export type DepartureTranslationResponse = {
+    translations?: Partial<Record<DepartureTranslationFieldKey, string>>;
+};
+
+export async function translateDepartureFields(fields: DepartureTranslationRequest[]) {
+    const res = await fetchApi('/translate-departure-fields', {
+        method: 'POST',
+        headers: await getApiAuthHeaders(),
+        body: JSON.stringify({ fields }),
+    }, 120000);
+    return readApiResponse(res) as Promise<DepartureTranslationResponse>;
+}
+
 export async function generateContent(prompt: string, lang: 'ja' | 'en') {
     const res = await fetchApi('/generate', {
         method: 'POST',

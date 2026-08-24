@@ -7,6 +7,9 @@ const {
   hasValidStatusDraft,
   normalizeStatusNarrative,
   normalizeStatusResponse,
+  normalizeDepartureTranslationFields,
+  buildDepartureTranslationPrompt,
+  normalizeDepartureTranslationResponse,
 } = require('./report_generation_service');
 
 test('status narrative normalization preserves numbered headings and named procedures', () => {
@@ -74,4 +77,35 @@ test('status prompt requires correction precedence and procedure-level fidelity'
   assert.match(prompt, /not interchangeable/i);
   assert.match(prompt, /There is no 1-2 sentence limit/);
   assert.match(prompt, /one continuous report/i);
+});
+
+test('departure translation request keeps field-level source and target languages explicit', () => {
+  const fields = normalizeDepartureTranslationFields([
+    { key: 'feeding', text: 'The horse is fed Equibal paste.', sourceLang: 'en', targetLang: 'ja' },
+    { key: 'comment', text: '右前のレントゲンでは問題ありません。', sourceLang: 'ja', targetLang: 'en' },
+  ]);
+  const prompt = buildDepartureTranslationPrompt(fields);
+
+  assert.deepEqual(fields.map(({ key, sourceLang, targetLang }) => ({ key, sourceLang, targetLang })), [
+    { key: 'feeding', sourceLang: 'en', targetLang: 'ja' },
+    { key: 'comment', sourceLang: 'ja', targetLang: 'en' },
+  ]);
+  assert.match(prompt, /Field key: feeding/);
+  assert.match(prompt, /Target language: Japanese/);
+  assert.match(prompt, /Return a non-empty value for every requested key/);
+});
+
+test('departure translation response rejects an untranslated target instead of silently saving it', () => {
+  const fields = normalizeDepartureTranslationFields([
+    { key: 'feeding', text: 'The horse is fed Equibal paste.', sourceLang: 'en', targetLang: 'ja' },
+  ]);
+
+  assert.deepEqual(
+    normalizeDepartureTranslationResponse({ translations: { feeding: '飼い葉はエクイバランペーストです。' } }, fields),
+    { translations: { feeding: '飼い葉はエクイバランペーストです。' } },
+  );
+  assert.throws(
+    () => normalizeDepartureTranslationResponse({ translations: { feeding: 'Equibal paste' } }, fields),
+    /did not return Japanese/,
+  );
 });

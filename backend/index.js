@@ -7,6 +7,8 @@ const { createSupabaseAdminClient } = require('./supabase_admin');
 const {
   generateMonthlyReport,
   generateDepartureReport,
+  translateDepartureFields,
+  normalizeDepartureTranslationFields,
   translateReportText,
 } = require('./report_generation_service');
 const { indexReport } = require('./semantic_indexer');
@@ -201,6 +203,40 @@ app.post('/translate', requireAllowedUser, aiRateLimit, async (req, res) => {
     }));
   } catch (e) {
     console.error('Translation Error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+app.post('/translate-departure-fields', requireAllowedUser, aiRateLimit, async (req, res) => {
+  const fields = req.body?.fields;
+  if (!Array.isArray(fields) || fields.length === 0) {
+    return res.status(400).json({ error: 'fields must contain at least one departure field' });
+  }
+  if (fields.length > 5) {
+    return res.status(400).json({ error: 'A maximum of five departure fields can be translated at once' });
+  }
+
+  const totalLength = fields.reduce((sum, field) => sum + String(field?.text || '').trim().length, 0);
+  if (totalLength > 30000) {
+    return res.status(400).json({ error: 'Departure translation input is too long' });
+  }
+
+  let normalizedFields;
+  try {
+    normalizedFields = normalizeDepartureTranslationFields(fields);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API Key not configured' });
+  }
+
+  try {
+    res.json(await translateDepartureFields({ fields: normalizedFields, apiKey }));
+  } catch (e) {
+    console.error('Departure Field Translation Error:', e);
     res.status(e.statusCode || 500).json({ error: e.message });
   }
 });

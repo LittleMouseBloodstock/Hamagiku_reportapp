@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
 import StatusReportTemplate, { StatusReportData } from '@/components/StatusReportTemplate';
+import { fillMissingDepartureTranslations, getDepartureTranslationRequests } from '@/lib/departure-report';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -40,6 +41,14 @@ const resolvePedigreeFields = (
     damEn: horse?.dam_en || source?.damEn || '',
 });
 
+const resolveBilingualNote = (value?: string | null) => {
+    const text = String(value || '').trim();
+    if (!text) return { jp: '', en: '' };
+    const hasJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/u.test(text);
+    const hasEnglish = /[A-Za-z]/.test(text);
+    return hasEnglish && !hasJapanese ? { jp: '', en: text } : { jp: text, en: '' };
+};
+
 export default function ReportEditor() {
     const { id } = useParams();
     const router = useRouter();
@@ -51,6 +60,7 @@ export default function ReportEditor() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [saveStage, setSaveStage] = useState<'idle' | 'translating' | 'saving'>('idle');
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [reviewStatus, setReviewStatus] = useState<string>('draft');
     const [isDirty, setIsDirty] = useState(false);
@@ -70,6 +80,7 @@ export default function ReportEditor() {
 
     // Current Data (Synced from Child)
     const reportDataRef = useRef<EditorData | null>(null);
+    const suppressDirtyRef = useRef(false);
     const autosaveTimerRef = useRef<number | null>(null);
     const remoteAutosaveTimerRef = useRef<number | null>(null);
     const lastRemoteSaveRef = useRef<number>(0);
@@ -572,6 +583,8 @@ export default function ReportEditor() {
                             } as Partial<StatusReportData>);
                         } else if (nextReportType === 'departure') {
                             const pedigree = resolvePedigreeFields(horse);
+                            const farrierNote = resolveBilingualNote(horse?.last_farrier_note);
+                            const wormingNote = resolveBilingualNote(horse?.last_worming_note);
                             const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                             setInitialData({
                                 reportDate: new Date().toISOString().slice(0, 10),
@@ -588,11 +601,11 @@ export default function ReportEditor() {
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                                 weightDate: latestWeightDate || '',
-                                farrierJp: horse?.last_farrier_note || '',
-                                farrierEn: horse?.last_farrier_note || '',
+                                farrierJp: farrierNote.jp,
+                                farrierEn: farrierNote.en,
                                 farrierDate: horse?.last_farrier_date || '',
-                                wormingJp: horse?.last_worming_note || '',
-                                wormingEn: horse?.last_worming_note || '',
+                                wormingJp: wormingNote.jp,
+                                wormingEn: wormingNote.en,
                                 wormingDate: horse?.last_worming_date || '',
                                 feedingJp: '',
                                 feedingEn: '',
@@ -908,6 +921,37 @@ export default function ReportEditor() {
                                                 outputMode: fallbackOutputMode,
                                                 showLogo: fallbackOutputMode !== 'print',
                                             } as Partial<StatusReportData>);
+                                        } else if (fallbackReportType === 'departure') {
+                                            const farrierNote = resolveBilingualNote(horse?.last_farrier_note);
+                                            const wormingNote = resolveBilingualNote(horse?.last_worming_note);
+                                            const fallbackOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
+                                            setInitialData({
+                                                reportDate: new Date().toISOString().slice(0, 10),
+                                                horseNameJp: horse?.name || '',
+                                                horseNameEn: horse?.name_en || '',
+                                                sexAgeJp: formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
+                                                sexAgeEn: formatSexAge(horse?.sex, horse?.birth_date, 'en'),
+                                                sireJp: pedigree.sireJp,
+                                                sireEn: pedigree.sireEn,
+                                                damJp: pedigree.damJp,
+                                                damEn: pedigree.damEn,
+                                                ownerName: horse?.clients?.name || '',
+                                                trainerNameJp: horse?.trainers?.trainer_name || '',
+                                                trainerNameEn: horse?.trainers?.trainer_name_en || '',
+                                                weight: latestWeight !== null ? `${latestWeight}kg` : '',
+                                                weightDate: weightData?.[0]?.measured_at || '',
+                                                farrierJp: farrierNote.jp,
+                                                farrierEn: farrierNote.en,
+                                                farrierDate: horse?.last_farrier_date || '',
+                                                wormingJp: wormingNote.jp,
+                                                wormingEn: wormingNote.en,
+                                                wormingDate: horse?.last_worming_date || '',
+                                                feedingJp: '', feedingEn: '',
+                                                exerciseJp: '', exerciseEn: '',
+                                                commentJp: '', commentEn: '',
+                                                outputMode: fallbackOutputMode,
+                                                showLogo: fallbackOutputMode !== 'print',
+                                            });
                                         } else {
                                             setInitialData({
                                             reportDate: defaultDate,
@@ -1007,6 +1051,41 @@ export default function ReportEditor() {
                                         outputMode: metrics.outputMode === 'print' ? 'print' : 'pdf',
                                         showLogo
                                     } as Partial<StatusReportData>);
+                                } else if (metrics.reportType === 'departure') {
+                                    setReportType('departure');
+                                    const metricsOutputMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
+                                        ? metrics.outputMode
+                                        : resolvedMode;
+                                    setInitialData({
+                                        reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 10),
+                                        horseNameJp: metrics.horseNameJp || horse?.name || '',
+                                        horseNameEn: metrics.horseNameEn || horse?.name_en || '',
+                                        sexAgeJp: metrics.sexAgeJp || formatSexAge(horse?.sex, horse?.birth_date, 'ja'),
+                                        sexAgeEn: metrics.sexAgeEn || formatSexAge(horse?.sex, horse?.birth_date, 'en'),
+                                        sireJp: pedigree.sireJp,
+                                        sireEn: pedigree.sireEn,
+                                        damJp: pedigree.damJp,
+                                        damEn: pedigree.damEn,
+                                        ownerName: metrics.ownerName || horse?.clients?.name || '',
+                                        trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
+                                        trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
+                                        weight: report.weight ? `${report.weight}kg` : '',
+                                        weightDate: metrics.weightDate || '',
+                                        farrierJp: metrics.farrierJp || '',
+                                        farrierEn: metrics.farrierEn || '',
+                                        farrierDate: metrics.farrierDate || '',
+                                        wormingJp: metrics.wormingJp || '',
+                                        wormingEn: metrics.wormingEn || '',
+                                        wormingDate: metrics.wormingDate || '',
+                                        feedingJp: metrics.feedingJp || '',
+                                        feedingEn: metrics.feedingEn || '',
+                                        exerciseJp: metrics.exerciseJp || '',
+                                        exerciseEn: metrics.exerciseEn || '',
+                                        commentJp: report.body || metrics.commentJp || '',
+                                        commentEn: metrics.commentEn || '',
+                                        outputMode: metricsOutputMode,
+                                        showLogo: metrics.showLogo ?? (metricsOutputMode !== 'print'),
+                                    });
                                 } else setInitialData({
                                     reportDate: report.title || new Date(report.created_at).toISOString().slice(0, 7).replace('-', '.'),
                                     horseNameJp: metrics.horseNameJp || horse?.name || '',
@@ -1174,6 +1253,8 @@ export default function ReportEditor() {
             } as Partial<StatusReportData>);
         } else if (reportType === 'departure') {
             const pedigree = resolvePedigreeFields(horse);
+            const farrierNote = resolveBilingualNote(horse?.last_farrier_note);
+            const wormingNote = resolveBilingualNote(horse?.last_worming_note);
             setInitialData({
                 reportDate: new Date().toISOString().slice(0, 10),
                 horseNameJp: horse?.name || '',
@@ -1189,11 +1270,11 @@ export default function ReportEditor() {
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
                 weightDate: latestWeightDate || '',
-                farrierJp: horse?.last_farrier_note || '',
-                farrierEn: horse?.last_farrier_note || '',
+                farrierJp: farrierNote.jp,
+                farrierEn: farrierNote.en,
                 farrierDate: horse?.last_farrier_date || '',
-                wormingJp: horse?.last_worming_note || '',
-                wormingEn: horse?.last_worming_note || '',
+                wormingJp: wormingNote.jp,
+                wormingEn: wormingNote.en,
                 wormingDate: horse?.last_worming_date || '',
                 feedingJp: '',
                 feedingEn: '',
@@ -1238,6 +1319,10 @@ export default function ReportEditor() {
 
     const handleDataChange = useCallback((data: EditorData) => {
         reportDataRef.current = data;
+        if (suppressDirtyRef.current) {
+            suppressDirtyRef.current = false;
+            return;
+        }
         setIsDirty(true);
         setAutosaveStatus('Saving draft...');
     }, []);
@@ -1378,12 +1463,14 @@ export default function ReportEditor() {
         }
 
         setSaving(true);
+        setSaveStage('saving');
         const d = reportDataRef.current;
         const saveTimeout = window.setTimeout(() => {
             console.warn('Save timed out, resetting UI');
             setSaving(false);
+            setSaveStage('idle');
             alert('Save is taking too long. Please try again.');
-        }, 90000);
+        }, 150000);
 
         try {
             if (reportType === 'status') {
@@ -1438,6 +1525,7 @@ export default function ReportEditor() {
                 setLastSaved(new Date());
                 setIsDirty(false);
                 setSaving(false);
+                setSaveStage('idle');
                 window.localStorage.removeItem(draftKey);
                 void deleteRemoteDraft();
                 setAutosaveStatus('Saved');
@@ -1448,7 +1536,17 @@ export default function ReportEditor() {
             }
 
             if (reportType === 'departure') {
-                const dep = d as DepartureReportData;
+                let dep = d as DepartureReportData;
+                const pendingTranslations = getDepartureTranslationRequests(dep);
+                if (pendingTranslations.length > 0) {
+                    setSaveStage('translating');
+                }
+                const translationResult = await fillMissingDepartureTranslations(dep);
+                dep = translationResult.data;
+                if (translationResult.translatedKeys.length > 0) {
+                    reportDataRef.current = dep;
+                }
+                setSaveStage('saving');
                 const metricsJson = {
                     reportType: 'departure',
                     horseNameJp: dep.horseNameJp,
@@ -1513,8 +1611,13 @@ export default function ReportEditor() {
                 }
 
                 setLastSaved(new Date());
+                if (translationResult.translatedKeys.length > 0) {
+                    suppressDirtyRef.current = true;
+                    setInitialData((previous) => ({ ...previous, ...dep }));
+                }
                 setIsDirty(false);
                 setSaving(false);
+                setSaveStage('idle');
                 if (typeof window !== 'undefined') {
                     window.localStorage.removeItem(draftKey);
                 }
@@ -1611,6 +1714,7 @@ export default function ReportEditor() {
             }
 
         setSaving(false);
+        setSaveStage('idle');
         setLastSaved(new Date());
         setIsDirty(false);
         if (typeof window !== 'undefined') {
@@ -1654,8 +1758,12 @@ export default function ReportEditor() {
             }
         } catch (err) {
             console.error('Save failed:', err);
-            alert('Save failed. Please try again.');
+            const detail = err instanceof Error ? err.message : String(err);
+            alert(reportType === 'departure'
+                ? `Save failed. The missing Japanese/English fields could not be completed.\n${detail}`
+                : 'Save failed. Please try again.');
             setSaving(false);
+            setSaveStage('idle');
         } finally {
             window.clearTimeout(saveTimeout);
         }
@@ -1829,7 +1937,7 @@ export default function ReportEditor() {
                         className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 sm:px-4 rounded text-sm font-bold flex items-center justify-center gap-2 transition-all flex-1 sm:flex-none min-w-[110px]"
                     >
                         {saving ? <UploadCloud size={16} className="animate-bounce" /> : <Save size={16} />}
-                        {saving ? 'Saving...' : 'Save'}
+                        {saving ? (saveStage === 'translating' ? 'Translating...' : 'Saving...') : 'Save'}
                     </button>
                     <button
                         onClick={handlePrint}

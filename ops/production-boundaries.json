@@ -1,0 +1,22 @@
+{
+  "hamagiku": {
+    "product": "Hamagiku Farm POC and production",
+    "sourceBranch": "main",
+    "hosting": "cloudflare-pages",
+    "cloudflareProject": "hamagiku-reportapp",
+    "googleProject": "first-api-spread",
+    "backendService": "hamagikureoprtapp2",
+    "supabaseUrl": "https://srhthxknehzofuzjjrhh.supabase.co",
+    "publicUrl": "https://hamagiku-reportapp.pages.dev"
+  },
+  "shinba": {
+    "product": "Shinba Report",
+    "sourceBranch": "codex/shinba-production",
+    "hosting": "cloud-run",
+    "googleProject": "shinba-report",
+    "frontendService": "shinba-report-frontend",
+    "backendService": "shinba-report-backend",
+    "supabaseUrl": "https://qlebmpirqfkhierfjqxv.supabase.co",
+    "publicUrl": "https://shinba.app"
+  }
+}
