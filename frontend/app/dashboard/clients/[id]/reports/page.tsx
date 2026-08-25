@@ -21,7 +21,7 @@ type Horse = {
     dam: string;
     dam_en?: string | null;
     birth_date?: string | null;
-    clients?: { name: string } | null;
+    clients?: { name: string; name_en?: string | null } | null;
     trainers?: {
         trainer_name?: string | null;
         trainer_name_en?: string | null;
@@ -66,7 +66,7 @@ export default function ClientBatchReports() {
     const { t } = useLanguage(); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [loading, setLoading] = useState(true);
     const refreshKey = useResumeRefresh();
-    const [owner, setOwner] = useState<{ id: string; name: string; report_output_mode?: string | null } | null>(null);
+    const [owner, setOwner] = useState<{ id: string; name: string; name_en?: string | null; report_output_mode?: string | null } | null>(null);
     const [reports, setReports] = useState<{ report: Report, horse: Horse, data: ReportData }[]>([]);
 
     const searchParams = useSearchParams();
@@ -315,7 +315,7 @@ export default function ClientBatchReports() {
                         const horsesById = new Map<string, Horse>();
                         if (idList) {
                             const horses = await restGet(
-                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)` +
+                                `horses?select=id,name,name_en,sire,sire_en,dam,dam_en,photo_url,birth_date,clients(name,name_en),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)` +
                                 `&id=in.(${idList})`
                             ) as Horse[];
                             horses.forEach((h) => horsesById.set(h.id, h));
@@ -337,6 +337,7 @@ export default function ClientBatchReports() {
                                 damEn: horse.dam_en || metrics.damEn || '',
                                 damJp: horse.dam || metrics.damJp || '',
                                 ownerName: horse.clients?.name || owner?.name || '',
+                                ownerNameEn: horse.clients?.name_en || owner?.name_en || horse.clients?.name || owner?.name || '',
                                 trainerNameJp: horse.trainers?.trainer_name || '',
                                 trainerNameEn: horse.trainers?.trainer_name_en || '',
                                 trainerLocation: horse.trainers?.trainer_location || '',
@@ -396,7 +397,7 @@ export default function ClientBatchReports() {
                     <div className="flex items-center gap-4">
                         <button onClick={() => router.back()} className="hover:text-gray-300"><ArrowLeft /></button>
                         <div>
-                            <h1 className="font-bold text-lg">{owner?.name || 'Client'} - Batch Reports</h1>
+                            <h1 className="font-bold text-lg">{owner?.name || 'Client'}{owner?.name_en ? ` / ${owner.name_en}` : ''} - Batch Reports</h1>
                             <p className="text-xs text-gray-400">Total: {reports.length} reports / Rendered: {reports.length}</p>
                         </div>
                     </div>

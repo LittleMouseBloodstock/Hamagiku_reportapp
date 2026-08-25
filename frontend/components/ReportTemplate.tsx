@@ -568,6 +568,7 @@ export type ReportData = {
     damEn?: string;
     damJp?: string;
     ownerName?: string;
+    ownerNameEn?: string;
     trainerNameJp?: string;
     trainerNameEn?: string;
     trainerLocation?: string;
@@ -691,6 +692,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
         sire: 'Lucky Vega',
         dam: 'Xmas',
         ownerName: '',
+        ownerNameEn: '',
         trainerNameJp: '',
         trainerNameEn: '',
         trainerLocation: '',
@@ -1718,7 +1720,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         <div className={`owner-line bg-[#f9fbfa] px-3 border border-[#e5e7eb] ${showLogo ? 'py-2 mb-4' : 'py-[6px] mb-[6px] min-h-[34px] overflow-visible'} ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] tracking-[-0.01em]'} whitespace-normal break-words [overflow-wrap:anywhere]`}>
                             <span className="font-bold mr-1">{t('owner')}:</span>
-                            <span>{formatOwnerName(data.ownerName)}</span>
+                            <span>{formatOwnerName(lang === 'ja' ? data.ownerName : (data.ownerNameEn || data.ownerName))}</span>
                             <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
                             <span className="font-bold mr-1">{t('trainer')}:</span>
                             <span>

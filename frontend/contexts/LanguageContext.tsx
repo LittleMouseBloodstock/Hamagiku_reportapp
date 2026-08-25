@@ -113,6 +113,9 @@ const translations: Translations = {
     // Client Form
     clientBasicInfo: { ja: "基本情報", en: "Basic Information" },
     clientName: { ja: "クライアント名 / 会社名", en: "Client Name / Company Name" },
+    clientNameJp: { ja: "クライアント名（日本語）", en: "Client Name (JP)" },
+    clientNameEn: { ja: "クライアント名（英語）", en: "Client Name (EN)" },
+    clientNameTranslationHint: { ja: "片方だけ入力した場合、保存時に不足言語を自動翻訳します。", en: "If only one language is entered, the missing language is translated on save." },
     representativeName: { ja: "代表者名", en: "Representative Name" },
     contactInfo: { ja: "連絡先情報", en: "Contact Information" },
     email: { ja: "メールアドレス", en: "Email" },
@@ -329,11 +332,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         if (typeof window === 'undefined') return;
         const stored = window.localStorage.getItem('appLanguage');
         if (stored === 'ja' || stored === 'en') {
+            // 外部ストレージから保存済みの初期言語を復元します。
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLanguage(stored);
             return;
         }
         const nav = window.navigator.language || '';
         if (nav.toLowerCase().startsWith('en')) {
+            // ブラウザの初期言語をアプリの表示言語へ反映します。
             setLanguage('en');
         }
     }, []);

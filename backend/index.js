@@ -300,11 +300,14 @@ app.post('/index-report', requireAllowedUser, indexRateLimit, async (req, res) =
 });
 
 app.post('/translate-name', requireAllowedUser, aiRateLimit, async (req, res) => {
-  const { name, targetLang } = req.body || {};
+  const { name, targetLang, nameType = 'horse' } = req.body || {};
   const validated = validateTextInput(name, 'name', 200);
   if (validated.error) return res.status(400).json({ error: validated.error });
   if (targetLang !== 'ja' && targetLang !== 'en') {
     return res.status(400).json({ error: 'targetLang must be ja or en' });
+  }
+  if (nameType !== 'horse' && nameType !== 'client') {
+    return res.status(400).json({ error: 'nameType must be horse or client' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -315,8 +318,15 @@ app.post('/translate-name', requireAllowedUser, aiRateLimit, async (req, res) =>
 
   try {
     const model = genAI.getGenerativeModel({ model: GENERATION_MODEL });
-    const prompt = `
-    Translate or transliterate the racehorse name "${validated.text}" into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
+    const inputName = JSON.stringify(validated.text);
+    const prompt = nameType === 'client'
+      ? `
+    Translate or transliterate the client, owner, person, or company name ${inputName} into ${targetLang === 'ja' ? 'natural Japanese' : 'natural English'}.
+    Preserve the identity of the proper name, legal/company suffixes, punctuation, and numbers. Do not add honorifics or explanations.
+    Return ONLY the translated or transliterated name as a string. No JSON, no explanations.
+    `
+      : `
+    Translate or transliterate the racehorse name ${inputName} into ${targetLang === 'ja' ? 'Katakana (Japanese)' : 'English'}.
     Return ONLY the translated name as a string. No JSON, no explanations.
     Example: "Lucky Vega" -> "ラッキーベガ"
     Example: "クロフネ" -> "Kurofune"

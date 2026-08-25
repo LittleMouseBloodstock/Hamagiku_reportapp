@@ -6,17 +6,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { buildRestHeaders, restDelete, restGet } from '@/lib/restClient';
+import { getClientDisplayName } from '@/lib/client-name';
 
 export default function ClientsPage() {
     interface Client {
         id: string;
         name: string;
+        name_en?: string | null;
         contact_email?: string;
         contact_phone?: string;
         created_at: string;
     }
 
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { user, session } = useAuth();
     const refreshKey = useResumeRefresh();
     const [clients, setClients] = useState<Client[]>([]);
@@ -108,14 +110,19 @@ export default function ClientsPage() {
                             </thead>
                             <tbody className="divide-y divide-stone-200">
                                 {clients.map((client) => (
+                                    (() => {
+                                        const displayName = getClientDisplayName(client, language);
+                                        const secondaryName = language === 'ja' ? client.name_en : client.name;
+                                        return (
                                     <tr key={client.id} className="hover:bg-stone-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs mr-3">
-                                                    {client.name?.charAt(0) || 'C'}
+                                                    {displayName.charAt(0) || 'C'}
                                                 </div>
                                                 <div className="text-sm font-medium text-stone-900">
-                                                    {client.name}
+                                                    <div>{displayName}</div>
+                                                    {secondaryName && secondaryName !== displayName && <div className="text-xs font-normal text-stone-400">{secondaryName}</div>}
                                                 </div>
                                             </div>
                                         </td>
@@ -130,7 +137,7 @@ export default function ClientsPage() {
                                                 View
                                             </Link>
                                             <button
-                                                onClick={() => handleDelete(client.id, client.name)}
+                                                onClick={() => handleDelete(client.id, displayName)}
                                                 className="text-stone-400 hover:text-red-500 transition-colors"
                                                 title="Delete"
                                             >
@@ -138,6 +145,8 @@ export default function ClientsPage() {
                                             </button>
                                         </td>
                                     </tr>
+                                        );
+                                    })()
                                 ))}
                             </tbody>
                         </table>

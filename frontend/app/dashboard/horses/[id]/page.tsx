@@ -7,6 +7,7 @@ import { Plus, ArrowLeft, FileText, Calendar, Activity, User } from 'lucide-reac
 import LanguageToggle from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { ensureBilingualClientName, getClientDisplayName, splitClientNameInput } from '@/lib/client-name';
 
 import Link from 'next/link';
 
@@ -29,7 +30,7 @@ type Horse = {
     last_worming_date?: string | null;
     last_worming_note?: string | null;
     owner_id: string | null;
-    clients: { id: string, name: string } | null;
+    clients: { id: string, name: string, name_en?: string | null } | null;
     trainer_id?: string | null;
     trainers?: { id: string; trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; trainer_location_en?: string | null; } | null;
     broodmare_flag?: boolean | null;
@@ -71,6 +72,7 @@ type WeightEntry = {
 type Client = {
     id: string;
     name: string;
+    name_en?: string | null;
 };
 type Trainer = {
     id: string;
@@ -227,7 +229,7 @@ export default function HorseDetail() {
     };
 
     const filteredClients = clients.filter(c =>
-        c.name.toLowerCase().includes(ownerSearch.toLowerCase())
+        [c.name, c.name_en].filter(Boolean).some(value => value!.toLowerCase().includes(ownerSearch.toLowerCase()))
     );
 
     useEffect(() => {
@@ -237,9 +239,9 @@ export default function HorseDetail() {
         const fetchData = async (retryCount = 0) => {
             try {
                 const [clientsData, trainersData, horseData, reportsData, weightsData] = await Promise.all([
-                    restGet('clients?select=id,name&order=name'),
+                    restGet('clients?select=id,name,name_en&order=name'),
                     restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name'),
-                    restGet(`horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`),
+                    restGet(`horses?select=*,clients(id,name,name_en),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`),
                     restGet(`reports?select=*&horse_id=eq.${id}&order=created_at.desc`),
                     restGet(`horse_weights?select=id,measured_at,weight,created_at&horse_id=eq.${id}&order=measured_at.desc`)
                 ]);
@@ -273,7 +275,7 @@ export default function HorseDetail() {
                         broodmare_flag: !!horseDataItem.broodmare_flag
                     });
                     setTrainerId(horseDataItem.trainer_id || '');
-                    if (horseDataItem.clients) setOwnerSearch(horseDataItem.clients.name);
+                    if (horseDataItem.clients) setOwnerSearch(getClientDisplayName(horseDataItem.clients, language));
                     else setOwnerSearch('');
                 }
 
@@ -332,14 +334,17 @@ export default function HorseDetail() {
 
             // Owner Update Logic (Same as New Horse Page)
             // If text is entered but no existing ID matches (or name changed), create/find client
-            if (ownerSearch && (!finalOwnerId || clients.find(c => c.id === finalOwnerId)?.name !== ownerSearch)) {
+            const selectedClient = clients.find(c => c.id === finalOwnerId);
+            if (ownerSearch && (!finalOwnerId || ![selectedClient?.name, selectedClient?.name_en].includes(ownerSearch))) {
                 // Check exact match
-                const existing = clients.find(c => c.name.toLowerCase() === ownerSearch.toLowerCase());
+                const existing = clients.find(c => [c.name, c.name_en].filter(Boolean).some(value => value!.toLowerCase() === ownerSearch.toLowerCase()));
                 if (existing) {
                     finalOwnerId = existing.id;
                 } else {
                     // Create new client
-                    const created = await restPost('clients', { name: ownerSearch });
+                    const inputNames = splitClientNameInput(ownerSearch, language);
+                    const names = await ensureBilingualClientName(inputNames.name, inputNames.name_en);
+                    const created = await restPost('clients', names);
                     if (!created || created.length === 0) throw new Error('Failed to create client');
                     finalOwnerId = created[0].id;
                 }
@@ -386,7 +391,7 @@ export default function HorseDetail() {
 
             // Refetch to get updated relation data
             // Or just update local state if we trust it. Let's refetch for safety on owner change.
-            const hRes = await restGet(`horses?select=*,clients(id,name),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`);
+            const hRes = await restGet(`horses?select=*,clients(id,name,name_en),trainers(id,trainer_name,trainer_name_en,trainer_location,trainer_location_en)&id=eq.${id}`);
             const h = hRes && hRes.length > 0 ? hRes[0] : null;
 
             if (h) {
@@ -397,7 +402,7 @@ export default function HorseDetail() {
                 setEditMode(false);
                 // Update client list if we added one (optional, but good practice)
                 const [clientsData, trainersData] = await Promise.all([
-                    restGet('clients?select=id,name&order=name'),
+                    restGet('clients?select=id,name,name_en&order=name'),
                     restGet('trainers?select=id,trainer_name,trainer_name_en,trainer_location,trainer_location_en&order=trainer_name')
                 ]);
                 if (clientsData) setClients(clientsData);
@@ -442,7 +447,9 @@ export default function HorseDetail() {
     const handlePrintWeightSummary = () => {
         if (!horse || typeof window === 'undefined') return;
         const title = language === 'ja' ? '体重サマリー' : 'Weight Summary';
-        const ownerName = horse.clients?.name || '-';
+        const ownerName = language === 'ja'
+            ? (horse.clients?.name || horse.clients?.name_en || '-')
+            : (horse.clients?.name_en || horse.clients?.name || '-');
         const trainerName = language === 'ja'
             ? (horse.trainers?.trainer_name || horse.trainers?.trainer_name_en || '-')
             : (horse.trainers?.trainer_name_en || horse.trainers?.trainer_name || '-');
@@ -725,12 +732,13 @@ export default function HorseDetail() {
                                                             key={client.id}
                                                             className="px-4 py-2 hover:bg-stone-50 cursor-pointer text-sm text-stone-700"
                                                             onClick={() => {
-                                                                setOwnerSearch(client.name);
+                                                                setOwnerSearch(getClientDisplayName(client, language));
                                                                 setFormData({ ...formData, owner_id: client.id });
                                                                 setShowSuggestions(false);
                                                             }}
                                                         >
-                                                            {client.name}
+                                                            <div>{getClientDisplayName(client, language)}</div>
+                                                            {client.name_en && client.name_en !== client.name && <div className="text-xs text-stone-400">{language === 'ja' ? client.name_en : client.name}</div>}
                                                         </div>
                                                     ))
                                                 ) : (

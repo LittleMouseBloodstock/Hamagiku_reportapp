@@ -14,6 +14,7 @@ export type StatusReportData = {
     horseNameJp: string;
     horseNameEn: string;
     ownerName?: string;
+    ownerNameEn?: string;
     trainerNameJp?: string;
     trainerNameEn?: string;
     sexAgeJp?: string;
@@ -49,6 +50,7 @@ const defaultData: StatusReportData = {
     horseNameJp: '',
     horseNameEn: '',
     ownerName: '',
+    ownerNameEn: '',
     trainerNameJp: '',
     trainerNameEn: '',
     sexAgeJp: '',
@@ -219,7 +221,10 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                     <label className="text-xs font-semibold text-stone-600">Horse (EN)<input value={data.horseNameEn} onChange={(event) => update('horseNameEn', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                    <label className="text-xs font-semibold text-stone-600">{language === 'ja' ? '馬主' : 'Owner'}<input value={data.ownerName || ''} onChange={(event) => update('ownerName', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
+                    <label className="text-xs font-semibold text-stone-600">Owner (JP)<input value={data.ownerName || ''} onChange={(event) => update('ownerName', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
+                    <label className="text-xs font-semibold text-stone-600">Owner (EN)<input value={data.ownerNameEn || ''} onChange={(event) => update('ownerNameEn', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                     <label className="text-xs font-semibold text-stone-600">{language === 'ja' ? '調教師' : 'Trainer'}<input value={language === 'ja' ? (data.trainerNameJp || '') : (data.trainerNameEn || '')} onChange={(event) => update(language === 'ja' ? 'trainerNameJp' : 'trainerNameEn', event.target.value)} className="mt-1 w-full rounded-lg border-stone-300 px-3 py-2 text-sm text-stone-900" /></label>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -250,7 +255,7 @@ export default function StatusReportTemplate({ initialData, onDataChange }: Prop
                             <div className="status-report-owner min-w-0 border-l-[3px] border-[#1a3c34] bg-[#f4f7f6] px-4 py-3 text-sm text-stone-600">
                                 <div className="status-report-owner-row">
                                     <span className="status-report-owner-label">{language === 'ja' ? '馬主：' : 'Owner:'}</span>
-                                    <span className="status-report-owner-value">{data.ownerName || '-'}</span>
+                                    <span className="status-report-owner-value">{(language === 'ja' ? data.ownerName : (data.ownerNameEn || data.ownerName)) || '-'}</span>
                                 </div>
                                 <div className="status-report-owner-row">
                                     <span className="status-report-owner-label">{language === 'ja' ? '調教師：' : 'Trainer:'}</span>

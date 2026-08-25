@@ -7,14 +7,16 @@ import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildRestHeaders, restGet, restPost } from '@/lib/restClient';
+import { ensureBilingualClientName, getClientDisplayName, splitClientNameInput } from '@/lib/client-name';
 
 export default function NewHorsePage() {
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const { session } = useAuth();
     const refreshKey = useResumeRefresh();
     interface Client {
         id: string;
         name: string;
+        name_en?: string | null;
     }
     interface Trainer {
         id: string;
@@ -76,13 +78,13 @@ export default function NewHorsePage() {
 
     // Filter clients based on search
     const filteredClients = clients.filter(c =>
-        c.name.toLowerCase().includes(ownerSearch.toLowerCase())
+        [c.name, c.name_en].filter(Boolean).some(value => value!.toLowerCase().includes(ownerSearch.toLowerCase()))
     );
 
     useEffect(() => {
         if (!session?.access_token) return;
         const fetchClients = async () => {
-            const data = await restGet('clients?select=id,name&order=name', getRestHeaders());
+            const data = await restGet('clients?select=id,name,name_en&order=name', getRestHeaders());
             if (data) setClients(data);
         };
         const fetchTrainers = async () => {
@@ -101,14 +103,17 @@ export default function NewHorsePage() {
             let finalOwnerId = formData.owner_id;
 
             // If text is entered but no existing ID selected (or name changed), create new client
-            if (ownerSearch && (!finalOwnerId || clients.find(c => c.id === finalOwnerId)?.name !== ownerSearch)) {
+            const selectedClient = clients.find(c => c.id === finalOwnerId);
+            if (ownerSearch && (!finalOwnerId || ![selectedClient?.name, selectedClient?.name_en].includes(ownerSearch))) {
                 // Check if exact match exists to avoid duplicates
-                const existing = clients.find(c => c.name.toLowerCase() === ownerSearch.toLowerCase());
+                const existing = clients.find(c => [c.name, c.name_en].filter(Boolean).some(value => value!.toLowerCase() === ownerSearch.toLowerCase()));
                 if (existing) {
                     finalOwnerId = existing.id;
                 } else {
                     // Create new client
-                    const created = await restPost('clients', { name: ownerSearch }, getRestHeaders());
+                    const inputNames = splitClientNameInput(ownerSearch, language);
+                    const names = await ensureBilingualClientName(inputNames.name, inputNames.name_en);
+                    const created = await restPost('clients', names, getRestHeaders());
                     if (!created || created.length === 0) throw new Error('Failed to create client');
                     finalOwnerId = created[0].id;
                 }
@@ -212,12 +217,13 @@ export default function NewHorsePage() {
                                             key={client.id}
                                             className="px-4 py-2 hover:bg-stone-50 cursor-pointer text-sm text-stone-700"
                                             onClick={() => {
-                                                setOwnerSearch(client.name);
+                                                setOwnerSearch(getClientDisplayName(client, language));
                                                 setFormData({ ...formData, owner_id: client.id });
                                                 setShowSuggestions(false);
                                             }}
                                         >
-                                            {client.name}
+                                            <div>{getClientDisplayName(client, language)}</div>
+                                            {client.name_en && client.name_en !== client.name && <div className="text-xs text-stone-400">{language === 'ja' ? client.name_en : client.name}</div>}
                                         </div>
                                     ))
                                 ) : (
@@ -234,12 +240,13 @@ export default function NewHorsePage() {
                                         key={client.id}
                                         className="px-4 py-2 hover:bg-stone-50 cursor-pointer text-sm text-stone-700"
                                         onClick={() => {
-                                            setOwnerSearch(client.name);
+                                            setOwnerSearch(getClientDisplayName(client, language));
                                             setFormData({ ...formData, owner_id: client.id });
                                             setShowSuggestions(false);
                                         }}
                                     >
-                                        {client.name}
+                                        <div>{getClientDisplayName(client, language)}</div>
+                                        {client.name_en && client.name_en !== client.name && <div className="text-xs text-stone-400">{language === 'ja' ? client.name_en : client.name}</div>}
                                     </div>
                                 ))}
                             </div>
