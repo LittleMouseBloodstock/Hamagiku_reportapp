@@ -531,7 +531,7 @@ export default function ReportEditor() {
                     if (paramHorseId) {
                         if (isMounted) setHorseId(paramHorseId);
                         // Fetch horse details to prepopulate
-                        const horseArr = await restGet(`horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
+                        const horseArr = await restGet(`horses?id=eq.${paramHorseId}&select=*,clients(name,name_en,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
                         const horse = horseArr?.[0];
 
                         // Fetch past weight history (last 6 months)
@@ -566,6 +566,7 @@ export default function ReportEditor() {
                                 damJp: pedigree.damJp,
                                 damEn: pedigree.damEn,
                                 ownerName: horse?.clients?.name || '',
+                                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
@@ -597,6 +598,7 @@ export default function ReportEditor() {
                                 damJp: pedigree.damJp,
                                 damEn: pedigree.damEn,
                                 ownerName: horse?.clients?.name || '',
+                                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
@@ -629,6 +631,7 @@ export default function ReportEditor() {
                                 damEn: pedigree.damEn,
                                 damJp: pedigree.damJp,
                                 ownerName: horse?.clients?.name || '',
+                                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                 trainerLocation: horse?.trainers?.trainer_location || '',
@@ -667,7 +670,7 @@ export default function ReportEditor() {
                 if (!report) throw new Error("Report not found");
 
                 // Fetch Horse Data
-                const horseArr = await restGet(`horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
+                const horseArr = await restGet(`horses?id=eq.${report.horse_id}&select=*,clients(name,name_en,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
                 const horse = horseArr?.[0];
                 const careRecords = await fetchCareRecords(report.horse_id);
                 const sixMonthsAgo = new Date();
@@ -699,6 +702,7 @@ export default function ReportEditor() {
                             horseNameJp: metrics.horseNameJp || horse?.name || '',
                             horseNameEn: metrics.horseNameEn || horse?.name_en || '',
                             ownerName: metrics.ownerName || horse?.clients?.name || '',
+                            ownerNameEn: metrics.ownerNameEn || horse?.clients?.name_en || metrics.ownerName || horse?.clients?.name || '',
                             trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
                             trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
                             sireJp: pedigree.sireJp,
@@ -738,6 +742,7 @@ export default function ReportEditor() {
                             damJp: pedigree.damJp,
                             damEn: pedigree.damEn,
                             ownerName: metrics.ownerName || horse?.clients?.name || '',
+                            ownerNameEn: metrics.ownerNameEn || horse?.clients?.name_en || metrics.ownerName || horse?.clients?.name || '',
                             trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
                             trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
                             weight: report.weight ? `${report.weight}kg` : '',
@@ -782,6 +787,7 @@ export default function ReportEditor() {
                             conditionJp: metrics.conditionJp || report.condition || '',
                             conditionEn: metrics.conditionEn || '',
                             ownerName: horse?.clients?.name || '',
+                            ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                             trainerNameJp: horse?.trainers?.trainer_name || '',
                             trainerNameEn: horse?.trainers?.trainer_name_en || '',
                             trainerLocation: horse?.trainers?.trainer_location || '',
@@ -862,7 +868,7 @@ export default function ReportEditor() {
                             if (paramHorseId) {
                                 if (isMounted) setHorseId(paramHorseId);
                                 const [horseRes, reportsRes, latestReportRes] = await Promise.all([
-                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
+                                    fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${paramHorseId}&select=*,clients(name,name_en,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers }),
                                     fetch(`${supabaseUrl}/rest/v1/horse_weights?horse_id=eq.${paramHorseId}&measured_at=gte.${sixMonthsAgoIso}&select=measured_at,weight&order=measured_at.asc`, { headers }),
                                     fetch(`${supabaseUrl}/rest/v1/reports?horse_id=eq.${paramHorseId}&select=weight,metrics_json,created_at,title&order=created_at.desc&limit=5`, { headers })
                                 ]);
@@ -903,6 +909,7 @@ export default function ReportEditor() {
                                                 damJp: pedigree.damJp,
                                                 damEn: pedigree.damEn,
                                                 ownerName: horse?.clients?.name || '',
+                                                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                                 weight: latestWeight !== null ? `${latestWeight}kg` : '',
@@ -936,6 +943,7 @@ export default function ReportEditor() {
                                                 damJp: pedigree.damJp,
                                                 damEn: pedigree.damEn,
                                                 ownerName: horse?.clients?.name || '',
+                                                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                                 trainerNameJp: horse?.trainers?.trainer_name || '',
                                                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                                 weight: latestWeight !== null ? `${latestWeight}kg` : '',
@@ -966,6 +974,7 @@ export default function ReportEditor() {
                                             conditionJp: '',
                                             conditionEn: '',
                                             ownerName: horse?.clients?.name || '',
+                                            ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                             trainerNameJp: horse?.trainers?.trainer_name || '',
                                             trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                             trainerLocation: horse?.trainers?.trainer_location || '',
@@ -1005,7 +1014,7 @@ export default function ReportEditor() {
                             const report = rData[0];
                             if (!report) throw new Error("Report not found");
 
-                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers });
+                            const horseRes = await fetch(`${supabaseUrl}/rest/v1/horses?id=eq.${report.horse_id}&select=*,clients(name,name_en,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`, { headers });
                             const hData = await horseRes.json();
                             const horse = hData[0];
                             const sixMonthsAgo = new Date();
@@ -1032,6 +1041,7 @@ export default function ReportEditor() {
                                         horseNameJp: metrics.horseNameJp || horse?.name || '',
                                         horseNameEn: metrics.horseNameEn || horse?.name_en || '',
                                         ownerName: metrics.ownerName || horse?.clients?.name || '',
+                                        ownerNameEn: metrics.ownerNameEn || horse?.clients?.name_en || metrics.ownerName || horse?.clients?.name || '',
                                         trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
                                         trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
                                         sireJp: pedigree.sireJp,
@@ -1067,6 +1077,7 @@ export default function ReportEditor() {
                                         damJp: pedigree.damJp,
                                         damEn: pedigree.damEn,
                                         ownerName: metrics.ownerName || horse?.clients?.name || '',
+                                        ownerNameEn: metrics.ownerNameEn || horse?.clients?.name_en || metrics.ownerName || horse?.clients?.name || '',
                                         trainerNameJp: metrics.trainerNameJp || horse?.trainers?.trainer_name || '',
                                         trainerNameEn: metrics.trainerNameEn || horse?.trainers?.trainer_name_en || '',
                                         weight: report.weight ? `${report.weight}kg` : '',
@@ -1099,6 +1110,7 @@ export default function ReportEditor() {
                                     conditionJp: metrics.conditionJp || report.condition || '',
                                     conditionEn: metrics.conditionEn || '',
                                     ownerName: horse?.clients?.name || '',
+                                    ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                                     trainerNameJp: horse?.trainers?.trainer_name || '',
                                     trainerNameEn: horse?.trainers?.trainer_name_en || '',
                                     trainerLocation: horse?.trainers?.trainer_location || '',
@@ -1208,7 +1220,7 @@ export default function ReportEditor() {
         const sixMonthsAgoIso = sixMonthsAgo.toISOString();
 
         // Fetch horse details
-        const horseArr = await restGet(`horses?id=eq.${selectedHorseId}&select=*,clients(name,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
+        const horseArr = await restGet(`horses?id=eq.${selectedHorseId}&select=*,clients(name,name_en,report_output_mode),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en,report_output_mode)`);
         const horse = horseArr?.[0];
 
         // Fetch past weight history (last 6 months)
@@ -1241,6 +1253,7 @@ export default function ReportEditor() {
                 damJp: pedigree.damJp,
                 damEn: pedigree.damEn,
                 ownerName: horse?.clients?.name || '',
+                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                 trainerNameJp: horse?.trainers?.trainer_name || '',
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
@@ -1266,6 +1279,7 @@ export default function ReportEditor() {
                 damJp: pedigree.damJp,
                 damEn: pedigree.damEn,
                 ownerName: horse?.clients?.name || '',
+                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                 trainerNameJp: horse?.trainers?.trainer_name || '',
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 weight: latestWeightValue !== null ? `${latestWeightValue}kg` : '',
@@ -1296,6 +1310,7 @@ export default function ReportEditor() {
                 damEn: pedigree.damEn,
                 damJp: pedigree.damJp,
                 ownerName: horse?.clients?.name || '',
+                ownerNameEn: horse?.clients?.name_en || horse?.clients?.name || '',
                 trainerNameJp: horse?.trainers?.trainer_name || '',
                 trainerNameEn: horse?.trainers?.trainer_name_en || '',
                 trainerLocation: horse?.trainers?.trainer_location || '',
@@ -1480,6 +1495,7 @@ export default function ReportEditor() {
                     horseNameJp: status.horseNameJp,
                     horseNameEn: status.horseNameEn,
                     ownerName: status.ownerName,
+                    ownerNameEn: status.ownerNameEn,
                     trainerNameJp: status.trainerNameJp,
                     trainerNameEn: status.trainerNameEn,
                     sireJp: status.sireJp,
@@ -1558,6 +1574,7 @@ export default function ReportEditor() {
                     damJp: dep.damJp,
                     damEn: dep.damEn,
                     ownerName: dep.ownerName,
+                    ownerNameEn: dep.ownerNameEn,
                     trainerNameJp: dep.trainerNameJp,
                     trainerNameEn: dep.trainerNameEn,
                     weightDate: dep.weightDate,
@@ -1673,6 +1690,8 @@ export default function ReportEditor() {
             showLogo: monthly.showLogo ?? true,
             horseNameJp: monthly.horseNameJp,
             horseNameEn: monthly.horseNameEn,
+            ownerName: monthly.ownerName,
+            ownerNameEn: monthly.ownerNameEn,
             conditionJp: monthly.conditionJp,
             conditionEn: monthly.conditionEn
         };

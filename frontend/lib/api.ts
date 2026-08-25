@@ -61,6 +61,15 @@ export async function translateText(text: string, targetLang: 'ja' | 'en', repor
     return readApiResponse(res);
 }
 
+export async function translateName(text: string, targetLang: 'ja' | 'en', nameType: 'horse' | 'client' = 'client') {
+    const res = await fetchApi('/translate-name', {
+        method: 'POST',
+        headers: await getApiAuthHeaders(),
+        body: JSON.stringify({ name: text, targetLang, nameType }),
+    });
+    return readApiResponse(res) as Promise<{ translatedName?: string }>;
+}
+
 export type DepartureTranslationFieldKey = 'farrier' | 'worming' | 'feeding' | 'exercise' | 'comment';
 
 export type DepartureTranslationRequest = {

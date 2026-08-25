@@ -10,6 +10,7 @@ export type DepartureReportData = {
     horseNameJp: string;
     horseNameEn: string;
     ownerName: string;
+    ownerNameEn: string;
     trainerNameJp: string;
     trainerNameEn: string;
     sexAgeJp: string;
@@ -61,6 +62,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         horseNameJp: '',
         horseNameEn: '',
         ownerName: '',
+        ownerNameEn: '',
         trainerNameJp: '',
         trainerNameEn: '',
         sexAgeJp: '',
@@ -300,11 +302,20 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('owner')}</label>
+                        <label className="block text-xs font-medium text-gray-700">{t('owner')} (JP)</label>
                         <input
                             type="text"
                             value={data.ownerName}
                             onChange={e => handleChange('ownerName', e.target.value)}
+                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-700">{t('owner')} (EN)</label>
+                        <input
+                            type="text"
+                            value={data.ownerNameEn}
+                            onChange={e => handleChange('ownerNameEn', e.target.value)}
                             className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
                         />
                     </div>
@@ -587,7 +598,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     ) : (
                         <section className="departure-section">
                             <div className="text-[15px] leading-7">
-                                <div>Owner: {data.ownerName || '-'} / Trainer: {formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
+                                <div>Owner: {data.ownerNameEn || data.ownerName || '-'} / Trainer: {formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
                                 <div>Name: {data.horseNameEn} {data.sexAgeEn ? `(${data.sexAgeEn})` : ''}</div>
                                 <div>Sire: {data.sireEn} / Dam: {data.damEn}</div>
                                 <div>Weight: {data.weight}{data.weightDate ? ` (${formatDateUK(data.weightDate)})` : ''}</div>

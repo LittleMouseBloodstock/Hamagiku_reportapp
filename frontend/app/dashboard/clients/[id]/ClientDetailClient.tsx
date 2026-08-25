@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildRestHeaders, restGet, restPatch } from '@/lib/restClient';
+import { ensureBilingualClientName } from '@/lib/client-name';
 
 export default function ClientDetailClient({ id }: { id: string }) {
     const router = useRouter();
@@ -17,6 +18,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
 
     const [formData, setFormData] = useState({
         name: '',
+        name_en: '',
         contact_email: '',
         contact_phone: '',
         zip_code: '',
@@ -48,6 +50,7 @@ export default function ClientDetailClient({ id }: { id: string }) {
                 if (data && isMounted) {
                     setFormData({
                         name: data.name || '',
+                        name_en: data.name_en || '',
                         contact_email: data.contact_email || '',
                         contact_phone: data.contact_phone || '',
                         zip_code: data.zip_code || '',
@@ -81,8 +84,10 @@ export default function ClientDetailClient({ id }: { id: string }) {
         setSaving(true);
 
         try {
+            const clientNames = await ensureBilingualClientName(formData.name, formData.name_en);
             await restPatch(`clients?id=eq.${id}`, {
-                name: formData.name,
+                name: clientNames.name,
+                name_en: clientNames.name_en,
                 contact_email: formData.contact_email,
                 contact_phone: formData.contact_phone,
                 zip_code: formData.zip_code,
@@ -132,16 +137,25 @@ export default function ClientDetailClient({ id }: { id: string }) {
                                 {t('clientBasicInfo')}
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('clientName')}</label>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('clientNameJp')}</label>
                                     <input
-                                        required
                                         type="text"
                                         className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 mb-1">{t('clientNameEn')}</label>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-lg border-stone-300 shadow-sm focus:border-[#1a3c34] focus:ring focus:ring-[#1a3c34]/20"
+                                        value={formData.name_en}
+                                        onChange={e => setFormData({ ...formData, name_en: e.target.value })}
+                                    />
+                                </div>
+                                <p className="md:col-span-2 -mt-3 text-xs text-stone-500">{t('clientNameTranslationHint')}</p>
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 mb-1">{t('representativeName')}</label>
                                     <input

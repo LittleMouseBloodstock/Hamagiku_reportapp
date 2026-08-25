@@ -18,7 +18,7 @@ export default function HorsesPage() {
         sex?: string | null;
         broodmare_flag?: boolean | null;
         owner_id?: string;
-        clients?: { name: string; };
+        clients?: { name: string; name_en?: string | null; };
         trainer_id?: string | null;
         trainers?: { trainer_name: string; trainer_name_en?: string | null; trainer_location?: string | null; trainer_location_en?: string | null; };
     }
@@ -96,7 +96,7 @@ export default function HorsesPage() {
         const fetchHorses = async (retryCount = 0) => {
             try {
                 if (!session?.access_token) return;
-                const data = await restGet('horses?select=*,clients(name),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name', getRestHeaders());
+                const data = await restGet('horses?select=*,clients(name,name_en),trainers(trainer_name,trainer_name_en,trainer_location,trainer_location_en)&order=name', getRestHeaders());
                 if (isMounted) setHorses(data as Horse[] || []);
             } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
                 const msg = String(error?.message || '');
@@ -304,7 +304,7 @@ export default function HorsesPage() {
                                             {calculateHorseAge(horse.birth_date) || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                                            {horse.clients?.name || '-'}
+                                            {language === 'ja' ? (horse.clients?.name || horse.clients?.name_en || '-') : (horse.clients?.name_en || horse.clients?.name || '-')}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-600">
                                             {horse.trainers
