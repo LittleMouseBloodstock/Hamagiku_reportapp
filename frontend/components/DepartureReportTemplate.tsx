@@ -381,10 +381,11 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
                         {narrativeItems.length > 0 && <section className="departure-narratives">{narrativeItems.map((item) => <div className="departure-narrative departure-card" key={item.label}><div className="departure-section-heading"><span>{item.label}</span><i /></div><p>{item.value}</p></div>)}</section>}
 
-                        <section className="departure-closing departure-card"><p className="departure-closing-text">{isJa ? closingMessage.jp : closingMessage.en}</p><p className="departure-closing-signature">{isJa ? '浜菊ファーム一同' : 'Everyone at Hamagiku Farm'}</p></section>
+                        <div className="departure-signoff">
+                            <section className="departure-closing departure-card"><p className="departure-closing-text">{isJa ? closingMessage.jp : closingMessage.en}</p><p className="departure-closing-signature">{isJa ? '浜菊ファーム一同' : 'Everyone at Hamagiku Farm'}</p></section>
+                            <footer className="departure-footer">HAMAGIKU FARM · HOKKAIDO, JAPAN · {isJa ? formatDateJp(data.reportDate) : formatDateUK(data.reportDate)}</footer>
+                        </div>
                     </div>
-
-                    <footer className="departure-footer">HAMAGIKU FARM · HOKKAIDO, JAPAN · {isJa ? formatDateJp(data.reportDate) : formatDateUK(data.reportDate)}</footer>
                     </article>
                 </div>
             </main>
@@ -424,32 +425,50 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 .departure-narratives { display: flex; flex-direction: column; gap: 5mm; }
                 .departure-narrative { break-inside: avoid; page-break-inside: avoid; padding: 5mm 6mm; }
                 .departure-narrative p { margin: 4mm 0 0; white-space: pre-line; overflow-wrap: break-word; word-break: normal; color: #3d493f; font-size: 15px; line-height: 1.8; font-variant-numeric: lining-nums; }
-                .departure-closing { break-inside: avoid; page-break-inside: avoid; margin-top: auto; border-color: #d8c79f; background: #fbf8ef; padding: 6mm 8mm; text-align: center; }
+                .departure-signoff { margin-top: auto; }
+                .departure-closing { break-inside: avoid; page-break-inside: avoid; border-color: #d8c79f; background: #fbf8ef; padding: 6mm 8mm; text-align: center; }
                 .departure-closing-text { margin: 0; white-space: pre-line; color: #806127; font-size: 15px; line-height: 1.75; }
                 .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
                 .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .12em; text-align: center; }
                 @media print {
-                    @page { size: A4 portrait; margin: 0; }
+                    /* 専用の用紙名で、他の帳票の余白設定との競合を防ぐ。 */
+                    @page hamagiku-departure { size: A4 portrait; margin: 12mm 15mm; }
+                    .departure-editor, .departure-root { page: hamagiku-departure; }
                     html, body, #__next { height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
                     .no-print { display: none !important; }
-                    .departure-root { display: block !important; width: 210mm !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+                    .departure-editor, .departure-editor .report-editor-surface { display: block !important; width: auto !important; height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+                    .departure-root { display: block !important; width: 180mm !important; max-width: 100% !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
                     .departure-preview-wrap { display: block !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
-                    .departure-preview-stage { display: block !important; width: 210mm !important; min-height: 0 !important; padding: 0 !important; }
-                    .departure-preview { width: 210mm !important; min-height: 297mm !important; height: auto !important; margin: 0 !important; padding: 14mm 18mm 8mm !important; display: block !important; overflow: visible !important; box-shadow: none !important; }
-                    .departure-preview.no-logo { padding-top: 21mm !important; }
+                    .departure-preview-stage { display: block !important; width: 180mm !important; max-width: 100% !important; min-height: 0 !important; padding: 0 !important; }
+                    /* 画面用A4の最低高さを印刷に持ち込まず、不要な次ページを作らない。 */
+                    .departure-preview { width: 180mm !important; max-width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; border: 0 !important; display: block !important; overflow: visible !important; box-shadow: none !important; }
                     .departure-preview.no-logo .departure-logo { display: none !important; }
-                    .departure-header { min-height: 27mm !important; padding-bottom: 5mm !important; }
-                    .departure-content { display: block !important; flex: none !important; padding-top: 6mm !important; }
-                    .departure-content > * + * { margin-top: 5mm !important; }
+                    .departure-header { min-height: 23mm !important; padding-bottom: 4mm !important; }
+                    .departure-logo { width: 23mm !important; height: 23mm !important; }
+                    .departure-content { display: block !important; flex: none !important; padding-top: 4mm !important; }
+                    .departure-content > * + * { margin-top: 3.5mm !important; }
+                    .departure-identity { padding: 5mm 6mm 4mm !important; }
+                    .departure-identity h1 { margin-top: 2mm !important; font-size: 24px !important; }
+                    .departure-meta-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .65fr) !important; margin-top: 4mm !important; padding-top: 3mm !important; gap: 3mm 5mm !important; }
+                    .departure-pedigree { margin-top: 3mm !important; padding-top: 2mm !important; }
+                    .departure-pedigree > span { display: none !important; }
+                    .departure-pedigree-grid { margin-top: 0 !important; }
                     .departure-care-grid { margin-top: 3mm !important; }
+                    .departure-care-item { min-height: 0 !important; padding: 3mm !important; }
+                    .departure-care-item > span { display: block !important; }
+                    .departure-care-item strong { margin-top: 2mm !important; }
+                    .departure-care-item small { margin-top: 1.5mm !important; }
                     .departure-narratives { display: block !important; }
-                    .departure-narratives > * + * { margin-top: 5mm !important; }
+                    .departure-narratives > * + * { margin-top: 3.5mm !important; }
                     .departure-narrative { break-inside: auto !important; page-break-inside: auto !important; padding: 4mm 5mm !important; }
-                    .departure-narrative p { margin-top: 3mm !important; line-height: 1.6 !important; }
-                    .departure-closing { margin-top: 5mm !important; padding: 4.5mm 7mm !important; }
-                    .departure-closing-text { line-height: 1.5 !important; }
-                    .departure-footer { break-inside: avoid !important; page-break-inside: avoid !important; margin-top: 5mm !important; padding-top: 3mm !important; }
-                    .departure-identity, .departure-section-card, .departure-closing { break-inside: avoid-page !important; page-break-inside: avoid !important; }
+                    .departure-narrative .departure-section-heading { break-after: avoid-page !important; page-break-after: avoid !important; }
+                    .departure-narrative p { margin-top: 2mm !important; line-height: 1.65 !important; orphans: 3; widows: 3; }
+                    .departure-signoff { break-inside: avoid-page !important; page-break-inside: avoid !important; break-before: avoid-page; page-break-before: avoid; }
+                    .departure-closing { padding: 4mm 6mm !important; }
+                    .departure-closing-text { line-height: 1.6 !important; }
+                    .departure-closing-signature { margin-top: 2mm !important; }
+                    .departure-footer { margin-top: 3mm !important; padding-top: 2.5mm !important; }
+                    .departure-identity, .departure-section-card { break-inside: avoid-page !important; page-break-inside: avoid !important; }
                 }
             `}</style>
         </div>

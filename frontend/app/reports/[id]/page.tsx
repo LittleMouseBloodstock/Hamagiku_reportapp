@@ -1906,7 +1906,7 @@ export default function ReportEditor() {
     }
 
     return (
-        <div className="fixed inset-0 overflow-y-auto overscroll-y-contain md:static md:h-screen md:overflow-hidden flex flex-col items-stretch md:items-center py-2 sm:py-8 font-sans print:py-0 print:block print:static print:min-h-0 print:h-auto print:overflow-visible print:bg-white bg-gray-100">
+        <div className={`${reportType === 'departure' ? 'departure-editor ' : ''}fixed inset-0 overflow-y-auto overscroll-y-contain md:static md:h-screen md:overflow-hidden flex flex-col items-stretch md:items-center py-2 sm:py-8 font-sans print:py-0 print:block print:static print:min-h-0 print:h-auto print:overflow-visible print:bg-white bg-gray-100`}>
             {/* Control Panel (Hidden in Print) */}
             <div className="control-panel w-full max-w-[210mm] bg-[#222] text-white p-3 sm:p-4 rounded-none sm:rounded-md mb-3 sm:mb-6 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-center shadow-lg no-print md:sticky md:top-4 z-50">
                 <div className="flex items-start w-full sm:w-auto justify-between sm:justify-start gap-3 sm:gap-4">
@@ -2003,7 +2003,7 @@ export default function ReportEditor() {
             {/* Actually ReportTemplate is responsive (stacked on mobile, split on desktop). 
                So we should just let it be full width. */}
 
-            <div className="w-full block md:flex md:flex-1 md:min-h-0 md:justify-center overflow-x-visible overflow-y-visible md:overflow-x-auto md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
+            <div className="report-editor-surface w-full block md:flex md:flex-1 md:min-h-0 md:justify-center overflow-x-visible overflow-y-visible md:overflow-x-auto md:overflow-y-hidden pb-0 print:pb-0 print:overflow-visible">
                 {reportType === 'status' ? (
                     <StatusReportTemplate initialData={displayData as Partial<StatusReportData>} onDataChange={handleDataChange} />
                 ) : reportType === 'departure' ? (
