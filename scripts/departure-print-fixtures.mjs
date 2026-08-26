@@ -63,6 +63,16 @@ await build({
                     ? execFileSync('git', ['show', `${sourceRef}:frontend/components/DepartureReportTemplate.tsx`], { cwd: root, encoding: 'utf8' })
                     : await readFile(filename, 'utf8');
                 assert.equal(source.match(/<style jsx global>/g)?.length, 1);
+                if (!sourceRef) {
+                    // Type3名だけでは判別できないフォントの太さ・継承元を、元コードでも検査する。
+                    assert.doesNotMatch(source, /\b(?:Arial|font-semibold|font-extrabold|font-black)\b/);
+                    for (const [, weight] of source.matchAll(/font-weight:\s*(\d+)/g)) {
+                        assert.ok(['400', '500', '700'].includes(weight), `未配信の太さ: ${weight}`);
+                    }
+                    const families = [...source.matchAll(/font-family:\s*([^;]+);/g)].map(match => match[1]);
+                    assert.equal(families.length, 2, 'フォント指定はルートと継承だけに限定する');
+                    assert.ok(families[0].startsWith('var(--font-noto-sans-jp)') && families[1] === 'inherit');
+                }
                 return {
                     // styled-jsx同様にCSSをraw textで出し、子セレクターの「>」をHTMLエスケープしない。
                     contents: source.replace(/<style jsx global>\{([\s\S]+?)\}<\/style>/g, '<style dangerouslySetInnerHTML={{ __html: $1 }} />'),

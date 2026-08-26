@@ -45,15 +45,18 @@ def text_occurrences(page, value):
     if not needle:
         return []
 
-    drawn_words = []
-    for word in page.get_text('words', sort=False):
-        text = normalize_text(word[4])
-        if not text:
-            continue
-        drawn_words.append((text, pymupdf.Rect(*word[:4])))
+    drawn_characters = []
+    # 日本語は「父＋馬名」が1単語に結合されるため、単語でなく文字単位の矩形を使う。
+    for block in page.get_text('rawdict', sort=False)['blocks']:
+        for line in block.get('lines', []):
+            for span in line['spans']:
+                for character in span['chars']:
+                    text = normalize_text(character['c'])
+                    if text:
+                        drawn_characters.append((text, pymupdf.Rect(character['bbox'])))
 
     occurrences = []
-    for block_words in [drawn_words]:
+    for block_words in [drawn_characters]:
         stream = ''
         indexed_words = []
         for text, rect in block_words:
@@ -66,6 +69,17 @@ def text_occurrences(page, value):
                 if start < match.end() and end > match.start()
             ]
             if not rects:
+                continue
+            # 無関係の列・項目を連結した見かけの一致を除き、自然な同一行・折返しだけを認める。
+            continuous = True
+            for previous, current in zip(rects, rects[1:]):
+                height = max(previous.height, current.height)
+                delta_y = current.y0 - previous.y0
+                if abs(delta_y) <= 2:
+                    continuous &= -1 <= current.x0 - previous.x1 <= height * 1.5
+                else:
+                    continuous &= 0 < delta_y <= height * 1.75
+            if not continuous:
                 continue
             occurrences.append({
                 'rects': rects,
@@ -109,16 +123,39 @@ def serializable_occurrence(occurrence):
     }
 
 
-def recipient_candidates(page, candidates, field, language):
-    """長い馬名に馬主名が含まれていても、宛名ラベル直下の値を選ぶ。"""
-    labels = {'ja': {'owner': '馬主', 'trainer': '調教師'}, 'en': {'owner': 'OWNER', 'trainer': 'TRAINER'}}
+def labeled_candidates(page, candidates, field, language):
+    """同名の別項目を選ばないよう、対応ラベルの隣／直下と段組位置で限定する。"""
+    labels = {
+        'ja': {'sexAge': '性齢', 'sire': '父', 'dam': '母', 'owner': '馬主', 'trainer': '調教師'},
+        'en': {'sexAge': 'Sex / age', 'sire': 'Sire', 'dam': 'Dam', 'owner': 'OWNER', 'trainer': 'TRAINER'},
+    }
     label = labels[language][field]
-    label_rects = [pymupdf.Rect(*word[:4]) for word in page.get_text('words') if word[4] == label]
-    return [candidate for candidate in candidates if any(
-        abs(candidate['bbox'][0] - rect.x0) < 4
-        and -IDENTITY_Y_TOLERANCE <= candidate['top'] - rect.y1 < 24
-        for rect in label_rects
-    )]
+    label_rects = page.search_for(label)
+    filtered = []
+    for candidate in candidates:
+        for rect in label_rects:
+            if field in ('owner', 'trainer'):
+                matches = abs(candidate['bbox'][0] - rect.x0) < 4 and -IDENTITY_Y_TOLERANCE <= candidate['top'] - rect.y1 < 24
+            else:
+                matches = 0 <= candidate['bbox'][0] - rect.x1 < 12 and abs(candidate['top'] - rect.y0) < 4
+            if field == 'sire':
+                matches &= candidate['bbox'][2] < page.rect.width / 2
+            if field == 'dam' and len(page.search_for(labels[language]['sire'])):
+                matches &= candidate['bbox'][0] > page.rect.width / 2
+            if matches:
+                filtered.append(candidate)
+                break
+    return filtered
+
+
+def horse_heading_candidate(page, candidate):
+    """馬名は本文や宛名中の同じ文字列でなく、24pxの見出しで照合する。"""
+    first_word = candidate['rects'][0]
+    point = pymupdf.Point((first_word.x0 + first_word.x1) / 2, (first_word.y0 + first_word.y1) / 2)
+    return any(
+        point in pymupdf.Rect(span['bbox']) and abs(span['size'] - 18) < 0.15
+        for block in page.get_text('dict')['blocks'] for line in block.get('lines', []) for span in line['spans']
+    )
 
 
 parser = argparse.ArgumentParser()
@@ -255,8 +292,10 @@ for fixture in fixtures:
                 if not normalize_text(value):
                     continue
                 candidates = text_occurrences(first_page, value)
-                if field in ('owner', 'trainer'):
-                    candidates = recipient_candidates(first_page, candidates, field, fixture['language'])
+                if field == 'horseName':
+                    candidates = [candidate for candidate in candidates if horse_heading_candidate(first_page, candidate)]
+                else:
+                    candidates = labeled_candidates(first_page, candidates, field, fixture['language'])
                 if not candidates:
                     failures.append(f'1ページ目のidentity文字が欠落: {field}')
                 else:
@@ -271,6 +310,10 @@ for fixture in fixtures:
                     identity_matches['sire'], identity_matches['dam'] = parent_pair
             for field, candidates in identity_candidates.items():
                 identity_matches.setdefault(field, candidates[0])
+            for left, right in [('sire', 'dam'), ('owner', 'trainer')]:
+                if left in identity_matches and right in identity_matches:
+                    if identity_matches[left]['bbox'][0] >= identity_matches[right]['bbox'][0]:
+                        failures.append(f'identity文字の左右順序が不正: {left} -> {right}')
 
             ordered_fields = ['horseName']
             if normalize_text(identity_values['sexAge']):
