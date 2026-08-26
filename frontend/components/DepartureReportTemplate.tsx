@@ -431,17 +431,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
                 .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .12em; text-align: center; }
                 @media print {
-                    /* 専用の用紙名で、他の帳票の余白設定との競合を防ぐ。 */
-                    @page hamagiku-departure { size: A4 portrait; margin: 12mm 15mm; }
-                    .departure-editor, .departure-root { page: hamagiku-departure; }
+                    /* 印刷設定の「余白なし」でも崩れないよう、余白は帳票本体に持たせる。 */
+                    @page hamagiku-departure { size: A4 portrait; margin: 0; }
+                    .departure-editor, .departure-root, .departure-preview { page: hamagiku-departure; }
                     html, body, #__next { height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
                     .no-print { display: none !important; }
                     .departure-editor, .departure-editor .report-editor-surface { display: block !important; width: auto !important; height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
-                    .departure-root { display: block !important; width: 180mm !important; max-width: 100% !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+                    .departure-root { display: block !important; width: 210mm !important; max-width: 100% !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
                     .departure-preview-wrap { display: block !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
-                    .departure-preview-stage { display: block !important; width: 180mm !important; max-width: 100% !important; min-height: 0 !important; padding: 0 !important; }
+                    .departure-preview-stage { display: block !important; width: 210mm !important; max-width: 100% !important; min-height: 0 !important; padding: 0 !important; }
                     /* 画面用A4の最低高さを印刷に持ち込まず、不要な次ページを作らない。 */
-                    .departure-preview { width: 180mm !important; max-width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; border: 0 !important; display: block !important; overflow: visible !important; box-shadow: none !important; }
+                    .departure-preview { width: 210mm !important; max-width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 12mm 15mm !important; border: 0 !important; display: block !important; overflow: visible !important; box-shadow: none !important; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
                     .departure-preview.no-logo .departure-logo { display: none !important; }
                     .departure-header { min-height: 23mm !important; padding-bottom: 4mm !important; }
                     .departure-logo { width: 23mm !important; height: 23mm !important; }
@@ -463,7 +463,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     .departure-narrative { break-inside: auto !important; page-break-inside: auto !important; padding: 4mm 5mm !important; }
                     .departure-narrative .departure-section-heading { break-after: avoid-page !important; page-break-after: avoid !important; }
                     .departure-narrative p { margin-top: 2mm !important; line-height: 1.65 !important; orphans: 3; widows: 3; }
-                    .departure-signoff { break-inside: avoid-page !important; page-break-inside: avoid !important; break-before: avoid-page; page-break-before: avoid; }
+                    /* 挨拶とフッターは一体で改ページし、フッターだけの次ページを防ぐ。 */
+                    .departure-signoff { display: inline-block !important; width: 100%; vertical-align: top; break-inside: avoid-page !important; page-break-inside: avoid !important; }
                     .departure-closing { padding: 4mm 6mm !important; }
                     .departure-closing-text { line-height: 1.6 !important; }
                     .departure-closing-signature { margin-top: 2mm !important; }

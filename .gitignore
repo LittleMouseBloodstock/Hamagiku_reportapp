@@ -14,3 +14,7 @@ internal_memory_secret.txt
 
 # Eval artifacts
 backend/evals/results/*.json
+
+# 退厩レポートのローカルPDF回帰検証（本番へ含めない）
+tmp/departure-print-audit/
+output/pdf/departure-print-audit/
