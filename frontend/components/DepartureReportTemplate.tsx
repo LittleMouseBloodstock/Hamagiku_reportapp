@@ -279,7 +279,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     ].filter(item => item.value);
 
     return (
-        <div className="departure-root flex min-h-screen w-full flex-col bg-stone-100 font-sans md:h-screen md:flex-row md:overflow-hidden">
+        <div className="departure-root flex min-h-screen w-full flex-col bg-stone-100 font-sans md:min-h-0 md:h-full md:flex-row md:overflow-hidden">
             <aside className="departure-form no-print w-full shrink-0 overflow-visible border-r border-stone-200 bg-white p-5 pb-32 md:w-[28rem] md:overflow-y-auto md:p-6">
                 <div className="mb-6 flex items-start justify-between gap-3">
                     <div>
@@ -350,7 +350,8 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
             </aside>
 
             <main className="departure-preview-wrap flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-[#525659] p-4 pb-12 md:p-8 print:bg-white print:p-0">
-                <article id="report-preview" className={`departure-preview${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}>
+                <div className="departure-preview-stage">
+                    <article id="report-preview" className={`departure-preview${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}>
                     <header className="departure-header">
                         <div className="departure-brand"><span>HAMAGIKU</span><span>FARM</span><small>{isJa ? '北海道・日本' : 'Hokkaido, Japan'}</small></div>
                         {showLogo && <img src="/hamagiku-logo.png" alt="Hamagiku Farm" className="departure-logo" />}
@@ -384,10 +385,12 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     </div>
 
                     <footer className="departure-footer">HAMAGIKU FARM · HOKKAIDO, JAPAN · {isJa ? formatDateJp(data.reportDate) : formatDateUK(data.reportDate)}</footer>
-                </article>
+                    </article>
+                </div>
             </main>
 
             <style jsx global>{`
+                .departure-preview-stage { box-sizing: border-box; display: flex; width: 100%; min-height: 100%; flex: 1 0 auto; align-items: flex-start; justify-content: center; padding-bottom: 12mm; }
                 .departure-preview { width: 210mm; min-height: 297mm; box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; margin: 0 auto 8mm; padding: 17mm 18mm 13mm; color: #26342d; background: #fff; border: 1px solid #d8d2c7; box-shadow: 0 16px 34px rgba(0, 0, 0, .28); font-family: var(--font-noto-sans-jp), var(--font-noto-sans), 'Noto Sans JP', 'Noto Sans', sans-serif; font-variant-numeric: lining-nums; }
                 .departure-header { position: relative; display: flex; min-height: 30mm; align-items: center; justify-content: space-between; border-bottom: 1px solid #c5a059; padding-bottom: 7mm; }
                 .departure-brand { display: flex; flex-direction: column; gap: 1px; color: #1b3226; font-family: Arial, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: .18em; line-height: 1.05; }
@@ -426,17 +429,27 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
                 .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .12em; text-align: center; }
                 @media print {
-                    @page { size: A4; margin: 0; }
+                    @page { size: A4 portrait; margin: 0; }
                     html, body, #__next { height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
                     .no-print { display: none !important; }
-                    .departure-root { display: block !important; min-height: 0 !important; background: #fff !important; }
+                    .departure-root { display: block !important; width: 210mm !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
                     .departure-preview-wrap { display: block !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
-                    .departure-preview { width: 210mm !important; min-height: 297mm !important; height: auto !important; margin: 0 !important; padding: 17mm 18mm 13mm !important; box-shadow: none !important; }
+                    .departure-preview-stage { display: block !important; width: 210mm !important; min-height: 0 !important; padding: 0 !important; }
+                    .departure-preview { width: 210mm !important; min-height: 297mm !important; height: auto !important; margin: 0 !important; padding: 14mm 18mm 8mm !important; display: block !important; overflow: visible !important; box-shadow: none !important; }
                     .departure-preview.no-logo { padding-top: 21mm !important; }
                     .departure-preview.no-logo .departure-logo { display: none !important; }
-                    .departure-content { gap: 6mm; }
-                    .departure-closing { margin-top: 4mm; }
-                    .departure-card, .departure-section-card, .departure-narrative, .departure-closing { break-inside: avoid !important; page-break-inside: avoid !important; }
+                    .departure-header { min-height: 27mm !important; padding-bottom: 5mm !important; }
+                    .departure-content { display: block !important; flex: none !important; padding-top: 6mm !important; }
+                    .departure-content > * + * { margin-top: 5mm !important; }
+                    .departure-care-grid { margin-top: 3mm !important; }
+                    .departure-narratives { display: block !important; }
+                    .departure-narratives > * + * { margin-top: 5mm !important; }
+                    .departure-narrative { break-inside: auto !important; page-break-inside: auto !important; padding: 4mm 5mm !important; }
+                    .departure-narrative p { margin-top: 3mm !important; line-height: 1.6 !important; }
+                    .departure-closing { margin-top: 5mm !important; padding: 4.5mm 7mm !important; }
+                    .departure-closing-text { line-height: 1.5 !important; }
+                    .departure-footer { break-inside: avoid !important; page-break-inside: avoid !important; margin-top: 5mm !important; padding-top: 3mm !important; }
+                    .departure-identity, .departure-section-card, .departure-closing { break-inside: avoid-page !important; page-break-inside: avoid !important; }
                 }
             `}</style>
         </div>
