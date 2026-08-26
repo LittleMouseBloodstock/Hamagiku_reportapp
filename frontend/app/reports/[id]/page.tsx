@@ -6,6 +6,7 @@ import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import DepartureReportTemplate, { DepartureReportData } from '@/components/DepartureReportTemplate';
 import StatusReportTemplate, { StatusReportData } from '@/components/StatusReportTemplate';
 import { fillMissingDepartureTranslations, getDepartureTranslationRequests } from '@/lib/departure-report';
+import { DEPARTURE_CLOSING_MESSAGE_VERSION, DEFAULT_DEPARTURE_CLOSING_MESSAGE } from '@/lib/departure-report-content';
 import { ArrowLeft, Save, Printer, Check, UploadCloud, Send, ShieldCheck, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -759,6 +760,9 @@ export default function ReportEditor() {
                             exerciseEn: metrics.exerciseEn || '',
                             commentJp: report.body || metrics.commentJp || '',
                             commentEn: metrics.commentEn || '',
+                            closingMessageJp: metrics.closingMessageJp || DEFAULT_DEPARTURE_CLOSING_MESSAGE.jp,
+                            closingMessageEn: metrics.closingMessageEn || DEFAULT_DEPARTURE_CLOSING_MESSAGE.en,
+                            closingMessageVersion: metrics.closingMessageVersion || DEPARTURE_CLOSING_MESSAGE_VERSION,
                             outputMode: metricsOutputMode,
                             showLogo: metricsShowLogo
                         });
@@ -1094,6 +1098,9 @@ export default function ReportEditor() {
                                         exerciseEn: metrics.exerciseEn || '',
                                         commentJp: report.body || metrics.commentJp || '',
                                         commentEn: metrics.commentEn || '',
+                                        closingMessageJp: metrics.closingMessageJp || DEFAULT_DEPARTURE_CLOSING_MESSAGE.jp,
+                                        closingMessageEn: metrics.closingMessageEn || DEFAULT_DEPARTURE_CLOSING_MESSAGE.en,
+                                        closingMessageVersion: metrics.closingMessageVersion || DEPARTURE_CLOSING_MESSAGE_VERSION,
                                         outputMode: metricsOutputMode,
                                         showLogo: metrics.showLogo ?? (metricsOutputMode !== 'print'),
                                     });
@@ -1590,6 +1597,9 @@ export default function ReportEditor() {
                     exerciseEn: dep.exerciseEn,
                     commentJp: dep.commentJp,
                     commentEn: dep.commentEn,
+                    closingMessageJp: dep.closingMessageJp || DEFAULT_DEPARTURE_CLOSING_MESSAGE.jp,
+                    closingMessageEn: dep.closingMessageEn || DEFAULT_DEPARTURE_CLOSING_MESSAGE.en,
+                    closingMessageVersion: dep.closingMessageVersion || DEPARTURE_CLOSING_MESSAGE_VERSION,
                     outputMode: dep.outputMode || 'pdf',
                     showLogo: dep.showLogo ?? true
                 };

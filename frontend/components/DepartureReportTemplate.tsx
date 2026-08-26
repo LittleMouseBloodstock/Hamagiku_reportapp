@@ -1,9 +1,15 @@
 'use client';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { AlertCircle, CheckCircle2, Languages, Loader2, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getApiAuthHeaders } from '@/lib/api';
 import { fillMissingDepartureTranslations, getDepartureTranslationStatus } from '@/lib/departure-report';
+import {
+    DEFAULT_DEPARTURE_CLOSING_MESSAGE,
+    DEPARTURE_CLOSING_MESSAGE_VERSION,
+    resolveDepartureClosingMessage,
+} from '@/lib/departure-report-content';
 
 export type DepartureReportData = {
     reportDate: string;
@@ -33,6 +39,9 @@ export type DepartureReportData = {
     exerciseEn: string;
     commentJp: string;
     commentEn: string;
+    closingMessageJp: string;
+    closingMessageEn: string;
+    closingMessageVersion: number;
     outputMode?: 'pdf' | 'print';
     showLogo?: boolean;
 };
@@ -41,6 +50,68 @@ interface DepartureReportTemplateProps {
     initialData?: Partial<DepartureReportData>;
     onDataChange?: (data: DepartureReportData) => void;
     readOnly?: boolean;
+}
+
+type BilingualFieldProps = {
+    label: string;
+    jpValue: string;
+    enValue: string;
+    onChangeJp: (value: string) => void;
+    onChangeEn: (value: string) => void;
+    multiline?: boolean;
+    rows?: number;
+    optional?: boolean;
+    disabled?: boolean;
+};
+
+const inputClass = 'mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#1B3226] focus:bg-white focus:ring-2 focus:ring-[#1B3226]/10 disabled:cursor-not-allowed disabled:opacity-60';
+const textAreaClass = `${inputClass} resize-y leading-6`;
+
+function BilingualField({
+    label,
+    jpValue,
+    enValue,
+    onChangeJp,
+    onChangeEn,
+    multiline = false,
+    rows = 3,
+    optional = false,
+    disabled = false,
+}: BilingualFieldProps) {
+    const renderControl = (value: string, onChange: (value: string) => void) => {
+        if (multiline) {
+            return <textarea rows={rows} disabled={disabled} className={textAreaClass} value={value} onChange={(event) => onChange(event.target.value)} />;
+        }
+        return <input type="text" disabled={disabled} className={inputClass} value={value} onChange={(event) => onChange(event.target.value)} />;
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-stone-700">{label}</span>
+                {optional && <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Optional</span>}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-[11px] font-medium text-stone-500">
+                    日本語 / JP
+                    {renderControl(jpValue, onChangeJp)}
+                </label>
+                <label className="block text-[11px] font-medium text-stone-500">
+                    English / EN
+                    {renderControl(enValue, onChangeEn)}
+                </label>
+            </div>
+        </div>
+    );
+}
+
+function SectionHeading({ title, description }: { title: string; description?: string }) {
+    return (
+        <div className="border-b border-stone-200 pb-2">
+            <h3 className="text-sm font-bold tracking-wide text-[#1B3226]">{title}</h3>
+            {description && <p className="mt-1 text-[11px] leading-5 text-stone-500">{description}</p>}
+        </div>
+    );
 }
 
 const formatDateUK = (dateStr: string) => {
@@ -53,6 +124,9 @@ const formatDateUK = (dateStr: string) => {
     if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return dateStr;
     return `${day}/${month}/${year}`;
 };
+
+const formatDateJp = (dateStr: string) => dateStr ? dateStr.replace(/-/g, '/') : '';
+const textValue = (value?: string | null) => String(value || '').trim();
 
 export default function DepartureReportTemplate({ initialData, onDataChange, readOnly = false }: DepartureReportTemplateProps) {
     const { language, t } = useLanguage();
@@ -85,8 +159,11 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         exerciseEn: '',
         commentJp: '',
         commentEn: '',
+        closingMessageJp: DEFAULT_DEPARTURE_CLOSING_MESSAGE.jp,
+        closingMessageEn: DEFAULT_DEPARTURE_CLOSING_MESSAGE.en,
+        closingMessageVersion: DEPARTURE_CLOSING_MESSAGE_VERSION,
         outputMode: 'pdf',
-        showLogo: true
+        showLogo: true,
     };
 
     const [data, setData] = useState<DepartureReportData>({ ...defaultData, ...initialData });
@@ -105,7 +182,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     }, [initialData]);
 
     useEffect(() => {
-        if (onDataChange) onDataChange(data);
+        onDataChange?.(data);
     }, [data, onDataChange]);
 
     const handleChange = useCallback((key: keyof DepartureReportData, value: string) => {
@@ -115,17 +192,14 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
 
     const formatOwnerName = (name?: string) => {
         if (!name) return '-';
-        if (language !== 'ja') return name;
+        if (!isJa) return name;
         return name.endsWith('様') ? name : `${name}様`;
     };
 
-    const formatTrainerName = (jp?: string, en?: string) => {
-        if (language === 'ja') return (jp || en || '-') + ' 様';
-        return en || jp || '-';
-    };
+    const formatTrainerName = (jp?: string, en?: string) => isJa ? (jp || en || '-') : (en || jp || '-');
 
     const handleGenerateFields = async () => {
-        if (!aiNotes) return;
+        if (!aiNotes.trim() || readOnly) return;
         setIsGenerating(true);
         setTranslationMessage('');
         try {
@@ -133,16 +207,14 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
             const res = await fetch(`${baseUrl}/generate-departure`, {
                 method: 'POST',
                 headers: await getApiAuthHeaders(),
-                body: JSON.stringify({ notes: aiNotes })
+                body: JSON.stringify({ notes: aiNotes, reportType: 'departure' }),
             });
             if (!res.ok) {
                 const errorText = await res.text();
                 throw new Error(`Server Error (${res.status}): ${errorText}`);
             }
             const json = await res.json();
-            if (!json?.ja || !json?.en) {
-                throw new Error('The generated report did not include both Japanese and English fields.');
-            }
+            if (!json?.ja || !json?.en) throw new Error('The generated report did not include both Japanese and English fields.');
             setData(prev => ({
                 ...prev,
                 farrierJp: prev.farrierJp || json.ja.farrier || '',
@@ -154,11 +226,11 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 exerciseJp: prev.exerciseJp || json.ja.exercise || '',
                 exerciseEn: prev.exerciseEn || json.en.exercise || '',
                 commentJp: prev.commentJp || json.ja.comment || '',
-                commentEn: prev.commentEn || json.en.comment || ''
+                commentEn: prev.commentEn || json.en.comment || '',
             }));
-        } catch (e) {
-            console.error(e);
-            alert("AI Generation failed:\n" + (e instanceof Error ? e.message : String(e)));
+        } catch (error) {
+            console.error(error);
+            alert(`AI Generation failed:\n${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsGenerating(false);
         }
@@ -171,13 +243,9 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
         try {
             const result = await fillMissingDepartureTranslations(data);
             setData(result.data);
-            setTranslationMessage(
-                isJa
-                    ? `${result.translatedKeys.length}項目の不足言語を補完しました。`
-                    : `${result.translatedKeys.length} missing language fields were completed.`
-            );
-        } catch (e) {
-            const detail = e instanceof Error ? e.message : String(e);
+            setTranslationMessage(isJa ? `${result.translatedKeys.length}項目の不足言語を補完しました。` : `${result.translatedKeys.length} missing language fields were completed.`);
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
             setTranslationMessage(isJa ? `翻訳に失敗しました。${detail}` : `Translation failed. ${detail}`);
         } finally {
             setIsTranslating(false);
@@ -185,480 +253,171 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
     };
 
     const translationStatus = getDepartureTranslationStatus(data);
+    const closingMessage = resolveDepartureClosingMessage({ jp: data.closingMessageJp, en: data.closingMessageEn });
+    const displayText = (jp: string, en: string) => isJa ? textValue(jp) || textValue(en) : textValue(en) || textValue(jp);
+    const altText = (jp: string, en: string) => isJa ? textValue(en) : textValue(jp);
+    const displayHorseName = displayText(data.horseNameJp, data.horseNameEn) || '-';
+    const secondaryHorseName = altText(data.horseNameJp, data.horseNameEn);
+
+    const careItems = [
+        { label: isJa ? '馬体重' : 'Weight', value: textValue(data.weight), date: data.weightDate },
+        { label: isJa ? '装蹄' : 'Farrier', value: displayText(data.farrierJp, data.farrierEn), date: data.farrierDate },
+        { label: isJa ? '駆虫' : 'Worming', value: displayText(data.wormingJp, data.wormingEn), date: data.wormingDate },
+    ].filter(item => item.value || item.date);
+
+    const narrativeItems = [
+        { label: isJa ? '飼葉' : 'Feeding', value: displayText(data.feedingJp, data.feedingEn) },
+        { label: isJa ? '運動・調教' : 'Exercise & Training', value: displayText(data.exerciseJp, data.exerciseEn) },
+        { label: isJa ? 'コメント' : 'Comment', value: displayText(data.commentJp, data.commentEn) },
+    ].filter(item => item.value);
 
     return (
-        <div className="departure-root flex w-full flex-col md:flex-row min-h-screen md:h-screen bg-gray-100 overflow-visible md:overflow-hidden font-sans">
-            <div className="departure-form w-full md:w-96 bg-white border-r border-gray-200 overflow-visible md:overflow-y-auto p-6 pb-40 space-y-6 no-print">
-                <div>
-                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('departureReport')}</h2>
-                    <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? '退厩レポート用の入力欄' : 'Fields for departure report.'}</p>
+        <div className="departure-root flex min-h-screen w-full flex-col bg-stone-100 font-sans md:h-screen md:flex-row md:overflow-hidden">
+            <aside className="departure-form no-print w-full shrink-0 overflow-visible border-r border-stone-200 bg-white p-5 pb-32 md:w-[28rem] md:overflow-y-auto md:p-6">
+                <div className="mb-6 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#B08D45]">Hamagiku Farm</p>
+                        <h2 className="mt-2 text-lg font-bold text-[#1B3226]">{t('departureReport')}</h2>
+                        <p className="mt-1 text-xs leading-5 text-stone-500">{isJa ? 'オーナー向け退厩レポート' : 'Owner-facing departure report'}</p>
+                    </div>
+                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500">A4 / PDF</span>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border border-indigo-100 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-bold text-indigo-800 uppercase tracking-wide">AI Writer</span>
-                        <span className="text-[11px] text-indigo-500">{language === 'ja' ? 'メモから各項目を自動生成' : 'Generate fields from notes'}</span>
+                <div className="mb-6 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide text-indigo-900">AI Writer</span>
+                        <span className="text-[11px] text-indigo-600">{isJa ? 'メモから各項目を生成' : 'Generate from notes'}</span>
                     </div>
-                    <div className="space-y-2">
-                        <textarea
-                            rows={5}
-                            value={aiNotes}
-                            onChange={(e) => setAiNotes(e.target.value)}
-                            placeholder={language === 'ja' ? "例：退厩理由、近況、装蹄や駆虫のメモ、飼葉/調教内容 など" : "e.g. reason for departure, recent condition, farrier/worming notes, feeding/training"}
-                            className="w-full resize-y border-0 rounded-lg bg-white/80 px-3 py-3 text-sm text-gray-900 shadow-sm ring-1 ring-indigo-200 placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
-                        />
-                        <button
-                            onClick={handleGenerateFields}
-                            disabled={isGenerating}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1"
-                        >
-                            <span>{isGenerating ? 'Generating...' : (isJa ? '日本語・英語を生成' : 'Generate Japanese & English')}</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-900">
-                            <Languages size={15} />
-                            <span>{isJa ? '言語の整合性' : 'Language consistency'}</span>
-                        </div>
-                        <span className="text-[11px] font-semibold text-emerald-700">
-                            {translationStatus.complete}/{translationStatus.total}
-                        </span>
-                    </div>
-                    <p className="mt-2 text-[11px] leading-5 text-emerald-800">
-                        {translationStatus.pending > 0
-                            ? (isJa
-                                ? `${translationStatus.pending}項目は片側のみです。保存時に不足分を自動翻訳します。`
-                                : `${translationStatus.pending} field${translationStatus.pending === 1 ? '' : 's'} have one language missing. Save will complete them automatically.`)
-                            : (isJa
-                                ? '入力済みの項目は日本語・英語が揃っています。'
-                                : 'All entered fields have both Japanese and English values.')}
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() => void handleTranslateMissing()}
-                        disabled={readOnly || isTranslating || translationStatus.pending === 0}
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {isTranslating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                        {isTranslating
-                            ? (isJa ? '翻訳中...' : 'Translating...')
-                            : (isJa ? '不足分を翻訳' : 'Translate missing fields')}
+                    <textarea rows={4} value={aiNotes} disabled={readOnly} onChange={(event) => setAiNotes(event.target.value)} placeholder={isJa ? '退厩理由、近況、装蹄、駆虫、飼葉、運動など' : 'Reason for departure, condition, farrier, worming, feeding, exercise...'} className="mt-3 w-full resize-y rounded-xl border-0 bg-white px-3 py-3 text-sm leading-6 text-stone-900 shadow-sm ring-1 ring-indigo-200 outline-none placeholder:text-indigo-300 focus:ring-2 focus:ring-indigo-400 disabled:opacity-60" />
+                    <button type="button" onClick={() => void handleGenerateFields()} disabled={readOnly || isGenerating || !aiNotes.trim()} className="mt-3 w-full rounded-xl bg-indigo-700 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-800 disabled:cursor-not-allowed disabled:opacity-50">
+                        {isGenerating ? 'Generating...' : (isJa ? '日本語・英語を生成' : 'Generate Japanese & English')}
                     </button>
-                    {translationMessage && (
-                        <p className={`mt-2 flex items-start gap-1 text-[11px] leading-5 ${translationMessage.includes(isJa ? '失敗' : 'failed') ? 'text-red-700' : 'text-emerald-700'}`}>
-                            {translationMessage.includes(isJa ? '失敗' : 'failed') ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
-                            <span>{translationMessage}</span>
-                        </p>
-                    )}
                 </div>
 
-                <div className="space-y-3">
-                    <label className="block text-xs font-medium text-gray-700">{t('reportDate')}</label>
-                    <input
-                        type="date"
-                        value={data.reportDate}
-                        onChange={e => handleChange('reportDate', e.target.value)}
-                        className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                    />
+                <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-950"><Languages size={15} /><span>{isJa ? '言語の整合性' : 'Language consistency'}</span></div>
+                        <span className="text-[11px] font-bold text-emerald-700">{translationStatus.complete}/{translationStatus.total}</span>
+                    </div>
+                    <p className="mt-2 text-[11px] leading-5 text-emerald-900">
+                        {translationStatus.pending > 0 ? (isJa ? `${translationStatus.pending}項目は片側のみです。保存時に不足分を補完します。` : `${translationStatus.pending} field${translationStatus.pending === 1 ? '' : 's'} will be completed before saving.`) : (isJa ? '入力済みの項目は日本語・英語が揃っています。' : 'All entered fields have both languages.')}
+                    </p>
+                    <button type="button" onClick={() => void handleTranslateMissing()} disabled={readOnly || isTranslating || translationStatus.pending === 0} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50">
+                        {isTranslating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                        {isTranslating ? (isJa ? '翻訳中...' : 'Translating...') : (isJa ? '不足分を翻訳' : 'Translate missing fields')}
+                    </button>
+                    {translationMessage && <p className={`mt-2 flex items-start gap-1 text-[11px] leading-5 ${translationMessage.includes(isJa ? '失敗' : 'failed') ? 'text-red-700' : 'text-emerald-700'}`}>{translationMessage.includes(isJa ? '失敗' : 'failed') ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}<span>{translationMessage}</span></p>}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <input
-                        id="show-logo-toggle-departure"
-                        type="checkbox"
-                        checked={data.showLogo ?? true}
-                        onChange={(e) => setData(prev => ({ ...prev, showLogo: e.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-300 text-[#1B3226] focus:ring-[#1B3226]"
-                    />
-                    <label htmlFor="show-logo-toggle-departure" className="select-none">
-                        Logo on PDF/Print
-                    </label>
-                </div>
+                <div className="space-y-7">
+                    <section className="space-y-4">
+                        <SectionHeading title={isJa ? 'レポート基本情報' : 'Report details'} description={isJa ? '帳票の表題と馬の基本情報' : 'Report identity and horse profile'} />
+                        <label className="block text-xs font-semibold text-stone-700">{t('reportDate')}<input type="date" value={data.reportDate} disabled={readOnly} onChange={(event) => handleChange('reportDate', event.target.value)} className={inputClass} /></label>
+                        <label className="flex items-center gap-2 text-xs font-medium text-stone-600"><input id="show-logo-toggle-departure" type="checkbox" checked={showLogo} disabled={readOnly} onChange={(event) => setData(prev => ({ ...prev, showLogo: event.target.checked }))} className="h-4 w-4 rounded border-stone-300 text-[#1B3226] focus:ring-[#1B3226]" />{isJa ? 'PDF・印刷にロゴを表示' : 'Show logo on PDF / print'}</label>
+                        <BilingualField label={isJa ? '馬名' : 'Horse name'} jpValue={data.horseNameJp} enValue={data.horseNameEn} onChangeJp={(value) => handleChange('horseNameJp', value)} onChangeEn={(value) => handleChange('horseNameEn', value)} disabled={readOnly} />
+                        <BilingualField label={isJa ? '馬主' : 'Owner'} jpValue={data.ownerName} enValue={data.ownerNameEn} onChangeJp={(value) => handleChange('ownerName', value)} onChangeEn={(value) => handleChange('ownerNameEn', value)} disabled={readOnly} />
+                        <BilingualField label={isJa ? '調教師' : 'Trainer'} jpValue={data.trainerNameJp} enValue={data.trainerNameEn} onChangeJp={(value) => handleChange('trainerNameJp', value)} onChangeEn={(value) => handleChange('trainerNameEn', value)} disabled={readOnly} />
+                        <BilingualField label={isJa ? '性齢' : 'Sex / age'} jpValue={data.sexAgeJp} enValue={data.sexAgeEn} onChangeJp={(value) => handleChange('sexAgeJp', value)} onChangeEn={(value) => handleChange('sexAgeEn', value)} disabled={readOnly} />
+                        <BilingualField label={isJa ? '父' : 'Sire'} jpValue={data.sireJp} enValue={data.sireEn} onChangeJp={(value) => handleChange('sireJp', value)} onChangeEn={(value) => handleChange('sireEn', value)} disabled={readOnly} />
+                        <BilingualField label={isJa ? '母' : 'Dam'} jpValue={data.damJp} enValue={data.damEn} onChangeJp={(value) => handleChange('damJp', value)} onChangeEn={(value) => handleChange('damEn', value)} disabled={readOnly} />
+                    </section>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('horseNameJp')}</label>
-                        <input
-                            type="text"
-                            value={data.horseNameJp}
-                            onChange={e => handleChange('horseNameJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('horseNameEn')}</label>
-                            <input
-                                type="text"
-                                value={data.horseNameEn}
-                                onChange={e => handleChange('horseNameEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            />
-                        </div>
-                    )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('owner')} (JP)</label>
-                        <input
-                            type="text"
-                            value={data.ownerName}
-                            onChange={e => handleChange('ownerName', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('owner')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.ownerNameEn}
-                            onChange={e => handleChange('ownerNameEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('trainer')} (JP)</label>
-                        <input
-                            type="text"
-                            value={data.trainerNameJp}
-                            onChange={e => handleChange('trainerNameJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                </div>
-                {!isJa && (
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('trainer')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.trainerNameEn}
-                            onChange={e => handleChange('trainerNameEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                )}
+                    <section className="space-y-4">
+                        <SectionHeading title={isJa ? 'ケア・引き継ぎ情報' : 'Care & handover'} description={isJa ? '日付は両言語で共通の1項目です' : 'Dates are shared between both languages'} />
+                        <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-semibold text-stone-700">{t('weight')}<input type="text" value={data.weight} disabled={readOnly} onChange={(event) => handleChange('weight', event.target.value)} placeholder="496kg" className={inputClass} /></label><label className="block text-xs font-semibold text-stone-700">{t('weightDate')}<input type="date" value={data.weightDate} disabled={readOnly} onChange={(event) => handleChange('weightDate', event.target.value)} className={inputClass} /></label></div>
+                        <BilingualField label={isJa ? '装蹄師名' : 'Farrier'} jpValue={data.farrierJp} enValue={data.farrierEn} onChangeJp={(value) => handleChange('farrierJp', value)} onChangeEn={(value) => handleChange('farrierEn', value)} optional disabled={readOnly} />
+                        <label className="block text-xs font-semibold text-stone-700">{isJa ? '装蹄日' : 'Farrier date'}<input type="date" value={data.farrierDate} disabled={readOnly} onChange={(event) => handleChange('farrierDate', event.target.value)} className={inputClass} /></label>
+                        <BilingualField label={isJa ? '駆虫内容' : 'Worming'} jpValue={data.wormingJp} enValue={data.wormingEn} onChangeJp={(value) => handleChange('wormingJp', value)} onChangeEn={(value) => handleChange('wormingEn', value)} optional disabled={readOnly} />
+                        <label className="block text-xs font-semibold text-stone-700">{isJa ? '駆虫日' : 'Worming date'}<input type="date" value={data.wormingDate} disabled={readOnly} onChange={(event) => handleChange('wormingDate', event.target.value)} className={inputClass} /></label>
+                    </section>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('sexAge')} (JP)</label>
-                        <input
-                            type="text"
-                            value={data.sexAgeJp}
-                            onChange={e => handleChange('sexAgeJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            placeholder="牡2歳"
-                        />
-                    </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('sexAge')} (EN)</label>
-                            <input
-                                type="text"
-                                value={data.sexAgeEn}
-                                onChange={e => handleChange('sexAgeEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                                placeholder="Colt 2yo"
-                            />
-                        </div>
-                    )}
-                </div>
+                    <section className="space-y-4">
+                        <SectionHeading title={isJa ? '近況・コメント' : 'Current condition & comments'} description={isJa ? '入力した言語に応じて保存時に不足分を補完します' : 'Missing language values are completed before saving'} />
+                        <BilingualField label={isJa ? '飼葉' : 'Feeding'} jpValue={data.feedingJp} enValue={data.feedingEn} onChangeJp={(value) => handleChange('feedingJp', value)} onChangeEn={(value) => handleChange('feedingEn', value)} multiline rows={4} optional disabled={readOnly} />
+                        <BilingualField label={isJa ? '運動・調教' : 'Exercise & training'} jpValue={data.exerciseJp} enValue={data.exerciseEn} onChangeJp={(value) => handleChange('exerciseJp', value)} onChangeEn={(value) => handleChange('exerciseEn', value)} multiline rows={4} optional disabled={readOnly} />
+                        <BilingualField label={isJa ? 'コメント' : 'Comment'} jpValue={data.commentJp} enValue={data.commentEn} onChangeJp={(value) => handleChange('commentJp', value)} onChangeEn={(value) => handleChange('commentEn', value)} multiline rows={4} optional disabled={readOnly} />
+                    </section>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('sireJp')}</label>
-                        <input
-                            type="text"
-                            value={data.sireJp}
-                            onChange={e => handleChange('sireJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('sireEn')}</label>
-                            <input
-                                type="text"
-                                value={data.sireEn}
-                                onChange={e => handleChange('sireEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            />
-                        </div>
-                    )}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('damJp')}</label>
-                        <input
-                            type="text"
-                            value={data.damJp}
-                            onChange={e => handleChange('damJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    {!isJa && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700">{t('damEn')}</label>
-                            <input
-                                type="text"
-                                value={data.damEn}
-                                onChange={e => handleChange('damEn', e.target.value)}
-                                className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            />
-                        </div>
-                    )}
+                    <section className="rounded-2xl border border-[#d8c79f] bg-[#fbf8ef] p-4"><p className="text-xs font-bold uppercase tracking-wider text-[#806127]">Closing message</p><p className="mt-2 whitespace-pre-line text-xs leading-5 text-stone-700">{isJa ? closingMessage.jp : closingMessage.en}</p><p className="mt-2 text-[10px] text-stone-500">{isJa ? 'この定型文はすべての退厩レポートに表示されます。' : 'This standard message appears on every departure report.'}</p></section>
                 </div>
+            </aside>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('weight')}</label>
-                        <input
-                            type="text"
-                            value={data.weight}
-                            onChange={e => handleChange('weight', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                            placeholder="496kg"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('weightDate')}</label>
-                        <input
-                            type="date"
-                            value={data.weightDate}
-                            onChange={e => handleChange('weightDate', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (JP)</label>
-                        <input
-                            type="text"
-                            value={data.farrierJp}
-                            onChange={e => handleChange('farrierJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.farrierEn}
-                            onChange={e => handleChange('farrierEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700">{t('lastFarrier')} {t('date')}</label>
-                        <input
-                            type="date"
-                            value={data.farrierDate}
-                            onChange={e => handleChange('farrierDate', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (JP)</label>
-                        <input
-                            type="text"
-                            value={data.wormingJp}
-                            onChange={e => handleChange('wormingJp', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} (EN)</label>
-                        <input
-                            type="text"
-                            value={data.wormingEn}
-                            onChange={e => handleChange('wormingEn', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                    <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-700">{t('lastWorming')} {t('date')}</label>
-                        <input
-                            type="date"
-                            value={data.wormingDate}
-                            onChange={e => handleChange('wormingDate', e.target.value)}
-                            className="w-full border-gray-300 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-900 shadow-sm"
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('feeding')} (JP)</label>
-                    <textarea
-                        rows={3}
-                        value={data.feedingJp}
-                        onChange={e => handleChange('feedingJp', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('feeding')} (EN)</label>
-                    <textarea
-                        rows={3}
-                        value={data.feedingEn}
-                        onChange={e => handleChange('feedingEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('exercise')} (JP)</label>
-                    <textarea
-                        rows={4}
-                        value={data.exerciseJp}
-                        onChange={e => handleChange('exerciseJp', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('exercise')} (EN)</label>
-                    <textarea
-                        rows={4}
-                        value={data.exerciseEn}
-                        onChange={e => handleChange('exerciseEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (JP)</label>
-                    <textarea
-                        rows={3}
-                        value={data.commentJp}
-                        onChange={e => handleChange('commentJp', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-medium text-gray-700">{t('comment')} (EN)</label>
-                    <textarea
-                        rows={3}
-                        value={data.commentEn}
-                        onChange={e => handleChange('commentEn', e.target.value)}
-                        className="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 px-3 py-2 text-sm text-gray-900"
-                    />
-                </div>
-            </div>
-
-            <div className="departure-preview-wrap hidden md:flex print:flex flex-1 min-h-0 bg-[#525659] p-4 md:p-8 overflow-y-auto justify-center items-start h-auto md:h-full pb-12 print:bg-white print:p-0 print:overflow-hidden">
-                <div
-                    id="report-preview"
-                    className={`departure-preview relative bg-white shadow-2xl w-[210mm] min-h-[297mm] text-gray-900 font-sans mb-8${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}
-                    style={{ padding: '20px 30px 10px 30px', boxSizing: 'border-box' }}
-                >
-                    <header className="report-header flex justify-between items-center border-b-2 border-[#c5a059] pb-0 mb-2 relative h-[120px] pt-4">
-                        <div className="flex flex-col justify-center items-start z-10">
-                            <div className="font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">HAMAGIKU</div>
-                            <div className="font-bold text-[#1a3c34] tracking-widest text-2xl leading-tight">FARM</div>
-                        </div>
-
-                        {showLogo && (
-                            <div className="absolute left-1/2 top-[42%] transform -translate-x-1/2 -translate-y-1/2 w-[140px] h-[140px] opacity-75 pointer-events-none logo-container">
-                                <img
-                                    src="/hamagiku-logo.png"
-                                    alt="Logo"
-                                    className="object-contain w-full h-full"
-                                />
-                            </div>
-                        )}
-
-                        <div className="flex flex-col justify-center items-end z-10">
-                            <div className="font-bold text-2xl text-[#1a3c34] tracking-widest text-right whitespace-pre-line leading-tight">
-                                {t('departureReport')}
-                            </div>
-                            <div className="text-[11px] text-[#6b7280] tracking-wide mt-1">
-                                {data.reportDate || '-'}
-                            </div>
-                        </div>
+            <main className="departure-preview-wrap flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-[#525659] p-4 pb-12 md:p-8 print:bg-white print:p-0">
+                <article id="report-preview" className={`departure-preview${isPrintMode ? ' print-mode' : ''}${showLogo ? '' : ' no-logo'}`}>
+                    <header className="departure-header">
+                        <div className="departure-brand"><span>HAMAGIKU</span><span>FARM</span><small>{isJa ? '北海道・日本' : 'Hokkaido, Japan'}</small></div>
+                        {showLogo && <img src="/hamagiku-logo.png" alt="Hamagiku Farm" className="departure-logo" />}
+                        <div className="departure-heading"><span>{t('departureReport')}</span><small>{isJa ? formatDateJp(data.reportDate) || '-' : formatDateUK(data.reportDate) || '-'}</small></div>
                     </header>
 
-                    {isJa ? (
-                        <section className="departure-section">
-                            <div className="text-[15px] leading-7">
-                                <div>馬主：{formatOwnerName(data.ownerName)} / 調教師：{formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
-                                <div>馬名：{data.horseNameJp} {data.sexAgeJp ? `（${data.sexAgeJp}）` : ''}</div>
-                                <div>父：{data.sireJp}　母：{data.damJp}</div>
-                                <div>馬体重：{data.weight}{data.weightDate ? `（${data.weightDate}）` : ''}</div>
-                                <div>{t('lastFarrier')}：{data.farrierJp}{data.farrierDate ? `　${data.farrierDate}` : ''}</div>
-                                <div>{t('lastWorming')}：{data.wormingJp}{data.wormingDate ? `　${data.wormingDate}` : ''}</div>
-                                <div>{t('feeding')}：{data.feedingJp}</div>
-                                <div>{t('exercise')}：{data.exerciseJp}</div>
-                                {data.commentJp ? <div>コメント：{data.commentJp}</div> : null}
+                    <div className="departure-content">
+                        <section className="departure-identity departure-card">
+                            <p className="departure-eyebrow">{isJa ? '退厩馬情報' : 'HORSE DEPARTURE PROFILE'}</p>
+                            <h1>{displayHorseName}</h1>
+                            {secondaryHorseName && <p className="departure-secondary-name">{secondaryHorseName}</p>}
+                            <div className="departure-meta-grid">
+                                <div><span>{isJa ? '馬主' : 'Owner'}</span><strong>{formatOwnerName(displayText(data.ownerName, data.ownerNameEn))}</strong></div>
+                                <div><span>{isJa ? '調教師' : 'Trainer'}</span><strong>{formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</strong></div>
+                                {displayText(data.sexAgeJp, data.sexAgeEn) && <div><span>{isJa ? '性齢' : 'Sex / age'}</span><strong>{displayText(data.sexAgeJp, data.sexAgeEn)}</strong></div>}
+                                {(displayText(data.sireJp, data.sireEn) || displayText(data.damJp, data.damEn)) && <div><span>{isJa ? '血統' : 'Pedigree'}</span><strong>{displayText(data.sireJp, data.sireEn) || '-'}{displayText(data.damJp, data.damEn) ? ` / ${displayText(data.damJp, data.damEn)}` : ''}</strong></div>}
                             </div>
                         </section>
-                    ) : (
-                        <section className="departure-section">
-                            <div className="text-[15px] leading-7">
-                                <div>Owner: {data.ownerNameEn || data.ownerName || '-'} / Trainer: {formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</div>
-                                <div>Name: {data.horseNameEn} {data.sexAgeEn ? `(${data.sexAgeEn})` : ''}</div>
-                                <div>Sire: {data.sireEn} / Dam: {data.damEn}</div>
-                                <div>Weight: {data.weight}{data.weightDate ? ` (${formatDateUK(data.weightDate)})` : ''}</div>
-                                <div>Farrier: {data.farrierEn}{data.farrierDate ? ` ${formatDateUK(data.farrierDate)}` : ''}</div>
-                                <div>Recent Worming: {data.wormingEn}{data.wormingDate ? ` ${formatDateUK(data.wormingDate)}` : ''}</div>
-                                <div>Feeding: {data.feedingEn}</div>
-                                <div>Exercise Routine: {data.exerciseEn}</div>
-                                {data.commentEn ? <div>Comment: {data.commentEn}</div> : null}
-                            </div>
-                        </section>
-                    )}
 
-                    <div className="footer-text absolute bottom-3 left-0 w-full text-center text-[10px] text-[#aaa] tracking-widest">
-                        HAMAGIKU FARM - HOKKAIDO, JAPAN | {isJa ? data.reportDate.replace(/\./g, '/') : formatDateUK(data.reportDate)}
+                        {careItems.length > 0 && <section className="departure-section-card"><div className="departure-section-heading"><span>{isJa ? 'ケア・引き継ぎ' : 'CARE & HANDOVER'}</span><i /></div><div className="departure-care-grid">{careItems.map((item) => <div className="departure-care-item" key={item.label}><span>{item.label}</span><strong>{item.value || '-'}</strong>{item.date && <small>{isJa ? formatDateJp(item.date) : formatDateUK(item.date)}</small>}</div>)}</div></section>}
+
+                        {narrativeItems.length > 0 && <section className="departure-narratives">{narrativeItems.map((item) => <div className="departure-narrative departure-card" key={item.label}><div className="departure-section-heading"><span>{item.label}</span><i /></div><p>{item.value}</p></div>)}</section>}
+
+                        <section className="departure-closing departure-card"><p className="departure-closing-text">{isJa ? closingMessage.jp : closingMessage.en}</p><p className="departure-closing-signature">{isJa ? '浜菊ファーム一同' : 'Everyone at Hamagiku Farm'}</p></section>
                     </div>
-                </div>
-            </div>
+
+                    <footer className="departure-footer">HAMAGIKU FARM · HOKKAIDO, JAPAN · {isJa ? formatDateJp(data.reportDate) : formatDateUK(data.reportDate)}</footer>
+                </article>
+            </main>
+
             <style jsx global>{`
+                .departure-preview { width: 210mm; min-height: 297mm; box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; margin: 0 auto; padding: 17mm 18mm 13mm; color: #26342d; background: #fff; box-shadow: 0 18px 45px rgba(0, 0, 0, .22); font-family: Georgia, 'Times New Roman', 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+                .departure-header { position: relative; display: flex; min-height: 30mm; align-items: center; justify-content: space-between; border-bottom: 1px solid #c5a059; padding-bottom: 7mm; }
+                .departure-brand { display: flex; flex-direction: column; gap: 1px; color: #1b3226; font-family: Arial, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: .18em; line-height: 1.05; }
+                .departure-brand small { margin-top: 5px; color: #8b8171; font-size: 8px; font-weight: 500; letter-spacing: .12em; }
+                .departure-logo { position: absolute; top: 50%; left: 50%; width: 29mm; height: 29mm; object-fit: contain; transform: translate(-50%, -51%); opacity: .8; }
+                .departure-heading { display: flex; flex-direction: column; align-items: flex-end; color: #1b3226; font-family: Arial, sans-serif; font-size: 16px; font-weight: 800; letter-spacing: .1em; text-align: right; }
+                .departure-heading small { margin-top: 6px; color: #8b8171; font-size: 9px; font-weight: 500; letter-spacing: .08em; }
+                .departure-content { display: flex; flex: 1; flex-direction: column; gap: 7mm; padding-top: 8mm; }
+                .departure-card { border: 1px solid #e4dfd4; background: #fff; }
+                .departure-identity { border-top: 4px solid #1b3226; padding: 7mm 8mm 6mm; }
+                .departure-eyebrow { margin: 0; color: #a17f3c; font-family: Arial, sans-serif; font-size: 8px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+                .departure-identity h1 { margin: 3mm 0 0; color: #1b3226; font-size: 26px; line-height: 1.15; }
+                .departure-secondary-name { margin: 2px 0 0; color: #877e70; font-family: Arial, sans-serif; font-size: 11px; letter-spacing: .08em; }
+                .departure-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; margin-top: 7mm; border-top: 1px solid #ece8df; padding-top: 5mm; }
+                .departure-meta-grid div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+                .departure-meta-grid span, .departure-care-item span { color: #9a8b70; font-family: Arial, sans-serif; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+                .departure-meta-grid strong { overflow-wrap: anywhere; color: #3d493f; font-size: 12px; font-weight: 600; line-height: 1.4; }
+                .departure-section-card { break-inside: avoid; page-break-inside: avoid; }
+                .departure-section-heading { display: flex; align-items: center; gap: 3mm; color: #806127; font-family: Arial, sans-serif; font-size: 8px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+                .departure-section-heading i { display: block; height: 1px; flex: 1; background: #dfd3bb; }
+                .departure-care-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4mm; margin-top: 4mm; }
+                .departure-care-item { min-height: 19mm; border: 1px solid #ebe6dc; background: #faf9f6; padding: 4mm; }
+                .departure-care-item strong { display: block; margin-top: 3mm; overflow-wrap: anywhere; color: #26342d; font-size: 12px; line-height: 1.35; }
+                .departure-care-item small { display: block; margin-top: 2mm; color: #9a8b70; font-family: Arial, sans-serif; font-size: 9px; }
+                .departure-narratives { display: flex; flex-direction: column; gap: 5mm; }
+                .departure-narrative { break-inside: avoid; page-break-inside: avoid; padding: 5mm 6mm; }
+                .departure-narrative p { margin: 4mm 0 0; white-space: pre-line; overflow-wrap: anywhere; color: #3d493f; font-size: 12px; line-height: 1.75; }
+                .departure-closing { break-inside: avoid; page-break-inside: avoid; margin-top: auto; border-color: #d8c79f; background: #fbf8ef; padding: 6mm 8mm; text-align: center; }
+                .departure-closing-text { margin: 0; white-space: pre-line; color: #806127; font-size: 13px; line-height: 1.7; }
+                .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+                .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-family: Arial, sans-serif; font-size: 8px; letter-spacing: .12em; text-align: center; }
                 @media print {
-                    @page { size: A4; margin: 10mm 0 0 0; }
-                    html, body, #__next {
-                        height: auto !important;
-                        overflow: visible !important;
-                        background: white !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
+                    @page { size: A4; margin: 0; }
+                    html, body, #__next { height: auto !important; min-height: 0 !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
                     .no-print { display: none !important; }
-                    .departure-root {
-                        background: white !important;
-                        height: auto !important;
-                    }
-                    .departure-preview-wrap {
-                        background: white !important;
-                        padding: 0 !important;
-                        overflow: visible !important;
-                    }
-                    .departure-preview {
-                        position: absolute !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        width: 210mm !important;
-                        height: 285mm !important;
-                        min-height: 0 !important;
-                        margin: 0 !important;
-                        padding: 20mm 30px 8px 30px !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        overflow: hidden !important;
-                    }
-                    .departure-preview.print-mode {
-                        top: 0 !important;
-                        height: 285mm !important;
-                        padding-top: 24mm !important;
-                    }
-                    .departure-preview.print-mode.no-logo {
-                        padding-top: 24mm !important;
-                    }
-                    .departure-preview .departure-section { font-size: 14px !important; line-height: 1.6 !important; }
-                    .logo-container { clip-path: inset(1px); }
+                    .departure-root { display: block !important; min-height: 0 !important; background: #fff !important; }
+                    .departure-preview-wrap { display: block !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
+                    .departure-preview { width: 210mm !important; min-height: 297mm !important; height: auto !important; margin: 0 !important; padding: 17mm 18mm 13mm !important; box-shadow: none !important; }
+                    .departure-preview.no-logo { padding-top: 21mm !important; }
+                    .departure-preview.no-logo .departure-logo { display: none !important; }
+                    .departure-content { gap: 6mm; }
+                    .departure-closing { margin-top: 4mm; }
+                    .departure-card, .departure-section-card, .departure-narrative, .departure-closing { break-inside: avoid !important; page-break-inside: avoid !important; }
                 }
             `}</style>
         </div>
