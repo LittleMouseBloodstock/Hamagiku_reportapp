@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
-import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 // 本番の帳票部品をそのまま静的描画し、画面CSSの印刷への置換は行わない。
 // 認証・通信と言語選択だけを検証用に置き換え、実データは扱わない。
@@ -18,6 +18,8 @@ const sourceRef = process.argv.find(value => value.startsWith('--source-ref='))?
 if (sourceRef) assert.match(sourceRef, /^[a-f0-9]{7,40}$/);
 const directory = path.join(root, 'tmp/departure-print-audit', label);
 await mkdir(directory, { recursive: true });
+const assetsDirectory = path.join(directory, 'assets');
+await mkdir(assetsDirectory, { recursive: true });
 
 const bundle = path.join(directory, 'fixture.cjs');
 await build({
@@ -88,22 +90,26 @@ const styles = await Promise.all(cssFiles.map(async name => {
                     ? path.join(frontend, '.next', relative.slice('/_next/'.length))
                     : path.resolve(cssDirectory, relative);
                 fontFiles.add(filename);
-                return `url("${pathToFileURL(filename).href}")`;
+                // Macへの受け渡しと画面検証にも使えるよう、参照は同梱アセットに限定する。
+                return `url("./assets/${path.basename(filename)}")`;
             });
 }));
 const commonCss = styles.join('\n');
 assert.ok(fontFiles.size, '本番フォントのローカル参照が必要です');
 await Promise.all([...fontFiles].map(filename => access(filename)));
+await Promise.all([...fontFiles].map(filename => copyFile(filename, path.join(assetsDirectory, path.basename(filename)))));
+await copyFile(path.join(frontend, 'public/hamagiku-logo.png'), path.join(assetsDirectory, 'hamagiku-logo.png'));
 assert.doesNotMatch(commonCss, /url\(['"]?\/_next\//, '未解決の本番アセットURLがあります');
 const fontClasses = [...commonCss.matchAll(/\.(__variable_[a-z0-9]+)\{--font-/g)].map(match => match[1]);
 assert.match(commonCss, /--font-noto-sans-jp:/, '本番の日本語フォントCSSが必要です');
 
 const fixtures = [];
 for (const language of ['ja', 'en']) {
-    for (const content of ['sample', 'standard', 'long']) {
+    for (const content of ['sample', 'standard', 'long', 'long-names', 'missing', 'dam-only']) {
         for (const logo of [false, true]) {
             for (const margins of ['css', 'zero']) {
                 const id = `${language}-${content}-${logo ? 'logo' : 'nologo'}-${margins}`;
+                if (['long-names', 'missing', 'dam-only'].includes(content) && (!logo || margins !== 'css')) continue;
                 if (only && id !== only) continue;
                 const commentCount = content === 'sample' ? 0 : content === 'long' ? 24 : 2;
                 const data = {
@@ -122,8 +128,31 @@ for (const language of ['ja', 'en']) {
                     commentEn: Array.from({ length: commentCount }, (_, index) => `Check ${String(index + 1).padStart(2, '0')}: The horse is in good condition. Please continue to monitor body condition and appetite while following a steady training programme.`).join('\n'),
                     showLogo: logo, outputMode: 'print',
                 };
+                if (content === 'long-names') {
+                    Object.assign(data, {
+                        horseNameJp: 'サンプルサラブレッドレーシング検証用ロングネーム号',
+                        horseNameEn: 'Sample Thoroughbred Racing Partnership Longname Audit Horse',
+                        sireJp: 'ノーザンサラブレッドレーシング検証用ロングネーム種牡馬',
+                        sireEn: 'Northern Thoroughbred Racing Longname Reference Stallion',
+                        damJp: 'サザンサラブレッドレーシング検証用ロングネーム繁殖牝馬',
+                        damEn: 'Southern Thoroughbred Racing Longname Reference Broodmare',
+                    });
+                }
+                if (content === 'missing' || content === 'dam-only') {
+                    Object.assign(data, { sexAgeJp: '', sexAgeEn: '', sireJp: '', sireEn: '' });
+                    if (content === 'missing') Object.assign(data, { damJp: '', damEn: '' });
+                }
                 const report = renderReport(language, data)
-                    .replace(/src="\/([^"?]+)"/g, (_, relative) => `src="${pathToFileURL(path.join(frontend, 'public', relative)).href}"`);
+                    .replace(/src="\/hamagiku-logo\.png"/g, 'src="./assets/hamagiku-logo.png"');
+                assert.doesNotMatch(report, /src="\//, '同梱されていないアセットがあります');
+                if (!sourceRef) {
+                    // 帳票だけでなく、入力欄も馬のプロフィールを先にまとめる。
+                    const form = report.match(/<aside\b[\s\S]*?<\/aside>/)?.[0];
+                    assert.ok(form, '入力欄がありません');
+                    const labels = language === 'ja' ? ['馬名', '性齢', '父', '母', '馬主', '調教師'] : ['Horse name', 'Sex / age', 'Sire', 'Dam', 'Owner', 'Trainer'];
+                    const positions = labels.map(value => form.indexOf(`>${value}</span>`));
+                    assert.ok(positions.every((value, index) => value >= 0 && (index === 0 || value > positions[index - 1])), '入力欄の馬情報の順序が不正です');
+                }
                 // 用紙余白がゼロに上書きされるケースも、実PDFとして回帰検査する。
                 const override = margins === 'zero'
                     ? '<style>@media print { @page { margin: 0 !important; } @page hamagiku-departure { margin: 0 !important; } }</style>' : '';
@@ -147,7 +176,10 @@ for (const language of ['ja', 'en']) {
                 const expectedText = language === 'ja'
                     ? [data.ownerName, data.trainerNameJp, data.sireJp, data.damJp, data.wormingJp, data.feedingJp, data.exerciseJp, ...data.commentJp.split('\n')]
                     : [data.ownerNameEn, data.trainerNameEn, data.sireEn, data.damEn, data.wormingEn, data.feedingEn, data.exerciseEn, ...data.commentEn.split('\n')];
-                fixtures.push({ id, language, content, logo, margins, commentCount, sourceRef: sourceRef || 'working-tree', expectedText: expectedText.filter(Boolean), html: filename, pdf: filename.replace(/\.html$/, '.pdf') });
+                const identityText = language === 'ja'
+                    ? { horseName: data.horseNameJp, sexAge: data.sexAgeJp, sire: data.sireJp, dam: data.damJp, owner: data.ownerName, trainer: data.trainerNameJp }
+                    : { horseName: data.horseNameEn, sexAge: data.sexAgeEn, sire: data.sireEn, dam: data.damEn, owner: data.ownerNameEn, trainer: data.trainerNameEn };
+                fixtures.push({ id, language, content, logo, margins, commentCount, identityText, sourceRef: sourceRef || 'working-tree', expectedText: expectedText.filter(Boolean), html: filename, pdf: filename.replace(/\.html$/, '.pdf') });
             }
         }
     }

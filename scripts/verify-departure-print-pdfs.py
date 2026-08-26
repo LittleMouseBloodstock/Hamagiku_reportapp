@@ -4,10 +4,122 @@ import json
 from pathlib import Path
 import re
 import sys
+import unicodedata
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tmp/departure-print-audit/python'))
 import pymupdf  # noqa: E402
+
+IDENTITY_FIELDS = ('horseName', 'sexAge', 'sire', 'dam', 'owner', 'trainer')
+IDENTITY_Y_TOLERANCE = 1.5
+RECT_OVERLAP_TOLERANCE = 0.05
+
+
+def normalize_text(value):
+    """PDFの行折返し・空白を無視してfixture文字列を照合する。"""
+    return re.sub(r'\s+', '', unicodedata.normalize('NFKC', value))
+
+
+def visible_fonts(page):
+    """画像や空spanを除き、PDFに実際に描画された文字のフォント名を返す。"""
+    fonts = []
+    for block in page.get_text('dict').get('blocks', []):
+        if block.get('type') != 0:
+            continue
+        for line in block.get('lines', []):
+            for span in line.get('spans', []):
+                if span.get('text', '').strip():
+                    fonts.append(span.get('font', ''))
+    return fonts
+
+
+def allowed_report_font(font, fonts_ready):
+    """実フォント名の表記揺れを許容し、Type3は実フォント確認時だけ許可する。"""
+    compact = re.sub(r'[\s_-]+', '', font).lower()
+    return ('noto' in compact and 'sans' in compact) or (fonts_ready and compact.startswith('type3'))
+
+
+def text_occurrences(page, value):
+    """描画順の文字列から、別blockへ折り返した父母名も実矩形付きで探す。"""
+    needle = normalize_text(value)
+    if not needle:
+        return []
+
+    drawn_words = []
+    for word in page.get_text('words', sort=False):
+        text = normalize_text(word[4])
+        if not text:
+            continue
+        drawn_words.append((text, pymupdf.Rect(*word[:4])))
+
+    occurrences = []
+    for block_words in [drawn_words]:
+        stream = ''
+        indexed_words = []
+        for text, rect in block_words:
+            start = len(stream)
+            stream += text
+            indexed_words.append((start, len(stream), rect))
+        for match in re.finditer(re.escape(needle), stream):
+            rects = [
+                rect for start, end, rect in indexed_words
+                if start < match.end() and end > match.start()
+            ]
+            if not rects:
+                continue
+            occurrences.append({
+                'rects': rects,
+                'top': min(rect.y0 for rect in rects),
+                'bottom': max(rect.y1 for rect in rects),
+                'bbox': [
+                    min(rect.x0 for rect in rects), min(rect.y0 for rect in rects),
+                    max(rect.x1 for rect in rects), max(rect.y1 for rect in rects),
+                ],
+            })
+    return sorted(occurrences, key=lambda item: (item['top'], item['bbox'][0]))
+
+
+def rects_overlap(left, right):
+    """文字矩形の正の面積の重なりだけを検出する。"""
+    return (
+        min(left.x1, right.x1) - max(left.x0, right.x0) > RECT_OVERLAP_TOLERANCE
+        and min(left.y1, right.y1) - max(left.y0, right.y0) > RECT_OVERLAP_TOLERANCE
+    )
+
+
+def occurrences_overlap(left, right):
+    return any(rects_overlap(left_rect, right_rect) for left_rect in left['rects'] for right_rect in right['rects'])
+
+
+def non_overlapping_parent_pair(sire_occurrences, dam_occurrences):
+    """同名候補が複数ある場合も、横並びの父母候補を選択する。"""
+    pairs = [
+        (max(sire['top'], dam['top']), sire['bbox'][0], sire, dam)
+        for sire in sire_occurrences
+        for dam in dam_occurrences
+        if not occurrences_overlap(sire, dam)
+    ]
+    return min(pairs, key=lambda item: (item[0], item[1]))[2:] if pairs else None
+
+
+def serializable_occurrence(occurrence):
+    return {
+        'bbox': [round(value, 2) for value in occurrence['bbox']],
+        'rects': [[round(value, 2) for value in rect] for rect in occurrence['rects']],
+    }
+
+
+def recipient_candidates(page, candidates, field, language):
+    """長い馬名に馬主名が含まれていても、宛名ラベル直下の値を選ぶ。"""
+    labels = {'ja': {'owner': '馬主', 'trainer': '調教師'}, 'en': {'owner': 'OWNER', 'trainer': 'TRAINER'}}
+    label = labels[language][field]
+    label_rects = [pymupdf.Rect(*word[:4]) for word in page.get_text('words') if word[4] == label]
+    return [candidate for candidate in candidates if any(
+        abs(candidate['bbox'][0] - rect.x0) < 4
+        and -IDENTITY_Y_TOLERANCE <= candidate['top'] - rect.y1 < 24
+        for rect in label_rects
+    )]
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--label', default='current')
@@ -28,6 +140,18 @@ for fixture in fixtures:
     document = pymupdf.open(pdf_path)
     failures = []
     fonts_ready = document.metadata.get('title') == 'departure-audit:NotoSansJP-ready'
+    has_identity_text = 'identityText' in fixture
+    identity_values = None
+    if has_identity_text:
+        identity_text = fixture['identityText']
+        if not isinstance(identity_text, dict):
+            failures.append('identityTextがオブジェクトではない')
+        elif any(field not in identity_text for field in IDENTITY_FIELDS):
+            failures.append('identityTextの項目が不足している')
+        elif any(not isinstance(identity_text[field], str) for field in IDENTITY_FIELDS):
+            failures.append('identityTextの値が文字列ではない')
+        else:
+            identity_values = {field: identity_text[field] for field in IDENTITY_FIELDS}
     if not fonts_ready:
         failures.append('実フォントの読み込み完了をPDFメタデータで確認できない')
     if fixture['content'] != 'long' and len(document) != 1:
@@ -39,19 +163,23 @@ for fixture in fixtures:
 
     page_results = []
     full_text = ''
+    drawn_text = ''
     closing_pages = []
     footer_pages = []
     body_sizes = []
     body_fonts = []
+    all_visible_fonts = []
     image_count = 0
     for index, page in enumerate(document):
         if abs(page.rect.width / mm - 210) > 0.6 or abs(page.rect.height / mm - 297) > 0.6:
             failures.append(f'{index + 1}ページ目がA4ではない')
         words = page.get_text('words')
+        all_visible_fonts += visible_fonts(page)
         # 描画順ではヘッダーが末尾になる。段組内の改行を保ったブロック順で検査する。
         text = ''.join(block[4] for block in page.get_text('blocks', sort=True) if block[6] == 0)
         image_count += len(page.get_image_info())
         full_text += text
+        drawn_text += page.get_text(sort=False)
         normalized_page = re.sub(r'\s+', '', text)
         if ('本馬の安全' if fixture['language'] == 'ja' else 'Wesincerelywishthishorse') in normalized_page:
             closing_pages.append(index)
@@ -82,13 +210,21 @@ for fixture in fixtures:
         page_results.append({'page': index + 1, 'textInsetsMm': {key: round(value, 2) for key, value in insets.items()}, 'image': str(image_path)})
 
     normalized = re.sub(r'\s+', '', full_text)
-    required = ['レイアウト検証馬' if fixture['language'] == 'ja' else 'SampleHorse', '497kg', '2.5kg']
+    if not has_identity_text:
+        # identityText導入前のmanifestだけは、従来の固定必須文字を維持する。
+        horse_required = 'レイアウト検証馬' if fixture['language'] == 'ja' else 'SampleHorse'
+    elif identity_values is not None:
+        horse_required = identity_values['horseName']
+    else:
+        horse_required = ''
+    required = [horse_required, '497kg', '2.5kg']
     required += ['本馬の安全と今後の活躍を心よりお祈り申し上げます。', '浜菊ファーム一同'] if fixture['language'] == 'ja' else ['Wesincerelywishthishorse', 'EveryoneatHamagikuFarm']
     for value in required:
-        if value not in normalized:
+        if normalize_text(value) not in normalize_text(full_text):
             failures.append(f'必須文字が欠落: {value}')
     for value in fixture.get('expectedText', []):
-        if re.sub(r'\s+', '', value) not in normalized:
+        # 段組の折返しはブロック整列順で交互になるため、描画順でも全文を照合する。
+        if normalize_text(value) not in normalize_text(full_text) and normalize_text(value) not in normalize_text(drawn_text):
             failures.append(f'本文が欠落: {value}')
     for number in range(1, fixture['commentCount'] + 1):
         marker = f"確認{number:02d}：" if fixture['language'] == 'ja' else f"Check{number:02d}:"
@@ -101,11 +237,65 @@ for fixture in fixtures:
     if not body_sizes or any(abs(size - 11.25) > 0.15 for size in body_sizes):
         failures.append('本文の15px相当サイズが維持されていない')
     # この検証環境の可変フォントはType3名になるため、上の読み込み検査と併せて確認する。
-    if any('NotoSans' not in font and not (fonts_ready and font.startswith('Type3')) for font in body_fonts):
+    if any(not allowed_report_font(font, fonts_ready) for font in body_fonts):
         failures.append('本文が想定のNoto Sans系フォントではない')
+    unexpected_fonts = sorted({font for font in all_visible_fonts if not allowed_report_font(font, fonts_ready)})
+    if unexpected_fonts:
+        failures.append(f'可視文字がNoto Sans/Type3以外のフォントを使用: {", ".join(unexpected_fonts)}')
+
+    identity_matches = {}
+    if identity_values is not None:
+        if not document:
+            failures.append('identityTextを検査する1ページ目がない')
+        else:
+            first_page = document[0]
+            identity_candidates = {}
+            for field in IDENTITY_FIELDS:
+                value = identity_values[field]
+                if not normalize_text(value):
+                    continue
+                candidates = text_occurrences(first_page, value)
+                if field in ('owner', 'trainer'):
+                    candidates = recipient_candidates(first_page, candidates, field, fixture['language'])
+                if not candidates:
+                    failures.append(f'1ページ目のidentity文字が欠落: {field}')
+                else:
+                    identity_candidates[field] = candidates
+
+            # 同じ名前の候補があっても、父母それぞれの実矩形が重ならない組を選ぶ。
+            if 'sire' in identity_candidates and 'dam' in identity_candidates:
+                parent_pair = non_overlapping_parent_pair(identity_candidates['sire'], identity_candidates['dam'])
+                if not parent_pair:
+                    failures.append('父と母の文字矩形が重なっている')
+                else:
+                    identity_matches['sire'], identity_matches['dam'] = parent_pair
+            for field, candidates in identity_candidates.items():
+                identity_matches.setdefault(field, candidates[0])
+
+            ordered_fields = ['horseName']
+            if normalize_text(identity_values['sexAge']):
+                ordered_fields.append('sexAge')
+            if normalize_text(identity_values['sire']) or normalize_text(identity_values['dam']):
+                ordered_fields.append('parents')
+            ordered_fields.append('recipients')
+            ordered_positions = []
+            for field in ordered_fields:
+                fields = ('sire', 'dam') if field == 'parents' else ('owner', 'trainer') if field == 'recipients' else (field,)
+                positions = [identity_matches[item] for item in fields if item in identity_matches]
+                if positions:
+                    ordered_positions.append((field, min(item['top'] for item in positions), max(item['bottom'] for item in positions)))
+            for previous, current in zip(ordered_positions, ordered_positions[1:]):
+                if current[1] + IDENTITY_Y_TOLERANCE < previous[2]:
+                    failures.append(f'identity文字のY順序が不正または重なり: {previous[0]} -> {current[0]}')
+
     if bool(image_count) != fixture['logo']:
         failures.append('ロゴの表示設定とPDF内の画像が一致しない')
-    results.append({'case': fixture['id'], 'pages': len(document), 'pass': not failures, 'failures': failures, 'fontsReady': fonts_ready, 'bodyFontPt': body_sizes, 'bodyFonts': body_fonts, 'images': image_count, 'layout': page_results})
+    results.append({
+        'case': fixture['id'], 'pages': len(document), 'pass': not failures, 'failures': failures,
+        'fontsReady': fonts_ready, 'bodyFontPt': body_sizes, 'bodyFonts': body_fonts,
+        'visibleFonts': sorted(set(all_visible_fonts)), 'images': image_count, 'layout': page_results,
+        'identityTextRects': {field: serializable_occurrence(occurrence) for field, occurrence in identity_matches.items()},
+    })
     document.close()
 
 # CSSの用紙余白設定と余白ゼロ設定で、位置とページ数が変わらないことを検査する。

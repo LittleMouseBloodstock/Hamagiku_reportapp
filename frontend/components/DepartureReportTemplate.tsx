@@ -88,7 +88,7 @@ function BilingualField({
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-stone-700">{label}</span>
+                <span className="text-xs font-bold text-stone-700">{label}</span>
                 {optional && <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">Optional</span>}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -287,7 +287,7 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                         <h2 className="mt-2 text-lg font-bold text-[#1B3226]">{t('departureReport')}</h2>
                         <p className="mt-1 text-xs leading-5 text-stone-500">{isJa ? 'オーナー向け退厩レポート' : 'Owner-facing departure report'}</p>
                     </div>
-                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500">A4 / PDF</span>
+                    <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">A4 / PDF</span>
                 </div>
 
                 <div className="mb-6 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
@@ -319,23 +319,25 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                 <div className="space-y-7">
                     <section className="space-y-4">
                         <SectionHeading title={isJa ? 'レポート基本情報' : 'Report details'} description={isJa ? '帳票の表題と馬の基本情報' : 'Report identity and horse profile'} />
-                        <label className="block text-xs font-semibold text-stone-700">{t('reportDate')}<input type="date" value={data.reportDate} disabled={readOnly} onChange={(event) => handleChange('reportDate', event.target.value)} className={inputClass} /></label>
+                        <label className="block text-xs font-bold text-stone-700">{t('reportDate')}<input type="date" value={data.reportDate} disabled={readOnly} onChange={(event) => handleChange('reportDate', event.target.value)} className={inputClass} /></label>
                         <label className="flex items-center gap-2 text-xs font-medium text-stone-600"><input id="show-logo-toggle-departure" type="checkbox" checked={showLogo} disabled={readOnly} onChange={(event) => setData(prev => ({ ...prev, showLogo: event.target.checked }))} className="h-4 w-4 rounded border-stone-300 text-[#1B3226] focus:ring-[#1B3226]" />{isJa ? 'PDF・印刷にロゴを表示' : 'Show logo on PDF / print'}</label>
                         <BilingualField label={isJa ? '馬名' : 'Horse name'} jpValue={data.horseNameJp} enValue={data.horseNameEn} onChangeJp={(value) => handleChange('horseNameJp', value)} onChangeEn={(value) => handleChange('horseNameEn', value)} disabled={readOnly} />
-                        <BilingualField label={isJa ? '馬主' : 'Owner'} jpValue={data.ownerName} enValue={data.ownerNameEn} onChangeJp={(value) => handleChange('ownerName', value)} onChangeEn={(value) => handleChange('ownerNameEn', value)} disabled={readOnly} />
-                        <BilingualField label={isJa ? '調教師' : 'Trainer'} jpValue={data.trainerNameJp} enValue={data.trainerNameEn} onChangeJp={(value) => handleChange('trainerNameJp', value)} onChangeEn={(value) => handleChange('trainerNameEn', value)} disabled={readOnly} />
                         <BilingualField label={isJa ? '性齢' : 'Sex / age'} jpValue={data.sexAgeJp} enValue={data.sexAgeEn} onChangeJp={(value) => handleChange('sexAgeJp', value)} onChangeEn={(value) => handleChange('sexAgeEn', value)} disabled={readOnly} />
                         <BilingualField label={isJa ? '父' : 'Sire'} jpValue={data.sireJp} enValue={data.sireEn} onChangeJp={(value) => handleChange('sireJp', value)} onChangeEn={(value) => handleChange('sireEn', value)} disabled={readOnly} />
                         <BilingualField label={isJa ? '母' : 'Dam'} jpValue={data.damJp} enValue={data.damEn} onChangeJp={(value) => handleChange('damJp', value)} onChangeEn={(value) => handleChange('damEn', value)} disabled={readOnly} />
+                        <div className="space-y-4 border-t border-stone-200 pt-4">
+                            <BilingualField label={isJa ? '馬主' : 'Owner'} jpValue={data.ownerName} enValue={data.ownerNameEn} onChangeJp={(value) => handleChange('ownerName', value)} onChangeEn={(value) => handleChange('ownerNameEn', value)} disabled={readOnly} />
+                            <BilingualField label={isJa ? '調教師' : 'Trainer'} jpValue={data.trainerNameJp} enValue={data.trainerNameEn} onChangeJp={(value) => handleChange('trainerNameJp', value)} onChangeEn={(value) => handleChange('trainerNameEn', value)} disabled={readOnly} />
+                        </div>
                     </section>
 
                     <section className="space-y-4">
                         <SectionHeading title={isJa ? 'ケア・引き継ぎ情報' : 'Care & handover'} description={isJa ? '日付は両言語で共通の1項目です' : 'Dates are shared between both languages'} />
-                        <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-semibold text-stone-700">{t('weight')}<input type="text" value={data.weight} disabled={readOnly} onChange={(event) => handleChange('weight', event.target.value)} placeholder="496kg" className={inputClass} /></label><label className="block text-xs font-semibold text-stone-700">{t('weightDate')}<input type="date" value={data.weightDate} disabled={readOnly} onChange={(event) => handleChange('weightDate', event.target.value)} className={inputClass} /></label></div>
+                        <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-bold text-stone-700">{t('weight')}<input type="text" value={data.weight} disabled={readOnly} onChange={(event) => handleChange('weight', event.target.value)} placeholder="496kg" className={inputClass} /></label><label className="block text-xs font-bold text-stone-700">{t('weightDate')}<input type="date" value={data.weightDate} disabled={readOnly} onChange={(event) => handleChange('weightDate', event.target.value)} className={inputClass} /></label></div>
                         <BilingualField label={isJa ? '装蹄師名（任意）' : 'Farrier name (optional)'} jpValue={data.farrierJp} enValue={data.farrierEn} onChangeJp={(value) => handleChange('farrierJp', value)} onChangeEn={(value) => handleChange('farrierEn', value)} optional disabled={readOnly} />
-                        <label className="block text-xs font-semibold text-stone-700">{isJa ? '装蹄日（共通）' : 'Farrier date (shared)'}<input type="date" value={data.farrierDate} disabled={readOnly} onChange={(event) => handleChange('farrierDate', event.target.value)} className={inputClass} /></label>
+                        <label className="block text-xs font-bold text-stone-700">{isJa ? '装蹄日（共通）' : 'Farrier date (shared)'}<input type="date" value={data.farrierDate} disabled={readOnly} onChange={(event) => handleChange('farrierDate', event.target.value)} className={inputClass} /></label>
                         <BilingualField label={isJa ? '駆虫内容' : 'Worming'} jpValue={data.wormingJp} enValue={data.wormingEn} onChangeJp={(value) => handleChange('wormingJp', value)} onChangeEn={(value) => handleChange('wormingEn', value)} optional disabled={readOnly} />
-                        <label className="block text-xs font-semibold text-stone-700">{isJa ? '駆虫日' : 'Worming date'}<input type="date" value={data.wormingDate} disabled={readOnly} onChange={(event) => handleChange('wormingDate', event.target.value)} className={inputClass} /></label>
+                        <label className="block text-xs font-bold text-stone-700">{isJa ? '駆虫日' : 'Worming date'}<input type="date" value={data.wormingDate} disabled={readOnly} onChange={(event) => handleChange('wormingDate', event.target.value)} className={inputClass} /></label>
                     </section>
 
                     <section className="space-y-4">
@@ -363,18 +365,17 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                             <p className="departure-eyebrow">{isJa ? '退厩馬情報' : 'HORSE DEPARTURE PROFILE'}</p>
                             <h1>{displayHorseName}</h1>
                             {secondaryHorseName && <p className="departure-secondary-name">{secondaryHorseName}</p>}
-                            <div className="departure-meta-grid">
-                                <div><span>{isJa ? '馬主' : 'Owner'}</span><strong>{formatOwnerName(data.ownerName, data.ownerNameEn)}</strong></div>
-                                <div><span>{isJa ? '調教師' : 'Trainer'}</span><strong>{formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</strong></div>
-                                {displayText(data.sexAgeJp, data.sexAgeEn) && <div><span>{isJa ? '性齢' : 'Sex / age'}</span><strong>{displayText(data.sexAgeJp, data.sexAgeEn)}</strong></div>}
-                            </div>
+                            {displayText(data.sexAgeJp, data.sexAgeEn) && <p className="departure-sex-age"><span>{isJa ? '性齢' : 'Sex / age'}</span><strong>{displayText(data.sexAgeJp, data.sexAgeEn)}</strong></p>}
                             {(displayText(data.sireJp, data.sireEn) || displayText(data.damJp, data.damEn)) && <div className="departure-pedigree">
-                                <span>{isJa ? '血統 / 父母' : 'PEDIGREE / PARENTS'}</span>
                                 <div className="departure-pedigree-grid">
                                     {displayText(data.sireJp, data.sireEn) && <div><small>{isJa ? '父' : 'Sire'}</small><strong>{displayText(data.sireJp, data.sireEn)}</strong></div>}
                                     {displayText(data.damJp, data.damEn) && <div><small>{isJa ? '母' : 'Dam'}</small><strong>{displayText(data.damJp, data.damEn)}</strong></div>}
                                 </div>
                             </div>}
+                            <div className="departure-meta-grid">
+                                <div><span>{isJa ? '馬主' : 'Owner'}</span><strong>{formatOwnerName(data.ownerName, data.ownerNameEn)}</strong></div>
+                                <div><span>{isJa ? '調教師' : 'Trainer'}</span><strong>{formatTrainerName(data.trainerNameJp, data.trainerNameEn)}</strong></div>
+                            </div>
                         </section>
 
                         {careItems.length > 0 && <section className="departure-section-card"><div className="departure-section-heading"><span>{isJa ? 'ケア・引き継ぎ' : 'CARE & HANDOVER'}</span><i /></div><div className="departure-care-grid">{careItems.map((item) => <div className="departure-care-item" key={item.label}><span>{item.label}</span><strong>{item.value || (item.date ? `${item.dateLabel}: ${isJa ? formatDateJp(item.date) : formatDateUK(item.date)}` : (isJa ? '記録なし' : 'No record'))}</strong>{item.value && item.date && <small>{item.dateLabel}: {isJa ? formatDateJp(item.date) : formatDateUK(item.date)}</small>}</div>)}</div></section>}
@@ -391,45 +392,49 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
             </main>
 
             <style jsx global>{`
+                /* 帳票・入力欄とも配信フォントを使い、端末標準の日本語フォントへ依存させない。 */
+                .departure-root { font-family: var(--font-noto-sans-jp), var(--font-noto-sans), 'Noto Sans JP', 'Noto Sans', sans-serif; }
                 .departure-preview-stage { box-sizing: border-box; display: flex; width: 100%; min-height: 100%; flex: 1 0 auto; align-items: flex-start; justify-content: center; padding-bottom: 12mm; }
-                .departure-preview { width: 210mm; min-height: 297mm; box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; margin: 0 auto 8mm; padding: 17mm 18mm 13mm; color: #26342d; background: #fff; border: 1px solid #d8d2c7; box-shadow: 0 16px 34px rgba(0, 0, 0, .28); font-family: var(--font-noto-sans-jp), var(--font-noto-sans), 'Noto Sans JP', 'Noto Sans', sans-serif; font-variant-numeric: lining-nums; }
+                .departure-preview { width: 210mm; min-height: 297mm; box-sizing: border-box; display: flex; flex-direction: column; flex-shrink: 0; margin: 0 auto 8mm; padding: 17mm 18mm 13mm; color: #26342d; background: #fff; border: 1px solid #d8d2c7; box-shadow: 0 16px 34px rgba(0, 0, 0, .28); font-family: inherit; font-variant-numeric: lining-nums; }
                 .departure-header { position: relative; display: flex; min-height: 30mm; align-items: center; justify-content: space-between; border-bottom: 1px solid #c5a059; padding-bottom: 7mm; }
-                .departure-brand { display: flex; flex-direction: column; gap: 1px; color: #1b3226; font-family: Arial, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: .18em; line-height: 1.05; }
+                .departure-brand { display: flex; flex-direction: column; gap: 1px; color: #1b3226; font-size: 18px; font-weight: 700; letter-spacing: .18em; line-height: 1.05; }
                 .departure-brand small { margin-top: 5px; color: #8b8171; font-size: 8px; font-weight: 500; letter-spacing: .12em; }
                 .departure-logo { position: absolute; top: 50%; left: 50%; width: 29mm; height: 29mm; object-fit: contain; transform: translate(-50%, -51%); opacity: .8; }
-                .departure-heading { display: flex; flex-direction: column; align-items: flex-end; color: #1b3226; font-family: Arial, sans-serif; font-size: 16px; font-weight: 800; letter-spacing: .1em; text-align: right; }
+                .departure-heading { display: flex; flex-direction: column; align-items: flex-end; color: #1b3226; font-size: 16px; font-weight: 700; letter-spacing: .1em; text-align: right; }
                 .departure-heading small { margin-top: 6px; color: #8b8171; font-size: 9px; font-weight: 500; letter-spacing: .08em; }
                 .departure-content { display: flex; flex: 1; flex-direction: column; gap: 7mm; padding-top: 8mm; }
                 .departure-card { border: 1px solid #e4dfd4; background: #fff; }
                 .departure-identity { border-top: 4px solid #1b3226; padding: 7mm 8mm 6mm; }
-                .departure-eyebrow { margin: 0; color: #a17f3c; font-family: Arial, sans-serif; font-size: 8px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-                .departure-identity h1 { margin: 3mm 0 0; color: #1b3226; font-size: 26px; line-height: 1.15; }
-                .departure-secondary-name { margin: 2px 0 0; color: #877e70; font-family: Arial, sans-serif; font-size: 11px; letter-spacing: .08em; }
-                .departure-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; margin-top: 7mm; border-top: 1px solid #ece8df; padding-top: 5mm; }
+                .departure-eyebrow { margin: 0; color: #a17f3c; font-size: 8px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+                .departure-identity h1 { margin: 3mm 0 0; overflow-wrap: anywhere; color: #1b3226; font-size: 26px; line-height: 1.15; }
+                .departure-secondary-name { margin: 2px 0 0; overflow-wrap: anywhere; color: #877e70; font-size: 11px; letter-spacing: .08em; }
+                .departure-sex-age { display: flex; align-items: baseline; gap: 2mm; margin: 3mm 0 0; font-size: 15px; line-height: 1.45; }
+                .departure-sex-age span { flex-shrink: 0; color: #806127; font-size: 12px; font-weight: 700; }
+                .departure-sex-age strong { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+                .departure-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; margin-top: 5mm; border-top: 1px solid #ece8df; padding-top: 4mm; }
                 .departure-meta-grid div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-                .departure-meta-grid span, .departure-care-item span { color: #9a8b70; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-                .departure-meta-grid strong { overflow-wrap: break-word; color: #3d493f; font-size: 15px; font-weight: 600; line-height: 1.45; }
-                .departure-pedigree { margin-top: 6mm; border-top: 1px solid #ece8df; padding-top: 4mm; }
-                .departure-pedigree > span { color: #9a8b70; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
-                .departure-pedigree-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; margin-top: 3mm; }
+                .departure-meta-grid span, .departure-care-item span { color: #9a8b70; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+                .departure-meta-grid strong { overflow-wrap: anywhere; color: #3d493f; font-size: 15px; font-weight: 700; line-height: 1.45; }
+                .departure-pedigree { margin-top: 3mm; }
+                .departure-pedigree-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; }
                 .departure-pedigree-grid div { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 2mm; min-width: 0; }
                 .departure-pedigree-grid small { color: #806127; font-size: 12px; font-weight: 700; white-space: nowrap; }
-                .departure-pedigree-grid strong { overflow-wrap: break-word; color: #3d493f; font-size: 15px; font-weight: 600; line-height: 1.45; }
+                .departure-pedigree-grid strong { overflow-wrap: anywhere; color: #3d493f; font-size: 15px; font-weight: 700; line-height: 1.45; }
                 .departure-section-card { break-inside: avoid; page-break-inside: avoid; }
-                .departure-section-heading { display: flex; align-items: center; gap: 3mm; color: #806127; font-family: Arial, sans-serif; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+                .departure-section-heading { display: flex; align-items: center; gap: 3mm; color: #806127; font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
                 .departure-section-heading i { display: block; height: 1px; flex: 1; background: #dfd3bb; }
                 .departure-care-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4mm; margin-top: 4mm; }
                 .departure-care-item { min-height: 19mm; border: 1px solid #ebe6dc; background: #faf9f6; padding: 4mm; }
                 .departure-care-item strong { display: block; margin-top: 3mm; overflow-wrap: break-word; color: #26342d; font-size: 15px; line-height: 1.45; font-variant-numeric: lining-nums tabular-nums; }
-                .departure-care-item small { display: block; margin-top: 2mm; color: #9a8b70; font-family: Arial, sans-serif; font-size: 11px; line-height: 1.35; }
+                .departure-care-item small { display: block; margin-top: 2mm; color: #9a8b70; font-size: 11px; line-height: 1.35; }
                 .departure-narratives { display: flex; flex-direction: column; gap: 5mm; }
                 .departure-narrative { break-inside: avoid; page-break-inside: avoid; padding: 5mm 6mm; }
                 .departure-narrative p { margin: 4mm 0 0; white-space: pre-line; overflow-wrap: break-word; word-break: normal; color: #3d493f; font-size: 15px; line-height: 1.8; font-variant-numeric: lining-nums; }
                 .departure-signoff { margin-top: auto; }
                 .departure-closing { break-inside: avoid; page-break-inside: avoid; border-color: #d8c79f; background: #fbf8ef; padding: 6mm 8mm; text-align: center; }
                 .departure-closing-text { margin: 0; white-space: pre-line; color: #806127; font-size: 15px; line-height: 1.75; }
-                .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
-                .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .12em; text-align: center; }
+                .departure-closing-signature { margin: 4mm 0 0; color: #6e6048; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+                .departure-footer { margin-top: 8mm; border-top: 1px solid #e7e0d1; padding-top: 4mm; color: #aaa194; font-size: 9px; letter-spacing: .12em; text-align: center; }
                 @media print {
                     /* 印刷設定の「余白なし」でも崩れないよう、余白は帳票本体に持たせる。 */
                     @page hamagiku-departure { size: A4 portrait; margin: 0; }
@@ -446,21 +451,21 @@ export default function DepartureReportTemplate({ initialData, onDataChange, rea
                     .departure-header { min-height: 23mm !important; padding-bottom: 4mm !important; }
                     .departure-logo { width: 23mm !important; height: 23mm !important; }
                     .departure-content { display: block !important; flex: none !important; padding-top: 4mm !important; }
-                    .departure-content > * + * { margin-top: 3.5mm !important; }
-                    .departure-identity { padding: 5mm 6mm 4mm !important; }
+                    .departure-content > * + * { margin-top: 3mm !important; }
+                    .departure-identity { padding: 4mm 6mm 4mm !important; }
                     .departure-identity h1 { margin-top: 2mm !important; font-size: 24px !important; }
-                    .departure-meta-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .65fr) !important; margin-top: 4mm !important; padding-top: 3mm !important; gap: 3mm 5mm !important; }
-                    .departure-pedigree { margin-top: 3mm !important; padding-top: 2mm !important; }
-                    .departure-pedigree > span { display: none !important; }
-                    .departure-pedigree-grid { margin-top: 0 !important; }
+                    .departure-sex-age { margin-top: 2mm !important; }
+                    .departure-pedigree { margin-top: 2mm !important; }
+                    .departure-meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; margin-top: 3mm !important; padding-top: 3mm !important; gap: 3mm 5mm !important; }
                     .departure-care-grid { margin-top: 3mm !important; }
                     .departure-care-item { min-height: 0 !important; padding: 3mm !important; }
                     .departure-care-item > span { display: block !important; }
                     .departure-care-item strong { margin-top: 2mm !important; }
                     .departure-care-item small { margin-top: 1.5mm !important; }
                     .departure-narratives { display: block !important; }
-                    .departure-narratives > * + * { margin-top: 3.5mm !important; }
-                    .departure-narrative { break-inside: auto !important; page-break-inside: auto !important; padding: 4mm 5mm !important; }
+                    .departure-narratives > * + * { margin-top: 3mm !important; }
+                    /* 長い馬名・父母名の折返し分は、本文縮小ではなくカード間隔で確保する。 */
+                    .departure-narrative { break-inside: auto !important; page-break-inside: auto !important; padding: 3mm 5mm !important; }
                     .departure-narrative .departure-section-heading { break-after: avoid-page !important; page-break-after: avoid !important; }
                     .departure-narrative p { margin-top: 2mm !important; line-height: 1.65 !important; orphans: 3; widows: 3; }
                     /* 挨拶とフッターは一体で改ページし、フッターだけの次ページを防ぐ。 */

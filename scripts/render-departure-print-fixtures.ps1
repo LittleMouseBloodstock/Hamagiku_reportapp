@@ -1,12 +1,17 @@
 param(
     [ValidatePattern('^[a-z0-9-]+$')][string]$Label = 'current',
-    [string]$Renderer = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+    [string]$Renderer = 'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    [ValidatePattern('^[a-z0-9-]+$')][string[]]$CaseId
 )
 
 $ErrorActionPreference = 'Stop'
 $auditRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $auditDirectory = Join-Path $auditRoot "tmp\departure-print-audit\$Label"
 $auditFixtures = Get-Content -Raw -LiteralPath (Join-Path $auditDirectory 'manifest.json') | ConvertFrom-Json
+if ($CaseId) {
+    $auditFixtures = @($auditFixtures | Where-Object { $_.id -in $CaseId })
+    if ($auditFixtures.Count -ne $CaseId.Count) { throw '未登録または重複した検証条件が指定されています。' }
+}
 $renderRunId = [Guid]::NewGuid().ToString('N')
 
 foreach ($fixture in $auditFixtures) {
