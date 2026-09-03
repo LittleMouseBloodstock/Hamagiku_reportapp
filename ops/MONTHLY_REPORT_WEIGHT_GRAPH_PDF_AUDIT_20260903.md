@@ -75,3 +75,17 @@ fixture生成時に単票・一括それぞれの120px/115px、`min-height`、`f
 - 反映成功後は新しいmainへ `hamagiku-production-20260903-monthly-weight-graph` を付け、通常pushでリモートへ保存する。force push、rebase、既存タグの付け替えは行わない。
 - 問題時はPagesを上記デプロイへロールバックし、Gitはreset/force pushではなく通常のrevertコミットで本番ソースと同期する。
 - 既存の未追跡 `frontend/Dockerfile` と `frontend/cloudbuild.yaml` は今回のコミット・本番ソースへ含めない。
+
+## 本番反映結果
+
+- 検証済み修正コミット: `3b7cdb587c6f16fec1f27f0f5584c0e1df1cdde1`
+- `main` 統合コミット: `fb322b0bdb25259ce8829cb307dea004aa1f538e`
+- Cloudflare Pages Production: `d287a2ae-bc5a-42d5-bdbf-812e43c079f6`（Source `fb322b0`、Active）
+- 本番固定タグ: `hamagiku-production-20260903-monthly-weight-graph`
+- 復旧タグ: `hamagiku-before-20260903-monthly-weight-graph` → `671ab833224d62306c7d113b83ba2369229a9ad6`
+- 復旧先Pages: `1276f197-d6d2-4e22-9339-c611245f4752`
+- canonical root、login、単票ルート、一括ルート、ロゴ画像、既存Cloud Run APIはHTTP 200。対象ルートが参照する19件のJS/CSS資産も全件HTTP 200。
+- 本番配信チャンクを直接検査し、ロゴ付きの単票・一括で `height: 120px`、`min-height: 120px`、`flex-shrink: 0` を確認。対象ブロックに旧 `height: 100px` はない。
+- ロゴなしの単票・一括では既存の `height: 115px` を維持し、`min-height: 115px` と `flex-shrink: 0` を確認。
+- `main` push後にも本番境界ガードを再実行し、branch、HEAD、`origin/main` の一致を確認した。
+- 本番確認後のこの結果追記は監査用ブランチだけに保存し、`main` の再デプロイは行わない。
