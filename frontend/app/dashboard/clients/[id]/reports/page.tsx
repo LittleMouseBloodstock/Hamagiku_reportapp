@@ -604,11 +604,15 @@ export default function ClientBatchReports() {
                         height: 90mm !important;
                     }
                     .batch-report-page .report-preview.print-mode .data-section {
-                        height: 100px !important;
+                        height: 120px !important;
+                        min-height: 120px !important;
+                        flex-shrink: 0 !important;
                         margin-bottom: 4px !important;
                     }
                     .batch-report-page .report-preview.print-mode.no-logo .data-section {
                         height: 115px !important;
+                        min-height: 115px !important;
+                        flex-shrink: 0 !important;
                         margin-bottom: 6px !important;
                     }
                     .batch-report-page .report-preview.print-mode.no-logo .weight-chart {

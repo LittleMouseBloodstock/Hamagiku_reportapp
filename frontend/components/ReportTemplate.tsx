@@ -123,6 +123,8 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .data-section {
         height: 115px !important;
+        min-height: 115px !important;
+        flex-shrink: 0 !important;
         margin-bottom: 6px !important;
         gap: 14px !important;
       }`}
@@ -161,13 +163,17 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode .data-section {
-        height: 100px !important;
+        height: 120px !important;
+        min-height: 120px !important;
+        flex-shrink: 0 !important;
         margin-bottom: 4px !important;
         gap: 14px !important;
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.print-mode.no-logo .data-section {
         height: 115px !important;
+        min-height: 115px !important;
+        flex-shrink: 0 !important;
         margin-bottom: 6px !important;
       }`}
 
@@ -1768,7 +1774,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                         </div>
 
                         {/* Data Section - Compact Height (Reduced from 220px to 120px) */}
-                        <div className={`data-section flex ${showLogo ? 'gap-6 mb-4 h-[120px]' : 'gap-[14px] mb-[6px] h-[115px]'}`}>
+                        <div className={`data-section flex shrink-0 ${showLogo ? 'gap-6 mb-4 h-[120px] min-h-[120px]' : 'gap-[14px] mb-[6px] h-[115px] min-h-[115px]'}`}>
                             {/* Stats Grid - 1 row, 3 columns (Reordered: Training, Condition, Weight -> Chart) */}
                             <div className="flex-1 grid grid-cols-3 gap-[10px]">
                                 <div className="bg-[#f4f7f6] p-3 flex min-h-0 flex-col justify-center border-t-[3px] border-[#ddd]">
