@@ -1,0 +1,610 @@
+{
+  "before": {
+    "observedAt": "2026-11-02T09:48:41.444Z",
+    "account": "06f3ed7e04359a30bc61d3eb553a2f6c",
+    "configuration": {
+      "project": "hamagiku-reportapp",
+      "subdomain": "hamagiku-reportapp.pages.dev",
+      "domains": [
+        "hamagiku-reportapp.pages.dev"
+      ],
+      "source": {
+        "owner": "LittleMouseBloodstock",
+        "repo_name": "Hamagiku_reportapp",
+        "production_branch": "main",
+        "deployments_enabled": true,
+        "production_deployments_enabled": true,
+        "preview_deployment_setting": "all"
+      },
+      "build": {
+        "build_command": "npx @cloudflare/next-on-pages@1",
+        "destination_dir": ".vercel/output/static",
+        "root_dir": "frontend"
+      },
+      "compatibilityDate": "2024-09-23",
+      "compatibilityFlags": [
+        "nodejs_compat"
+      ],
+      "environmentNames": [
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_DEMO_MODE",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "environmentTypes": {
+        "NEXT_PUBLIC_API_URL": "secret_text",
+        "NEXT_PUBLIC_DEMO_MODE": "secret_text",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "secret_text",
+        "NEXT_PUBLIC_SUPABASE_URL": "secret_text"
+      },
+      "publicConfiguration": {
+        "NEXT_PUBLIC_API_URL": "[redacted by Cloudflare]",
+        "NEXT_PUBLIC_SUPABASE_URL": "[redacted by Cloudflare]",
+        "NEXT_PUBLIC_DEMO_MODE": "[redacted by Cloudflare]"
+      }
+    },
+    "canonical": {
+      "id": "d287a2ae-bc5a-42d5-bdbf-812e43c079f6",
+      "environment": "production",
+      "url": "https://d287a2ae.hamagiku-reportapp.pages.dev",
+      "aliases": null,
+      "createdOn": "2026-09-03T09:23:21.641185Z",
+      "latestStage": {
+        "name": "deploy",
+        "started_on": "2026-09-03T09:25:00.73963Z",
+        "ended_on": "2026-09-03T09:25:10.354261Z",
+        "status": "success"
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-09-03T09:23:21.784857Z",
+          "ended_on": "2026-09-03T09:23:21.789481Z",
+          "status": "success"
+        },
+        {
+          "name": "initialize",
+          "started_on": "2026-09-03T09:23:21.789481Z",
+          "ended_on": "2026-09-03T09:23:23.594305Z",
+          "status": "success"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": "2026-09-03T09:23:23.594305Z",
+          "ended_on": "2026-09-03T09:23:25.620601Z",
+          "status": "success"
+        },
+        {
+          "name": "build",
+          "started_on": "2026-09-03T09:23:25.620601Z",
+          "ended_on": "2026-09-03T09:25:00.73963Z",
+          "status": "success"
+        },
+        {
+          "name": "deploy",
+          "started_on": "2026-09-03T09:25:00.73963Z",
+          "ended_on": "2026-09-03T09:25:10.354261Z",
+          "status": "success"
+        }
+      ],
+      "trigger": {
+        "type": "github:push",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "fb322b0bdb25259ce8829cb307dea004aa1f538e",
+          "commit_message": "月次PDF体重グラフ修正を本番mainへ統合",
+          "commit_dirty": false
+        }
+      }
+    },
+    "rollback": {
+      "id": "d287a2ae-bc5a-42d5-bdbf-812e43c079f6",
+      "environment": "production",
+      "url": "https://d287a2ae.hamagiku-reportapp.pages.dev",
+      "aliases": null,
+      "createdOn": "2026-09-03T09:23:21.641185Z",
+      "latestStage": {
+        "name": "deploy",
+        "started_on": "2026-09-03T09:25:00.73963Z",
+        "ended_on": "2026-09-03T09:25:10.354261Z",
+        "status": "success"
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-09-03T09:23:21.784857Z",
+          "ended_on": "2026-09-03T09:23:21.789481Z",
+          "status": "success"
+        },
+        {
+          "name": "initialize",
+          "started_on": "2026-09-03T09:23:21.789481Z",
+          "ended_on": "2026-09-03T09:23:23.594305Z",
+          "status": "success"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": "2026-09-03T09:23:23.594305Z",
+          "ended_on": "2026-09-03T09:23:25.620601Z",
+          "status": "success"
+        },
+        {
+          "name": "build",
+          "started_on": "2026-09-03T09:23:25.620601Z",
+          "ended_on": "2026-09-03T09:25:00.73963Z",
+          "status": "success"
+        },
+        {
+          "name": "deploy",
+          "started_on": "2026-09-03T09:25:00.73963Z",
+          "ended_on": "2026-09-03T09:25:10.354261Z",
+          "status": "success"
+        }
+      ],
+      "trigger": {
+        "type": "github:push",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "fb322b0bdb25259ce8829cb307dea004aa1f538e",
+          "commit_message": "月次PDF体重グラフ修正を本番mainへ統合",
+          "commit_dirty": false
+        }
+      }
+    }
+  },
+  "after": {
+    "observedAt": "2026-11-02T09:55:31.865Z",
+    "account": "06f3ed7e04359a30bc61d3eb553a2f6c",
+    "configuration": {
+      "project": "hamagiku-reportapp",
+      "subdomain": "hamagiku-reportapp.pages.dev",
+      "domains": [
+        "hamagiku-reportapp.pages.dev"
+      ],
+      "source": {
+        "owner": "LittleMouseBloodstock",
+        "repo_name": "Hamagiku_reportapp",
+        "production_branch": "main",
+        "deployments_enabled": true,
+        "production_deployments_enabled": true,
+        "preview_deployment_setting": "all"
+      },
+      "build": {
+        "build_command": "npx @cloudflare/next-on-pages@1",
+        "destination_dir": ".vercel/output/static",
+        "root_dir": "frontend"
+      },
+      "compatibilityDate": "2024-09-23",
+      "compatibilityFlags": [
+        "nodejs_compat"
+      ],
+      "environmentNames": [
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_DEMO_MODE",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "environmentTypes": {
+        "NEXT_PUBLIC_API_URL": "secret_text",
+        "NEXT_PUBLIC_DEMO_MODE": "secret_text",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "secret_text",
+        "NEXT_PUBLIC_SUPABASE_URL": "secret_text"
+      },
+      "publicConfiguration": {
+        "NEXT_PUBLIC_API_URL": "[redacted by Cloudflare]",
+        "NEXT_PUBLIC_SUPABASE_URL": "[redacted by Cloudflare]",
+        "NEXT_PUBLIC_DEMO_MODE": "[redacted by Cloudflare]"
+      }
+    },
+    "canonical": {
+      "id": "767b5982-9256-42ad-84f7-2154fbbf8d69",
+      "environment": "production",
+      "url": "https://767b5982.hamagiku-reportapp.pages.dev",
+      "aliases": null,
+      "createdOn": "2026-11-02T09:52:33.314031Z",
+      "latestStage": {
+        "name": "deploy",
+        "started_on": "2026-11-02T09:54:05.938706Z",
+        "ended_on": "2026-11-02T09:54:15.378723Z",
+        "status": "success"
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-11-02T09:52:33.466916Z",
+          "ended_on": "2026-11-02T09:52:33.469719Z",
+          "status": "success"
+        },
+        {
+          "name": "initialize",
+          "started_on": "2026-11-02T09:52:33.469719Z",
+          "ended_on": "2026-11-02T09:52:35.195185Z",
+          "status": "success"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": "2026-11-02T09:52:35.195185Z",
+          "ended_on": "2026-11-02T09:52:36.555954Z",
+          "status": "success"
+        },
+        {
+          "name": "build",
+          "started_on": "2026-11-02T09:52:36.555954Z",
+          "ended_on": "2026-11-02T09:54:05.938706Z",
+          "status": "success"
+        },
+        {
+          "name": "deploy",
+          "started_on": "2026-11-02T09:54:05.938706Z",
+          "ended_on": "2026-11-02T09:54:15.378723Z",
+          "status": "success"
+        }
+      ],
+      "trigger": {
+        "type": "github:push",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "12f02eb265d60738601c3b45c54df7a520d4cbd5",
+          "commit_message": "月次PDF文字欠け修正を浜菊本番mainへ統合",
+          "commit_dirty": false
+        }
+      }
+    }
+  },
+  "preflight": {
+    "verifiedAt": "2026-11-02T09:51:21.561616+00:00",
+    "pdf": [
+      {
+        "browser": "chrome",
+        "cases": 24,
+        "pages": 36,
+        "failed": 0
+      },
+      {
+        "browser": "msedge",
+        "cases": 24,
+        "pages": 36,
+        "failed": 0
+      }
+    ],
+    "layout": [
+      {
+        "browser": "chrome",
+        "conditions": 96,
+        "failed": 0
+      },
+      {
+        "browser": "msedge",
+        "conditions": 96,
+        "failed": 0
+      }
+    ],
+    "sourceSha256": {
+      "frontend/components/ReportTemplate.tsx": "f7e43f35e24bf6ccd256283cb96bd5da58a14fb94fd24ae1b647a194d25c70d4",
+      "frontend/app/reports/[id]/page.tsx": "8181420a41aa22a80770a7798fd13087f5efc065d57b076f783adae036b88e8c",
+      "frontend/app/dashboard/clients/[id]/reports/page.tsx": "07a5b755d9e055b794abb6d09ea0a4ba4cba26a297db72b870849ca62c0c235c",
+      "frontend/lib/print-readiness.ts": "7fa6f63c8e36df22460223f219e1f1ec8c2f4844c0efe0cab5c27471247bf146",
+      "scripts/print-readiness.test.mjs": "5095f310ddca9a0a13ce18ee7f555d46323cf2c3d7ba04a74e4598efb41572b5",
+      "scripts/monthly-report-print-fixtures.mjs": "879f1c1e7cc31d466dd68c6999d18f594bddbae6724aaf5d157310ae5a2b94bf",
+      "scripts/verify-monthly-report-print-pdfs.py": "91e14b287fcc21e2e8e437d080a213052efb0359a670a578b88f72ae67d7f518",
+      "scripts/verify-monthly-report-layout.mjs": "998c0bf2f025b40d57f32f63a6cbf3af580ab98339fb872e483c22e1f83dcc86"
+    },
+    "printReadinessTests": {
+      "passed": 3,
+      "failed": 0
+    },
+    "productionBuild": {
+      "passed": true,
+      "existingLintWarnings": true,
+      "data": "dummy local build settings only"
+    }
+  },
+  "publicSmoke": {
+    "observedAt": "2026-11-02T09:58:54.105Z",
+    "mode": "after",
+    "base": "https://hamagiku-reportapp.pages.dev",
+    "routes": [
+      {
+        "kind": "root",
+        "path": "/",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "db558157637cf0c35249706c159cbaee7621856d899649d367925d56433ec0af",
+        "bytes": 38011
+      },
+      {
+        "kind": "login",
+        "path": "/login",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "98833b9239d5d905539ae19f2066dab0e73ccdc541c081430100f1adcb04c37e",
+        "bytes": 38834
+      },
+      {
+        "kind": "single",
+        "path": "/reports/new",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "41ff53e539289ebe6fdcd3011c48258977de58174099307da52db2a734c3bd5c",
+        "bytes": 33179
+      },
+      {
+        "kind": "batch",
+        "path": "/dashboard/clients/production-smoke/reports",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "sha256": "85321e7382392861b0a31b02714a538468b100abd20393d524dc72d4db4e96bb",
+        "bytes": 35195
+      }
+    ],
+    "assets": [
+      {
+        "path": "/_next/static/css/d94f51f53f64bbf7.css",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "sha256": "4c4ac59abff8f54f3e426aec587ee3ce74257bd4a6dcd26b7beb31308da63a4f",
+        "bytes": 17244
+      },
+      {
+        "path": "/_next/static/chunks/webpack-ba3dc9fb524b1522.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "4213a81e57834b173ee094a93876104cb10fa1b4d78769d945756902cfc7b687",
+        "bytes": 3432
+      },
+      {
+        "path": "/_next/static/chunks/app/layout-f35b07c3c029d3de.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "0b6f55cdcbba41642ae62fd4f43c938ef606e5cbbb369c70f4ea215e527a54ea",
+        "bytes": 4800
+      },
+      {
+        "path": "/_next/static/chunks/153-886a8087a7e13c9e.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "ccc2330efa3493b4355180122e63249ed525a1b7173826ac42bc03826f528676",
+        "bytes": 16116
+      },
+      {
+        "path": "/_next/static/css/90ca84f78c1cbf7f.css",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "sha256": "b85f369a25d3e6f3896d3fb4f926508dad893ed2cfaf1d9fc8eda9305a40ea2a",
+        "bytes": 69670
+      },
+      {
+        "path": "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683",
+        "bytes": 112594
+      },
+      {
+        "path": "/_next/static/chunks/4bd1b696-70ae28e42e586af4.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "3c21403f32af8ae307a718be188ed52f37dcb22cc689bec748c16ee1fc20f780",
+        "bytes": 167090
+      },
+      {
+        "path": "/_next/static/css/4ea7de8927e19211.css",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "sha256": "bf6892fd9a53610383f436320fc55795b94871cd422cd24102325f2352b550b9",
+        "bytes": 188732
+      },
+      {
+        "path": "/_next/static/chunks/352-264c625560ae4b55.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "05a7e06229816ddd14fec5fbe8cd360e5591c080e31cc15e65fc3b41505cb8ad",
+        "bytes": 194403
+      },
+      {
+        "path": "/_next/static/chunks/main-app-278d4ac08e354a90.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "7df437ab850afd2c137448928340af5e992c9fcee4f6e89faf5863317112f1f5",
+        "bytes": 683
+      },
+      {
+        "path": "/_next/static/chunks/517-89369a29800a480f.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "158846156105f053cef07b684acfd4e81e4ec941a3dd9a6d5adfbd6b9ea711b3",
+        "bytes": 200484
+      },
+      {
+        "path": "/_next/static/css/6738184ec3964f1e.css",
+        "status": 200,
+        "contentType": "text/css; charset=utf-8",
+        "sha256": "1c2103c42a9a1759f86034348c14bdebb22f19af3b5ca24951b7066d2c1ea0b3",
+        "bytes": 283045
+      },
+      {
+        "path": "/_next/static/chunks/app/login/page-26c746aa5faf8336.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "cd0074440a9b46de5386fbb3cefdf84e1182aa8a7595043cbc9f8e326450441b",
+        "bytes": 3975
+      },
+      {
+        "path": "/_next/static/chunks/278-976b4f3bb34e6c22.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "62c2dd8b20498421b80333a8dea82d36d4ce3f18a531cbf9d16edbcdbbf4e142",
+        "bytes": 36676
+      },
+      {
+        "path": "/_next/static/chunks/app/reports/%5Bid%5D/page-688aa10875ddc6df.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "7fe7e60e8055acd22a33419c192b1d056134e88ef8f68c183cb2c25f209dde40",
+        "bytes": 109111
+      },
+      {
+        "path": "/_next/static/chunks/750-9cfd926e3d408753.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "30c9e4db9e32554eb1893000e5ce3c8d37d67de312741c06eb342703af0a5590",
+        "bytes": 73460
+      },
+      {
+        "path": "/_next/static/chunks/565-125b55d49ec26df5.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "5d7f90bb1aab0b7650665fdeecf3dfea6a0cea6bbad6219315e68e516788b934",
+        "bytes": 13954
+      },
+      {
+        "path": "/_next/static/chunks/app/dashboard/clients/%5Bid%5D/reports/page-c4f032f6f406976b.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "f2a4baa4bd7c92de5b08bf874e18432333845a7225d05a50353b77d3bd9c8dc4",
+        "bytes": 17895
+      },
+      {
+        "path": "/_next/static/chunks/28-cd0c00589b8abf12.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "77aa0b65814fb98d83511cabe1925163eb9fafd8d68b16417c40c8d5967a54f1",
+        "bytes": 10111
+      },
+      {
+        "path": "/_next/static/chunks/app/dashboard/layout-6fcbbff4870e520e.js",
+        "status": 200,
+        "contentType": "application/javascript",
+        "sha256": "ace57cc7ee119a05561bdef3a081cdd6ce742e221deaf62595e4da157298dd78",
+        "bytes": 10310
+      }
+    ],
+    "markers": {
+      "single": {
+        "grid": true,
+        "profile": true,
+        "wrapping": true,
+        "photoPreserved": true
+      },
+      "batch": {
+        "grid": true,
+        "profile": true,
+        "wrapping": true,
+        "photoPreserved": true,
+        "imageAndFontBarrierCall": true,
+        "noForcedNameNoWrap": true
+      }
+    },
+    "dataTargets": {
+      "single": [
+        "https://hamagikureoprtapp2-248106009661.asia-northeast1.run.app",
+        "https://srhthxknehzofuzjjrhh.supabase.co"
+      ],
+      "batch": [
+        "https://hamagikureoprtapp2-248106009661.asia-northeast1.run.app",
+        "https://srhthxknehzofuzjjrhh.supabase.co"
+      ]
+    },
+    "logo": {
+      "path": "/hamagiku-logo.png",
+      "status": 200,
+      "contentType": "image/png",
+      "sha256": "c39096108d69c780fc158f664768a2578683f0ceb469109c75a25cbb1068714e",
+      "bytes": 123002
+    }
+  },
+  "anonymousBrowserCheck": {
+    "observedAt": "2026-11-02T09:54:58.998Z",
+    "authenticated": false,
+    "results": [
+      {
+        "route": "/reports/new",
+        "status": 200,
+        "finalPath": "/login",
+        "loginVisible": true,
+        "pageErrors": []
+      },
+      {
+        "route": "/dashboard/clients/production-smoke/reports?print=1",
+        "status": 200,
+        "finalPath": "/login",
+        "loginVisible": true,
+        "pageErrors": []
+      }
+    ]
+  },
+  "apiBefore": {
+    "status": {
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-09-03T09:25:57.046985Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2026-09-03T09:25:57.096461Z",
+          "reason": "Retired",
+          "status": "True",
+          "type": "ConfigurationsReady"
+        },
+        {
+          "lastTransitionTime": "2026-08-25T05:21:59.629665Z",
+          "status": "True",
+          "type": "RoutesReady"
+        }
+      ],
+      "latestCreatedRevisionName": "hamagikureoprtapp2-00369-tc2",
+      "latestReadyRevisionName": "hamagikureoprtapp2-00362-vg4",
+      "traffic": [
+        {
+          "percent": 100,
+          "revisionName": "hamagikureoprtapp2-00362-vg4"
+        }
+      ],
+      "url": "https://hamagikureoprtapp2-zyr65wwffa-an.a.run.app"
+    }
+  },
+  "apiAfter": {
+    "status": {
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-09-03T09:25:57.046985Z",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2026-09-03T09:25:57.096461Z",
+          "reason": "Retired",
+          "status": "True",
+          "type": "ConfigurationsReady"
+        },
+        {
+          "lastTransitionTime": "2026-08-25T05:21:59.629665Z",
+          "status": "True",
+          "type": "RoutesReady"
+        }
+      ],
+      "latestCreatedRevisionName": "hamagikureoprtapp2-00369-tc2",
+      "latestReadyRevisionName": "hamagikureoprtapp2-00362-vg4",
+      "traffic": [
+        {
+          "percent": 100,
+          "revisionName": "hamagikureoprtapp2-00362-vg4"
+        }
+      ],
+      "url": "https://hamagikureoprtapp2-zyr65wwffa-an.a.run.app"
+    }
+  },
+  "apiHealth": {
+    "observedAt": "2026-11-02T09:57:33.152Z",
+    "url": "https://hamagikureoprtapp2-zyr65wwffa-an.a.run.app",
+    "status": 200,
+    "body": "Multilingual Report API"
+  },
+  "scope": {
+    "authenticatedProductionPdf": "client confirmation pending",
+    "macSafariChrome": "client confirmation pending",
+    "productionDataMutations": false,
+    "newSessionsOrWorktrees": false
+  }
+}
