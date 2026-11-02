@@ -17,6 +17,37 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
     .font-serif-en { font-family: 'Playfair Display', serif; }
     .font-body-en { font-family: 'Cormorant Garamond', serif; }
     .font-serif-jp { font-family: 'Noto Serif JP', serif; }
+
+    /* 欄間の余白を引いた幅を分配し、フォントの字幅によらず本文を欄内で折り返す。 */
+    .report-preview .horse-profile {
+      display: grid;
+      grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
+      gap: 1rem;
+      align-items: end;
+      flex-shrink: 0;
+    }
+    .report-preview.no-logo .horse-profile {
+      grid-template-columns: minmax(0, 48fr) minmax(0, 52fr);
+    }
+    .report-preview .horse-name-block,
+    .report-preview .pedigree-block,
+    .report-preview .pedigree-content {
+      min-width: 0;
+    }
+    .report-preview .horse-name-primary,
+    .report-preview .horse-name-secondary,
+    .report-preview .pedigree-block,
+    .report-preview .owner-line {
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: anywhere;
+    }
+    .report-preview .owner-line { flex-shrink: 0; }
+    .report-preview .main-photo { flex-shrink: 0; }
+    @media screen {
+      /* 長名で増えた行はプレビューの高さへ反映し、写真を押し縮めない。 */
+      .report-preview:not(.has-appendix) { height: auto !important; }
+    }
     
     /* Print Settings */
     @media print {
@@ -109,13 +140,11 @@ const Fonts = ({ disablePrintStyles = false }: { disablePrintStyles?: boolean })
       }`}
 
       ${disablePrintStyles ? '' : `body:not(.batch-print) #report-preview.no-logo .owner-line {
-        height: 34px !important;
+        min-height: 34px !important;
         margin-top: 10mm !important;
         margin-bottom: 6px !important;
         padding-top: 6px !important;
         padding-bottom: 6px !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
         line-height: 1.15 !important;
         font-size: 13px !important;
         border-color: #d1d5db !important;
@@ -1680,17 +1709,17 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                     <div className="relative z-10 flex flex-col h-full min-h-0">
 
                         {/* Horse Profile */}
-                        <div className={`flex justify-between items-end gap-4 ${showLogo ? 'mb-5' : 'mb-4'}`}>
-                            <div className={`min-w-0 ${showLogo ? 'basis-[46%] max-w-[46%] flex-none' : 'flex-1'}`}>
+                        <div className={`horse-profile ${showLogo ? 'mb-5' : 'mb-4'}`}>
+                            <div className="horse-name-block">
                                 <h1 className="leading-tight">
                                     <span
-                                        className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'font-serif-jp tracking-[-0.04em] whitespace-normal break-keep leading-[1.05] max-h-[2.1em]' : 'font-serif-en tracking-[-0.03em] whitespace-nowrap overflow-hidden'}`}
+                                        className={`horse-name-primary block font-bold text-gray-800 ${lang === 'ja' ? 'font-serif-jp tracking-[-0.04em] leading-[1.05]' : 'font-serif-en tracking-[-0.03em]'}`}
                                         style={{ fontSize: showLogo ? showLogoPrimaryFontSize : noLogoPrimaryFontSize }}
                                     >
                                         {primaryHorseName}
                                     </span>
                                     <span
-                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 whitespace-nowrap overflow-hidden ${lang === 'ja' ? 'font-serif-en tracking-[-0.02em]' : 'font-serif-jp tracking-[-0.02em]'}`}
+                                        className={`horse-name-secondary block font-bold text-[#c5a059] mt-1 ${lang === 'ja' ? 'font-serif-en tracking-[-0.02em]' : 'font-serif-jp tracking-[-0.02em]'}`}
                                         style={{ fontSize: showLogo ? showLogoSecondaryFontSize : noLogoSecondaryFontSize }}
                                     >
                                         {secondaryHorseName}
@@ -1698,26 +1727,26 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
                                 </h1>
                             </div>
                             <div
-                                className={`sire-dam-line bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? 'basis-[54%] max-w-[54%] flex-none' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'w-[52%] text-[14px] leading-[1.4] text-[#666]'}`}
+                                className={`sire-dam-line pedigree-block bg-[#f4f7f6] py-2 px-4 border-l-[3px] border-[#1a3c34] ${showLogo ? '' : 'min-h-[50px] flex items-center'} ${lang === 'ja' ? 'text-[15px] text-[#666]' : 'text-[14px] leading-[1.4] text-[#666]'}`}
                                 title={`${t('sire')}: ${lang === 'ja' ? (data.sireJp || data.sire) : (data.sireEn || data.sire)} × ${t('dam')}: ${lang === 'ja' ? (data.damJp || data.dam) : (data.damEn || data.dam)}`}
                             >
                                 {lang === 'ja' ? (
-                                    <>
+                                    <div className="pedigree-content">
                                         <span className="font-bold mr-1">{t('sire')}:</span>
-                                        {data.sireJp || data.sire}
+                                        <span className="pedigree-value">{data.sireJp || data.sire}</span>
                                         <span className="mx-2 text-gray-400">×</span>
                                         <span className="font-bold mr-1">{t('dam')}:</span>
-                                        {data.damJp || data.dam}
-                                    </>
+                                        <span className="pedigree-value">{data.damJp || data.dam}</span>
+                                    </div>
                                 ) : (
-                                    <div className="flex flex-col gap-1">
+                                    <div className="pedigree-content flex flex-col gap-1">
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold shrink-0">{t('sire')}:</span>
-                                            <span className="break-words">{data.sireEn || data.sire}</span>
+                                            <span className="pedigree-value min-w-0">{data.sireEn || data.sire}</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
                                             <span className="font-bold shrink-0">{t('dam')}:</span>
-                                            <span className="break-words">{data.damEn || data.dam}</span>
+                                            <span className="pedigree-value min-w-0">{data.damEn || data.dam}</span>
                                         </div>
                                     </div>
                                 )}
@@ -1726,7 +1755,7 @@ export default function ReportTemplate({ initialData, onDataChange, readOnly = f
 
                         <div className={`owner-line bg-[#f9fbfa] px-3 border border-[#e5e7eb] ${showLogo ? 'py-2 mb-4' : 'py-[6px] mb-[6px] min-h-[34px] overflow-visible'} ${lang === 'ja' ? 'text-[14px] text-[#444]' : 'text-[12px] text-[#444] tracking-[-0.01em]'} whitespace-normal break-words [overflow-wrap:anywhere]`}>
                             <span className="font-bold mr-1">{t('owner')}:</span>
-                            <span>{formatOwnerName(lang === 'ja' ? data.ownerName : (data.ownerNameEn || data.ownerName))}</span>
+                            <span className="owner-value">{formatOwnerName(lang === 'ja' ? data.ownerName : (data.ownerNameEn || data.ownerName))}</span>
                             <span className={lang === 'ja' ? 'mx-2 text-gray-300' : 'mx-1.5 text-gray-300'}>/</span>
                             <span className="font-bold mr-1">{t('trainer')}:</span>
                             <span>
