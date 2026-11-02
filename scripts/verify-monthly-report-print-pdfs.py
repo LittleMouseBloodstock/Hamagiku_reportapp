@@ -35,7 +35,12 @@ def text_rects(page, value):
         for line in block.get('lines', []):
             for span in line.get('spans', []):
                 for char in span.get('chars', []):
-                    chars.append((norm(char.get('c', '')), pymupdf.Rect(char['bbox'])))
+                    # streamから除外する空白はbbox配列にも追加しない。NFKCで複数
+                    # codepointへ展開される文字は、各codepointへ同じglyph矩形を割り当てる。
+                    normalized = norm(char.get('c', ''))
+                    if normalized:
+                        rect = pymupdf.Rect(char['bbox'])
+                        chars.extend((codepoint, rect) for codepoint in normalized)
     stream = ''.join(char for char, _ in chars)
     rects = []
     for match in re.finditer(re.escape(needle), stream):
@@ -59,6 +64,88 @@ def frame_top(page, legend):
                 if abs(left.y - right.y) < 0.5 and abs(left.y - legend.y0) < 15 and abs(right.x - left.x) > 250:
                     candidates.append(left.y)
     return min(candidates) if candidates else None
+
+
+def overlap_area(left, right):
+    width = max(0.0, min(left.x1, right.x1) - max(left.x0, right.x0))
+    height = max(0.0, min(left.y1, right.y1) - max(left.y0, right.y0))
+    return width * height
+
+
+def find_pedigree_border(page):
+    """血統欄の左罫線（浜菊グリーンの細い縦矩形）を取得する。"""
+    candidates = []
+    for drawing in page.get_drawings():
+        rect = drawing.get('rect')
+        fill = drawing.get('fill')
+        if not rect or not fill or len(fill) < 3:
+            continue
+        if (
+            rect.x0 > 200
+            and 1.5 <= rect.width <= 3.5
+            and rect.height > 30
+            and all(abs(fill[index] - expected) <= 0.01 for index, expected in enumerate((0.102, 0.2353, 0.2039)))
+        ):
+            candidates.append(rect)
+    return min(candidates, key=lambda rect: (rect.y0, rect.x0)) if candidates else None
+
+
+def validate_layout_groups(page, groups, image_info):
+    """長文fixtureの馬名・血統・馬主が同じ矩形へ侵入しないことを確認する。"""
+    failures = []
+    group_rects = {}
+    for group, values in groups.items():
+        rects = []
+        for value in values:
+            value_rects = text_rects(page, value)
+            if not value_rects:
+                failures.append(f'{group}の値の文字矩形が取得できない: {value}')
+            rects.extend(value_rects)
+        if not rects:
+            failures.append(f'{group}の文字矩形が取得できない')
+            continue
+        # 複数行の外接矩形では、離れた行の空間まで重なったと誤判定する。
+        # 実際のglyph矩形同士を比較して、文字の侵入だけを検知する。
+        group_rects[group] = rects
+
+    group_names = list(group_rects)
+    for index, left_name in enumerate(group_names):
+        for right_name in group_names[index + 1:]:
+            for left_rect in group_rects[left_name]:
+                for right_rect in group_rects[right_name]:
+                    area = overlap_area(left_rect, right_rect)
+                    if area > 0:
+                        failures.append(f'{left_name}と{right_name}の矩形が重なる: {area:.2f}pt^2')
+
+    # 正方形のロゴは馬名見出しに意図的に近接するため、写真（fixtureの非正方形画像）だけを対象にする。
+    image_rects = [
+        pymupdf.Rect(item['bbox'])
+        for item in image_info
+        if item.get('bbox') and item.get('width') != item.get('height')
+    ]
+    for group, group_text_rects in group_rects.items():
+        for group_rect in group_text_rects:
+            for image_rect in image_rects:
+                area = overlap_area(group_rect, image_rect)
+                if area > 0:
+                    failures.append(f'{group}と写真の矩形が重なる: {area:.2f}pt^2')
+    return failures
+
+
+def validate_horse_border_gap(page, groups):
+    """馬名glyphの右端と血統欄左罫線の間に安全離隔を要求する。"""
+    border = find_pedigree_border(page)
+    if not border:
+        return ['血統欄の左罫線を取得できない'], None
+    horse_rects = [rect for value in groups.get('horseName', []) for rect in text_rects(page, value)]
+    overlapping_rects = [rect for rect in horse_rects if rect.y1 > border.y0 and rect.y0 < border.y1]
+    if not overlapping_rects:
+        return ['罫線の高さ範囲に馬名glyphがない'], None
+    horse_right = max(rect.x1 for rect in overlapping_rects)
+    gap = border.x0 - horse_right
+    if gap <= SAFE_GAP_PT:
+        return [f'馬名右端→血統欄左罫線の安全離隔不足: {gap:.2f}pt'], gap
+    return [], gap
 
 
 parser = argparse.ArgumentParser()
@@ -93,6 +180,7 @@ for fixture in fixtures:
         axis_bottom = None
         legend = None
         frame = None
+        horse_border_gap = None
         if abs(page.rect.width / MM - 210) > 0.6 or abs(page.rect.height / MM - 297) > 0.6:
             failures.append(f'{page_index + 1}ページ目がA4ではない')
         visible = norm(page.get_text('text'))
@@ -126,13 +214,17 @@ for fixture in fixtures:
             if fixture['logo'] and (gap_frame is None or gap_frame <= SAFE_GAP_PT):
                 failures.append(f'x軸下端→コメント枠上端の安全離隔不足: {gap_frame}')
         images = page.get_image_info()
+        if fixture.get('layoutGroups'):
+            failures.extend(validate_layout_groups(page, fixture['layoutGroups'], images))
+            border_failures, horse_border_gap = validate_horse_border_gap(page, fixture['layoutGroups'])
+            failures.extend(border_failures)
         logo_images = [image for image in images if image['width'] == image['height']]
         if len(images) < int(fixture['expectedImageCountMin']):
             failures.append(f'画像数が不足: {len(images)}')
         expected_logo_images = int(fixture['expectedLogoImageCount'])
         if len(logo_images) != expected_logo_images:
             failures.append(f'ロゴ画像数が不正: {len(logo_images)}（期待値 {expected_logo_images}）')
-        page_results.append({'page': page_index + 1, 'a4': [round(page.rect.width / MM, 2), round(page.rect.height / MM, 2)], 'images': len(images), 'logoImages': len(logo_images), 'axisBottomPt': round(axis_bottom, 2) if axis_bottom is not None else None, 'legendTopPt': round(legend.y0, 2) if legend is not None else None, 'frameTopPt': round(frame, 2) if frame is not None else None, 'axisToLegendGapPt': round(gap_label, 2) if gap_label is not None else None, 'axisToFrameGapPt': round(gap_frame, 2) if gap_frame is not None else None})
+        page_results.append({'page': page_index + 1, 'a4': [round(page.rect.width / MM, 2), round(page.rect.height / MM, 2)], 'images': len(images), 'logoImages': len(logo_images), 'axisBottomPt': round(axis_bottom, 2) if axis_bottom is not None else None, 'legendTopPt': round(legend.y0, 2) if legend is not None else None, 'frameTopPt': round(frame, 2) if frame is not None else None, 'axisToLegendGapPt': round(gap_label, 2) if gap_label is not None else None, 'axisToFrameGapPt': round(gap_frame, 2) if gap_frame is not None else None, 'horseToPedigreeBorderGapPt': round(horse_border_gap, 2) if horse_border_gap is not None else None})
     page_count = len(document)
     document.close()
     results.append({'case': fixture['id'], 'kind': fixture['kind'], 'logo': fixture['logo'], 'pages': page_count, 'pass': not failures, 'failures': failures, 'layout': page_results})

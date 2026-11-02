@@ -7,6 +7,7 @@ import ReportTemplate, { ReportData } from '@/components/ReportTemplate';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { normalizeCareRecords } from '@/lib/careRecords';
+import { waitForPrintReady } from '@/lib/print-readiness';
 
 export const runtime = 'edge';
 
@@ -216,11 +217,21 @@ export default function ClientBatchReports() {
         if (!isPrintView) return;
         if (loading) return;
         if (reports.length === 0) return;
+        let cancelled = false;
+        let stylesApplied = false;
         const timer = window.setTimeout(() => {
-            applyPrintInlineStyles();
-            window.print();
+            void (async () => {
+                applyPrintInlineStyles();
+                stylesApplied = true;
+                await waitForPrintReady(document.querySelector('.reports-list'));
+                if (!cancelled) window.print();
+            })();
         }, 300);
-        return () => window.clearTimeout(timer);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+            if (stylesApplied) cleanupPrintInlineStyles();
+        };
     }, [isPrintView, loading, reports.length]);
 
     useEffect(() => {
@@ -586,11 +597,6 @@ export default function ClientBatchReports() {
                         top: 0 !important;
                         padding-top: 20mm !important;
                         transform: none !important;
-                    }
-                    .batch-report-page .horse-name-primary,
-                    .batch-report-page .horse-name-secondary,
-                    .batch-report-page .sire-dam-line {
-                        white-space: nowrap !important;
                     }
                     .batch-report-page .report-preview.no-logo .report-header {
                         border-bottom-color: transparent !important;

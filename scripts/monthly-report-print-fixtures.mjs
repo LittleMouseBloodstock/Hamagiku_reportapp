@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { copyFile, access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 // ReportTemplateを認証・通信から切り離し、同じ入力を毎回静的HTMLへ描画する。
 // このスクリプトは検証用の一時ディレクトリだけへ出力し、本番データを読み書きしない。
@@ -14,6 +15,12 @@ const label = process.argv.find((value) => value.startsWith('--label='))?.slice(
 assert.match(label, /^[a-z0-9-]+$/);
 const only = process.argv.find((value) => value.startsWith('--case='))?.slice(7);
 if (only) assert.match(only, /^[a-z0-9-]+$/);
+// 修正前の同一入力を再生成し、回帰検査が失敗することも確認できる。
+const sourceRef = process.argv.find(value => value.startsWith('--source-ref='))?.slice(13);
+const buildRoot = path.resolve(process.argv.find(value => value.startsWith('--build-root='))?.slice(13) || path.join(frontend, '.next'));
+const readSource = relative => sourceRef
+    ? Promise.resolve(execFileSync('git', ['show', `${sourceRef}:${relative}`], { cwd: root, encoding: 'utf8' }))
+    : readFile(path.join(root, relative), 'utf8');
 
 const directory = path.join(root, 'tmp/monthly-report-print-audit', label);
 const assetsDirectory = path.join(directory, 'assets');
@@ -29,7 +36,7 @@ function assertCssContract(source, selector, expectedDeclarations, labelText) {
 }
 
 // 実運用の単票・一括印刷経路が、fixtureの前提から外れた場合は生成自体を止める。
-const reportTemplateSource = await readFile(path.join(frontend, 'components/ReportTemplate.tsx'), 'utf8');
+const reportTemplateSource = await readSource('frontend/components/ReportTemplate.tsx');
 for (const contract of [
     /batchPrint\?: boolean/,
     /<Fonts disablePrintStyles=\{batchPrint\}/,
@@ -50,7 +57,7 @@ assertCssContract(
     [/(?:^|;)\s*height:\s*115px\s*!important/, /(?:^|;)\s*min-height:\s*115px\s*!important/, /(?:^|;)\s*flex-shrink:\s*0\s*!important/],
     '単票・ロゴなし',
 );
-const batchReportsSource = await readFile(path.join(frontend, 'app/dashboard/clients/[id]/reports/page.tsx'), 'utf8');
+const batchReportsSource = await readSource('frontend/app/dashboard/clients/[id]/reports/page.tsx');
 for (const contract of [
     /batchPrint=\{true\}/,
     /page-break-after-always/,
@@ -68,6 +75,10 @@ assertCssContract(
     [/(?:^|;)\s*height:\s*115px\s*!important/, /(?:^|;)\s*min-height:\s*115px\s*!important/, /(?:^|;)\s*flex-shrink:\s*0\s*!important/],
     '一括・ロゴなし',
 );
+const batchStyleMatch = batchReportsSource.match(/<style jsx global>\{`([\s\S]*?)`\}<\/style>/);
+assert.ok(batchStyleMatch, '一括印刷CSSの実装本体を取得できません');
+// 一括印刷fixtureにも実運用のCSSを適用し、source側のnowrap変更を回帰検知する。
+const batchPrintCss = batchStyleMatch[1];
 
 const bundle = path.join(directory, 'fixture.cjs');
 await build({
@@ -112,7 +123,7 @@ await build({
             builder.onResolve({ filter: /^next\/image$/ }, () => ({ path: 'next-image', namespace: 'monthly-audit' }));
             builder.onResolve({ filter: /^react-easy-crop$/ }, () => ({ path: 'cropper', namespace: 'monthly-audit' }));
             builder.onLoad({ filter: /[\\/]components[\\/]ReportTemplate\.tsx$/ }, async ({ path: filename }) => {
-                const source = await readFile(filename, 'utf8');
+                const source = reportTemplateSource;
                 assert.equal(source.match(/<style jsx global>/g)?.length, 1, '印刷CSSのstyle要素数が変わりました');
                 return {
                     contents: source.replace(
@@ -171,7 +182,7 @@ await build({
 });
 const { renderReport } = requireFrontend(bundle);
 
-const cssDirectory = path.join(frontend, '.next/static/css');
+const cssDirectory = path.join(buildRoot, 'static/css');
 const cssFiles = (await readdir(cssDirectory)).filter((name) => name.endsWith('.css')).sort();
 assert.ok(cssFiles.length, '先にfrontendの本番ビルドを行ってください');
 const fontFiles = new Set();
@@ -182,7 +193,7 @@ const styles = await Promise.all(cssFiles.map(async (name) => {
         .replace(/url\((['"]?)((?:\.\.\/media\/|\/_next\/static\/media\/)[^)'"\s]+)\1\)/g,
             (_, quote, relative) => {
                 const filename = relative.startsWith('/_next/')
-                    ? path.join(frontend, '.next', relative.slice('/_next/'.length))
+                    ? path.join(buildRoot, relative.slice('/_next/'.length))
                     : path.resolve(cssDirectory, relative);
                 fontFiles.add(filename);
                 return `url("./assets/${path.basename(filename)}")`;
@@ -206,15 +217,44 @@ const comments = {
     en: 'The horse is currently cantering 3,200m six days a week at 20–22 seconds per furlong, with a 600m sharper session at 18–19 seconds once a week.',
 };
 
-function fixtureData({ language, logo }, index = 0) {
+const longTextFixture = {
+    horseNameJp: 'ワイルドイントリーグの24',
+    horseNameEn: 'Wild Intrigue 24 Thoroughbred Partnership International',
+    sireJp: 'ラッキーベガ系統の優良種牡馬ワイルドイントリーグ',
+    sireEn: 'Lucky Vega Thoroughbred Stallion Partnership International',
+    damJp: 'サンプルカルメンオブザハマギクファーム',
+    damEn: 'Sample Carmen of Hamagiku Farm Bloodstock Partnership',
+    ownerName: '株式会社浜菊ファーム・サラブレッド・パートナーズ共有組合',
+    ownerNameEn: 'Hamagiku Farm Thoroughbred Racing and Bloodstock Partnership International',
+};
+
+const wrapStressFixture = {
+    // 31文字。日本語の禁則・折返しが無い場合に右側の血統欄へ侵入する長さ。
+    horseNameJp: 'ワイルドイントリーグ二〇二四年産サラブレッド長名回帰検証用馬名',
+    horseNameEn: 'WildIntrigueTwentyFourThoroughbredPartnershipInternationalEdition',
+    sireJp: 'ラッキーベガ系統の優良種牡馬ワイルドイントリーグ回帰検証用',
+    sireEn: 'LuckyVegaThoroughbredStallionPartnershipInternationalBloodstockEdition',
+    damJp: 'サンプルカルメンオブザハマギクファーム回帰検証用繁殖牝馬',
+    damEn: 'SampleCarmenOfHamagikuFarmBloodstockPartnershipInternationalEdition',
+    ownerName: '株式会社浜菊ファーム・サラブレッド・パートナーズ共有組合長名検証',
+    ownerNameEn: 'HamagikuFarmThoroughbredRacingAndBloodstockPartnershipInternationalEdition',
+};
+
+function fixtureData({ language, logo, profile = 'standard' }, index = 0) {
     const suffix = index ? ` ${index + 1}` : '';
+    const profileData = profile === 'long' ? longTextFixture : profile === 'wrap-stress' ? wrapStressFixture : {
+        horseNameJp: `静的監査馬${index ? ` ${index + 1}` : ''}`,
+        horseNameEn: `Static Audit Horse${suffix}`,
+        sireJp: 'ラッキーベガ', sireEn: 'Lucky Vega',
+        damJp: 'サンプルカルメン', damEn: 'Sample Carmen',
+        ownerName: '株式会社サンプルレーシング', ownerNameEn: 'Sample Racing Partnership',
+    };
     return {
         reportDate: '2026-08',
-        horseNameEn: `Static Audit Horse${suffix}`,
-        horseNameJp: `静的監査馬${index ? ` ${index + 1}` : ''}`,
-        sire: 'Lucky Vega', sireEn: 'Lucky Vega', sireJp: 'ラッキーベガ',
-        dam: 'Sample Carmen', damEn: 'Sample Carmen', damJp: 'サンプルカルメン',
-        ownerName: '株式会社サンプルレーシング', ownerNameEn: 'Sample Racing Partnership',
+        horseNameEn: profileData.horseNameEn, horseNameJp: profileData.horseNameJp,
+        sire: profileData.sireEn, sireEn: profileData.sireEn, sireJp: profileData.sireJp,
+        dam: profileData.damEn, damEn: profileData.damEn, damJp: profileData.damJp,
+        ownerName: profileData.ownerName, ownerNameEn: profileData.ownerNameEn,
         trainerNameJp: '検証用調教師', trainerNameEn: 'Sample Training Stable',
         trainerLocation: '北海道', trainerLocationEn: 'Hokkaido', birthDate: '2023-04-12', age: 3, sex: 'Colt',
         outputMode: 'print', showLogo: logo, mainPhoto: photoDataUri, originalPhoto: '',
@@ -224,35 +264,17 @@ function fixtureData({ language, logo }, index = 0) {
     };
 }
 
+// 外側のアプリUIだけを置き換える。欄・写真・印刷寸法は本番CSSを直接使う。
 const auditCss = `
-    @page { size: A4 portrait; margin: 10mm 0 0 0; }
     html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
     body { width: 210mm; min-width: 210mm; }
-    .monthly-single { width: 210mm; height: 287mm; min-height: 0; margin: 0; padding: 0; background: #fff; }
-    .monthly-single .preview-wrapper { display: flex !important; width: 210mm !important; height: 287mm !important; min-height: 287mm !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; background: #fff !important; }
-    .monthly-single .report-preview { width: 210mm !important; min-height: 297mm !important; margin: 0 !important; box-shadow: none !important; transform: none !important; }
-    .monthly-batch-root { width: 100%; min-height: 0; overflow: visible !important; background: #fff; }
-    .monthly-batch-root .reports-list { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
-    .monthly-batch-root .page-break-after-always { display: block; width: 210mm; height: auto; overflow: visible; margin: 0 auto; padding: 0; break-after: page; page-break-after: always; break-inside: auto; page-break-inside: auto; }
-    .monthly-batch-root .page-break-after-always:last-child { break-after: auto; page-break-after: auto; }
-    .monthly-batch-root .preview-wrapper { display: block !important; width: 210mm !important; height: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; background: #fff !important; }
-    .monthly-batch-root .report-preview { position: static !important; width: 210mm !important; max-width: 210mm !important; min-height: 285mm !important; height: 285mm !important; padding: 15mm 30px 8px !important; margin: 0 auto !important; box-sizing: border-box !important; box-shadow: none !important; transform: none !important; overflow: hidden !important; break-inside: avoid !important; page-break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    .monthly-batch-root .report-preview.no-logo { padding-top: 20mm !important; }
-    .monthly-batch-root .report-preview.print-mode .main-photo { height: 98mm !important; margin-bottom: 4px !important; }
-    .monthly-batch-root .report-preview.print-mode.no-logo .main-photo { height: 90mm !important; }
-    .monthly-batch-root .report-preview.print-mode .data-section { height: 120px !important; min-height: 120px !important; flex-shrink: 0 !important; margin-bottom: 4px !important; }
-    .monthly-batch-root .report-preview.print-mode.no-logo .data-section { height: 115px !important; min-height: 115px !important; flex-shrink: 0 !important; margin-bottom: 6px !important; }
-    .monthly-batch-root .report-preview.print-mode.no-logo .weight-chart { height: 100px !important; }
-    .monthly-batch-root .report-preview.print-mode .comment-box { margin-top: 1px !important; min-height: 108px !important; max-height: 108px !important; padding: 8px 12px 10px !important; overflow: visible !important; break-inside: avoid !important; page-break-inside: avoid !important; }
-    .monthly-batch-root .report-preview.print-mode .comment-label { display: block !important; margin-bottom: 3px !important; line-height: 1.15 !important; }
-    .monthly-batch-root .report-preview.print-mode .comment-text-ja { font-size: 13.5px !important; line-height: 1.48 !important; max-height: 82px !important; overflow: hidden !important; }
-    .monthly-batch-root .report-preview.print-mode .stat-value-print { font-size: 15px !important; line-height: 1.2 !important; white-space: nowrap !important; letter-spacing: -0.02em !important; }
-    .monthly-batch-root .report-preview.no-logo .sire-dam-line { transform: translateY(10mm) !important; }
-    .monthly-batch-root .report-preview.no-logo .owner-line { margin-top: 10mm !important; line-height: 1.15 !important; font-size: 13px !important; border-color: #d1d5db !important; }
-    .monthly-batch-root .report-preview.no-logo .footer-text { display: none !important; }
-    .font-body-en { font-family: Georgia, 'Times New Roman', serif !important; }
+    .monthly-single, .monthly-batch-root { width: 210mm; margin: 0; padding: 0; }
+    .monthly-single .preview-wrapper { display: flex !important; width: 210mm !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; background: #fff !important; }
+    .monthly-single .report-preview { margin: 0 !important; box-shadow: none !important; transform: none !important; }
+    .monthly-batch-root .reports-list { display: block; padding: 0; margin: 0; }
+    .monthly-batch-root .preview-wrapper { padding: 0; margin: 0; }
     @media print {
-        .monthly-single, .monthly-single .preview-wrapper { break-inside: avoid; page-break-inside: avoid; }
+        .monthly-single, .monthly-single .preview-wrapper { height: 287mm !important; min-height: 0 !important; break-inside: avoid; page-break-inside: avoid; }
         .no-print { display: none !important; }
     }
 `;
@@ -261,14 +283,15 @@ const fixtures = [];
 for (const language of ['ja', 'en']) {
     for (const logo of [false, true]) {
         for (const kind of ['single', 'batch']) {
-            const id = `${language}-${kind}-${logo ? 'logo' : 'nologo'}`;
-            if (only && id !== only) continue;
-            const reportCount = kind === 'batch' ? 2 : 1;
-            const rendered = Array.from({ length: reportCount }, (_, index) => renderReport(language, fixtureData({ language, logo }, index), kind !== 'single'));
+            for (const profile of ['standard', 'long', 'wrap-stress']) {
+                const id = `${language}-${kind}-${logo ? 'logo' : 'nologo'}${profile === 'long' ? '-long-text' : profile === 'wrap-stress' ? '-wrap-stress' : ''}`;
+                if (only && id !== only) continue;
+                const reportCount = kind === 'batch' ? 2 : 1;
+                const rendered = Array.from({ length: reportCount }, (_, index) => renderReport(language, fixtureData({ language, logo, profile }, index), kind !== 'single'));
             const bodyContent = kind === 'batch'
                 ? `<div class="reports-list">${rendered.map((html) => `<div class="page-break-after-always">${html.replace(/@import[^;]*fonts\.googleapis\.com[^;]*;/g, '').replace(/src="\/hamagiku-logo\.png"/g, 'src="./assets/hamagiku-logo.png"')}</div>`).join('')}</div>`
                 : rendered[0].replace(/@import[^;]*fonts\.googleapis\.com[^;]*;/g, '').replace(/src="\/hamagiku-logo\.png"/g, 'src="./assets/hamagiku-logo.png"');
-            const html = `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>月次レポート印刷検証</title><style>${commonCss}</style><style>${auditCss}</style></head><body class="${fontClasses.join(' ')} antialiased font-sans${kind === 'batch' ? ' batch-print batch-print-view' : ''}"><div class="${kind === 'batch' ? 'monthly-batch-root batch-report-page' : 'monthly-single'}">${bodyContent}</div><script>
+            const html = `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>月次レポート印刷検証</title><style>${commonCss}</style><style>${kind === 'batch' ? batchPrintCss : ''}</style><style>${auditCss}</style></head><body class="${fontClasses.join(' ')} antialiased font-sans${kind === 'batch' ? ' batch-print batch-print-view' : ''}"><div class="${kind === 'batch' ? 'monthly-batch-root batch-report-page' : 'monthly-single'}">${bodyContent}</div><script>
                 document.title = 'monthly-audit:fonts-pending';
                 document.fonts.ready.then(() => { document.title = document.fonts.status === 'loaded' ? 'monthly-audit:fonts-ready' : 'monthly-audit:fonts-failed'; }).catch(() => { document.title = 'monthly-audit:fonts-failed'; });
             </script></body></html>`;
@@ -277,13 +300,26 @@ for (const language of ['ja', 'en']) {
             const xAxisLabels = language === 'ja'
                 ? ['26/2', '26/4', '26/5', '26/7', '26/8']
                 : ['Feb 26', 'Apr 26', 'May 26', 'Jul 26', 'Aug 26'];
-            fixtures.push({
-                id, kind, language, logo, reportCount, expectedPages: reportCount,
-                expectedImageCountMin: 1, expectedLogoImageCount: logo ? 1 : 0,
-                weights, xAxisLabels, commentLegend: language === 'ja' ? 'コメント' : 'COMMENT',
-                html: filename, pdf: filename.replace(/\.html$/, '.pdf'), source: 'frontend/components/ReportTemplate.tsx',
-                expectedText: [language === 'ja' ? comments.ja : comments.en, '473 kg'],
-            });
+                const data = fixtureData({ language, logo, profile });
+                const hasLongText = profile !== 'standard';
+                const visibleText = language === 'ja'
+                    ? [data.horseNameJp, data.horseNameEn, data.sireJp, data.damJp, data.ownerName]
+                    : [data.horseNameEn, data.horseNameJp, data.sireEn, data.damEn, data.ownerNameEn];
+                fixtures.push({
+                    id, kind, language, logo, profile, reportCount, expectedPages: reportCount,
+                    expectedImageCountMin: 1, expectedLogoImageCount: logo ? 1 : 0,
+                    weights, xAxisLabels, commentLegend: language === 'ja' ? 'コメント' : 'COMMENT',
+                    html: filename, pdf: filename.replace(/\.html$/, '.pdf'), source: 'frontend/components/ReportTemplate.tsx',
+                    expectedText: [language === 'ja' ? comments.ja : comments.en, '473 kg', ...(hasLongText ? visibleText : [])],
+                    ...(hasLongText ? {
+                        layoutGroups: {
+                            horseName: [data.horseNameJp, data.horseNameEn],
+                            pedigree: language === 'ja' ? [data.sireJp, data.damJp] : [data.sireEn, data.damEn],
+                            owner: [language === 'ja' ? data.ownerName : data.ownerNameEn],
+                        },
+                    } : {}),
+                });
+            }
         }
     }
 }

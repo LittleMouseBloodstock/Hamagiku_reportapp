@@ -12,6 +12,7 @@ import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { waitForPrintReady } from '@/lib/print-readiness';
 
 type ReportKind = 'monthly' | 'departure' | 'status';
 type EditorData = ReportData | DepartureReportData | StatusReportData;
@@ -1824,23 +1825,7 @@ export default function ReportEditor() {
     };
 
     const printReportWhenReady = useCallback(async () => {
-        if (typeof document !== 'undefined') {
-            if (document.fonts?.ready) {
-                await document.fonts.ready;
-            }
-            const images = Array.from(document.querySelectorAll<HTMLImageElement>('#report-preview img'));
-            await Promise.all(images.map((image) => {
-                if (image.complete) return Promise.resolve();
-                return new Promise<void>((resolve) => {
-                    const finish = () => resolve();
-                    image.addEventListener('load', finish, { once: true });
-                    image.addEventListener('error', finish, { once: true });
-                });
-            }));
-            await new Promise<void>((resolve) => {
-                window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-            });
-        }
+        await waitForPrintReady(document.querySelector('#report-preview'));
         window.print();
     }, []);
 
