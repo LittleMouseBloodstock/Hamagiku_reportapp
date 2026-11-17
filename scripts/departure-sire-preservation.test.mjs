@@ -9,43 +9,75 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const requireFrontend = createRequire(path.join(root, 'frontend/package.json'));
 const { transform } = requireFrontend('esbuild');
 const source = await readFile(path.join(root, 'frontend/app/reports/[id]/page.tsx'), 'utf8');
-// 実際の読込・下書き復元で使う関数を取り出し、マスターと入力値が異なる条件を検査する。
+const batchSource = await readFile(path.join(root, 'frontend/app/dashboard/clients/[id]/reports/page.tsx'), 'utf8');
+// 単票・下書き復元の実関数と、一括印刷の実際の血統マッピングを検査する。
 const resolver = source.match(/const resolvePedigreeFields = \([\s\S]*?\n\}\);/)?.[0];
 assert.ok(resolver, '血統の読込処理が見つかりません');
 const compiled = await transform(resolver + '\nexport { resolvePedigreeFields };', { loader: 'ts', format: 'esm' });
 const { resolvePedigreeFields } = await import(`data:text/javascript;base64,${Buffer.from(compiled.code).toString('base64')}`);
-const horse = { sire: 'フランケル', sire_en: 'Frankel', dam: '母マスター', dam_en: 'Master Dam' };
-const saved = { sire: '旧父表記', sireJp: 'Frankel', sireEn: 'Saved Sire', dam: '旧母表記', damJp: '保存母', damEn: 'Saved Dam' };
+const fields = ['sire', 'sireJp', 'sireEn', 'dam', 'damJp', 'damEn'];
+const batchMapping = batchSource.match(/const rData: ReportData = \{([\s\S]*?)\n\s*\};/)?.[1];
+assert.ok(batchMapping, '一括レポートの実データ変換が見つかりません');
+const declarations = fields.map(key => {
+    const expression = batchMapping.match(new RegExp(`(?:^|\\n)\\s*${key}: ([^\\n]+),`))?.[1];
+    assert.ok(expression, `一括レポートの${key}を取得できません`);
+    return `${key}: ${expression}`;
+});
+const batchResolve = new Function('horse', 'metrics', `return ({${declarations.join(',')}});`);
+const horse = { sire: 'フランケル', sire_en: 'Master Sire', dam: '母マスター', dam_en: 'Master Dam' };
+const saved = { sireJp: 'Frankel', sireEn: "King's Best (USA)", damJp: 'Sea The Stars', damEn: 'Custom Dam (IRE)' };
+const expected = { sire: saved.sireJp, sireJp: saved.sireJp, sireEn: saved.sireEn, dam: saved.damJp, damJp: saved.damJp, damEn: saved.damEn };
 
-test('退厩レポートの日本語父馬欄に入力した英語表記を読込後も保持する', () => {
-    const actual = resolvePedigreeFields(horse, saved, 'departure');
-    assert.equal(actual.sireJp, 'Frankel');
-    const previous = resolvePedigreeFields(horse, saved);
-    assert.deepEqual({ ...actual, sireJp: previous.sireJp }, previous, '日本語父馬欄以外は従来どおり');
+test('月次・退厩・状況の単票/下書きは父母の日英入力値をすべて保持する', () => {
+    assert.deepEqual(resolvePedigreeFields(horse, saved), expected);
+    const restored = JSON.parse(JSON.stringify(saved));
+    assert.deepEqual(resolvePedigreeFields(horse, restored), expected);
 });
 
-test('退厩レポートの日本語父馬欄の手入力表記・記号・空白も保持する', () => {
-    for (const sireJp of ["King's Best (USA)", 'Sea The Stars', '  Frankel  ', '日本語で入力した父馬']) {
-        assert.equal(resolvePedigreeFields(horse, { ...saved, sireJp }, 'departure').sireJp, sireJp);
+test('月次一括でも保存済みの父母の日英表記を保持する', () => {
+    assert.deepEqual(batchResolve(horse, saved), expected);
+});
+
+test('未入力の欄だけ馬マスターで補完し、他の入力値を上書きしない', () => {
+    const partial = { sireJp: 'Frankel', sireEn: '', damJp: '', damEn: 'Custom Dam' };
+    const expectedPartial = { sire: 'Frankel', sireJp: 'Frankel', sireEn: horse.sire_en, dam: horse.dam, damJp: horse.dam, damEn: 'Custom Dam' };
+    assert.deepEqual(resolvePedigreeFields(horse, partial), expectedPartial);
+    assert.deepEqual(batchResolve(horse, partial), expectedPartial);
+});
+
+test('名前の記号・日本語・空白も入力どおり保持する', () => {
+    for (const name of ["King's Best (USA)", 'Sea The Stars', '  Frankel  ', '入力した日本語表記']) {
+        const values = { sireJp: name, sireEn: name, damJp: name, damEn: name };
+        for (const read of [resolvePedigreeFields, batchResolve]) {
+            assert.ok(Object.values(read(horse, values)).every(value => value === name));
+        }
     }
 });
 
-test('退厩レポートの未入力欄は従来どおり馬マスターを使う', () => {
-    for (const value of [undefined, null, '']) {
-        assert.equal(resolvePedigreeFields(horse, { sireJp: value }, 'departure').sireJp, horse.sire);
-    }
-    assert.equal(resolvePedigreeFields(null, saved, 'departure').sireJp, 'Frankel');
+test('マスター欠損・既存の旧形式の下書きでも表記を失わない', () => {
+    assert.deepEqual(resolvePedigreeFields(null, saved), expected);
+    const legacy = resolvePedigreeFields(horse, { sire: 'Legacy Sire', dam: 'Legacy Dam' });
+    assert.equal(legacy.sireJp, 'Legacy Sire');
+    assert.equal(legacy.damJp, 'Legacy Dam');
+    const empty = { sire: '', sire_en: '', dam: '', dam_en: '' };
+    assert.ok(Object.values(resolvePedigreeFields(null, {})).every(value => value === ''));
+    assert.ok(Object.values(batchResolve(empty, {})).every(value => value === ''));
 });
 
-test('月次・状況レポートと種別未指定のマスター優先動作を変えない', () => {
-    const expected = { sire: horse.sire, sireJp: horse.sire, sireEn: horse.sire_en, dam: horse.dam, damJp: horse.dam, damEn: horse.dam_en };
-    for (const kind of ['monthly', 'status', undefined, null]) {
-        assert.deepEqual(resolvePedigreeFields(horse, saved, kind), expected);
+test('マスター更新の完了・失敗にかかわらず保存表記と一括/単票が一致する', () => {
+    for (const master of [horse, { ...horse, sire: saved.sireJp, dam: saved.damJp }, { ...horse, sire: '後日訂正した父', dam: '後日訂正した母' }]) {
+        assert.deepEqual(resolvePedigreeFields(master, saved), expected);
+        assert.deepEqual(batchResolve(master, saved), expected);
     }
 });
 
-test('通常読込・フォールバック読込・下書き復元から退厩の種別が渡る', () => {
-    assert.ok(/resolvePedigreeFields\(horse, draftData, draftType\)/.test(source), '下書き復元で種別を渡す');
-    assert.ok(/resolvePedigreeFields\(horse, metrics, 'departure'\)/.test(source), '通常読込で退厩の種別を渡す');
-    assert.ok(/resolvePedigreeFields\(horse, metrics, metrics\.reportType\)/.test(source), 'フォールバック読込で種別を渡す');
+test('読込で元データを変更せず、新規レポートはマスターから補完する', () => {
+    const input = Object.freeze({ ...saved });
+    const master = Object.freeze({ ...horse });
+    resolvePedigreeFields(master, input);
+    batchResolve(master, input);
+    assert.deepEqual(input, saved);
+    const defaults = { sire: horse.sire, sireJp: horse.sire, sireEn: horse.sire_en, dam: horse.dam, damJp: horse.dam, damEn: horse.dam_en };
+    assert.deepEqual(resolvePedigreeFields(horse), defaults);
+    assert.deepEqual(batchResolve(horse, {}), defaults);
 });

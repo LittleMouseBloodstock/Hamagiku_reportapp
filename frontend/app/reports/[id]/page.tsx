@@ -33,16 +33,15 @@ const isReportSelectableHorse = (horse: { horse_status?: string | null }) => !['
 
 const resolvePedigreeFields = (
     horse?: { sire?: string | null; sire_en?: string | null; dam?: string | null; dam_en?: string | null } | null,
-    source?: { sire?: string | null; sireJp?: string | null; sireEn?: string | null; dam?: string | null; damJp?: string | null; damEn?: string | null } | null,
-    reportKind?: ReportKind | null
+    source?: { sire?: string | null; sireJp?: string | null; sireEn?: string | null; dam?: string | null; damJp?: string | null; damEn?: string | null } | null
 ) => ({
-    sire: horse?.sire || source?.sire || source?.sireJp || '',
-    // 退厩レポートの父馬名は、外国産種牡馬の英字表記を含め手入力値を保持する。
-    sireJp: (reportKind === 'departure' ? source?.sireJp : '') || horse?.sire || source?.sireJp || source?.sire || '',
-    sireEn: horse?.sire_en || source?.sireEn || '',
-    dam: horse?.dam || source?.dam || source?.damJp || '',
-    damJp: horse?.dam || source?.damJp || source?.dam || '',
-    damEn: horse?.dam_en || source?.damEn || '',
+    // レポート・下書きの入力済み表記を保持し、未入力の欄だけ馬情報から補完する。
+    sire: source?.sireJp || source?.sire || horse?.sire || '',
+    sireJp: source?.sireJp || source?.sire || horse?.sire || '',
+    sireEn: source?.sireEn || horse?.sire_en || '',
+    dam: source?.damJp || source?.dam || horse?.dam || '',
+    damJp: source?.damJp || source?.dam || horse?.dam || '',
+    damEn: source?.damEn || horse?.dam_en || '',
 });
 
 const resolveBilingualNote = (value?: string | null) => {
@@ -369,7 +368,7 @@ export default function ReportEditor() {
         try {
             const horseArr = await restGet(`horses?id=eq.${horseId}&select=sire,sire_en,dam,dam_en`);
             const horse = horseArr?.[0];
-            const pedigree = resolvePedigreeFields(horse, draftData, draftType);
+            const pedigree = resolvePedigreeFields(horse, draftData);
             if (draftType === 'departure' || draftType === 'status') {
                 const depDraft = draftData as DepartureReportData;
                 return {
@@ -727,7 +726,7 @@ export default function ReportEditor() {
                             showLogo: typeof metrics.showLogo === 'boolean' ? metrics.showLogo : resolvedMode !== 'print'
                         } as Partial<StatusReportData>);
                     } else if (reportTypeFromMetrics === 'departure') {
-                        const pedigree = resolvePedigreeFields(horse, metrics, 'departure');
+                        const pedigree = resolvePedigreeFields(horse, metrics);
                         const defaultOutputMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                         const metricsOutputMode = metrics.outputMode === 'print' || metrics.outputMode === 'pdf'
                             ? metrics.outputMode
@@ -1032,7 +1031,7 @@ export default function ReportEditor() {
                             if (isMounted) {
                                 setHorseId(report.horse_id);
                                 const metrics = report.metrics_json || {};
-                                const pedigree = resolvePedigreeFields(horse, metrics, metrics.reportType);
+                                const pedigree = resolvePedigreeFields(horse, metrics);
                                 const resolvedMode = resolveOutputMode(horse?.clients?.report_output_mode, horse?.trainers?.report_output_mode);
                                 const showLogo = metrics.showLogo ?? (resolvedMode !== 'print');
                                 const mergedHistory = mergeWeightHistory(
